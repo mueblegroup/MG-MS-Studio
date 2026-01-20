@@ -3,60 +3,71 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassCard;
-use App\Models\Cart;
-use App\Models\CartItem;
 use App\Models\ClassSession;
 use App\Models\Plan;
 use App\Services\CartService;
+use App\Services\StudioSettingsService;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
-    public function index(CartService $cartService) // Renamed variable for clarity
+    public function index(CartService $cartService, StudioSettingsService $settings)
     {
-        // Fetch the cart and eager load the items and their related polymorphic models
         $cartModel = $cartService->currentCart()->load(['items.purchasable']);
 
+        $currency = $settings->currency('MYR');
+
         $summary = [
-            'currency' => 'MYR',
+            'currency' => $currency,
             'subtotal' => (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price),
-            'total' => (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price),
+            'total'    => (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price),
         ];
 
         return view('shop.cart', compact('cartModel', 'summary'));
     }
 
-    public function add(Request $request, CartService $cart)
+    public function add(Request $request, CartService $cart, StudioSettingsService $settings)
     {
         $validated = $request->validate([
             'type' => 'required|in:class_session,plan,class_card',
-            'id' => 'required|integer',
-            'qty' => 'nullable|integer|min:1|max:99',
+            'id'   => 'required|integer',
+            'qty'  => 'nullable|integer|min:1|max:99',
         ]);
 
         $qty = (int) ($validated['qty'] ?? 1);
+
+        // Global studio currency (fallback MYR)
+        $currency = $settings->currency('MYR');
 
         if ($validated['type'] === 'class_session') {
             $session = ClassSession::with('classModel')->findOrFail($validated['id']);
             $price = (float) ($session->classModel->price ?? 0);
 
-            $cart->addItem($session, 1, $price, 'MYR', [
+            $cart->addItem($session, 1, $price, $currency, [
                 'label' => $session->classModel->name ?? 'Class',
-                'date' => optional($session->start_time)->format('Y-m-d'),
-                'time' => optional($session->start_time)->format('H:i') . ' - ' . optional($session->end_time)->format('H:i'),
+                'date'  => optional($session->start_time)->format('Y-m-d'),
+                'time'  => optional($session->start_time)->format('H:i') . ' - ' . optional($session->end_time)->format('H:i'),
             ]);
         }
 
         if ($validated['type'] === 'plan') {
             $plan = Plan::findOrFail($validated['id']);
-            $cart->addItem($plan, 1, (float) $plan->price, $plan->currency ?? 'MYR', [
+
+            // If you still want per-plan currency, keep this line; else use global.
+            $planCurrency = $plan->currency ?: $currency;
+
+            $cart->addItem($plan, 1, (float) $plan->price, $planCurrency, [
                 'label' => $plan->name,
             ]);
         }
 
         if ($validated['type'] === 'class_card') {
             $card = ClassCard::findOrFail($validated['id']);
-            $cart->addItem($card, $qty, (float) $card->price, $card->currency ?? 'MYR', [
+
+            // If you still want per-card currency, keep this line; else use global.
+            $cardCurrency = $card->currency ?: $currency;
+
+            $cart->addItem($card, $qty, (float) $card->price, $cardCurrency, [
                 'label' => $card->name,
                 'classes' => $card->total_classes,
                 'validity_weeks' => $card->validity_weeks,

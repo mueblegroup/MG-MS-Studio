@@ -7,7 +7,7 @@
             </p>
 
             <div class="mt-6 flex gap-2">
-                <a href="{{ route('shop.cart') }}"
+                <a href="{{ route('shop.cart.index') }}"
                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
                           text-white bg-indigo-600 hover:bg-indigo-700 transition">
                     <i class="bx bx-cart"></i> Back to Cart

@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Services\CartService;
+use App\Services\StudioSettingsService;
 use App\Services\HitPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,16 +15,17 @@ use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
-    public function index(CartService $cart)
+    public function index(CartService $cart, StudioSettingsService $settings)
     {
         $cartModel = $cart->currentCart()->load('items.purchasable');
 
         if ($cartModel->items->isEmpty()) {
             return redirect()->route('shop.cart.index')->with('error', 'Your cart is empty.');
         }
+        $currency = strtoupper($settings->get('currency', 'MYR'));
 
         $summary = [
-            'currency' => 'MYR',
+            'currency' => $currency,
             'subtotal' => (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price),
             'total'    => (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price),
         ];
@@ -31,7 +33,7 @@ class CheckoutController extends Controller
         return view('shop.checkout', compact('cartModel', 'summary'));
     }
 
-    public function pay(Request $request, CartService $cart, HitPayService $hitpay)
+    public function pay(Request $request, CartService $cart, StudioSettingsService $settings, HitPayService $hitpay)
     {
         $validated = $request->validate([
             'provider' => 'required|in:stripe,hitpay',
@@ -43,8 +45,8 @@ class CheckoutController extends Controller
             return redirect()->route('shop.cart.index')->with('error', 'Your cart is empty.');
         }
 
-        [$order, $payment] = DB::transaction(function () use ($cartModel, $validated) {
-            $currency = 'MYR';
+        [$order, $payment] = DB::transaction(function () use ($cartModel, $validated, $settings) {
+            $currency = strtoupper($settings->get('currency', 'MYR'));
             $subtotal = (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price);
 
             $order = Order::create([
@@ -63,7 +65,7 @@ class CheckoutController extends Controller
                     'purchasable_id'   => $item->purchasable_id,
                     'quantity'         => $item->quantity,
                     'unit_price'       => $item->unit_price,
-                    'currency'         => $item->currency ?? 'MYR',
+                    'currency'         => $currency,
                     'meta'             => $item->meta,
                 ]);
             }

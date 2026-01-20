@@ -20,6 +20,7 @@ use App\Http\Controllers\PlanAttendanceController;
 use App\Http\Controllers\ClassCardAttendanceController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\PaymentHistoryController;
+use App\Http\Controllers\StudioSettingsController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -127,19 +128,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::delete('/admin/admins/{id}/destroy', [AdminController::class, 'destroyAdmin'])->name('admin.admins.destroy');
 });
-/*----- Studio Settings Routes (Admin)------*/
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/studio-settings', [AdminController::class, 'studioSettings'])->name('admin.studio-settings');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/studio-settings/{id}/edit', [AdminController::class, 'editStudioSettings'])->name('admin.studio-settings.edit');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::delete('/admin/studio-settings/{id}/destroy', [AdminController::class, 'destroyStudioSettings'])->name('admin.studio-settings.destroy');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::put('/admin/studio-settings/{id}/update', [AdminController::class, 'updateStudioSettings'])->name('admin.studio-settings.update');
-});
+
 /*----- User Routes (Admin)------*/
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/users/create', [AdminController::class, 'create'])->name('admin.users.create');
@@ -253,9 +242,7 @@ Route::middleware(['auth', 'role:admin'])
 
     });
 
-/* -------------------------------- */
-/*             SHOP ROUTES       */
-/* -------------------------------- */
+/*******SHOP ROUTES *******/
 
 Route::prefix('shop')->name('shop.')->group(function () {
     Route::get('/', [ShopController::class, 'index'])->name('index');
@@ -284,7 +271,7 @@ Route::post('/webhooks/stripe', [CheckoutController::class, 'stripeWebhook'])->n
 Route::post('/webhooks/hitpay', [CheckoutController::class, 'hitpayWebhook'])->name('webhooks.hitpay');
 
 
-/*ATTENDANCE ROUTES*/
+/******** ATTENDANCE ROUTES ********/
 Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/classes/{classSessionId}/attendance', [ClassAttendanceController::class, 'show'])
         ->name('admin.classes.attendance');
@@ -310,6 +297,14 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/payments', [PaymentHistoryController::class, 'index'])->name('payments.index');
     Route::get('/payments/{id}', [PaymentHistoryController::class, 'show'])->name('payments.show');
 });
+
+/******** Studio Settings Routes (Admin) ********/
+Route::prefix('admin')->middleware(['auth'])->group(function () {
+    Route::get('/settings/studio', [StudioSettingsController::class, 'edit'])->name('settings.studio');
+    Route::post('/settings/studio', [StudioSettingsController::class, 'update'])->name('settings.studio.update');
+});
+
+
 
 /* -------------------------------- */
 /*             TEACHER ROUTES       */
