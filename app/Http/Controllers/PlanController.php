@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Models\PlanSession;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +43,8 @@ class PlanController extends Controller
 
     public function create()
     {
-        return view('admin.plans.create');
+        $teachers = User::where('role', 'teacher')->get();
+        return view('admin.plans.create', compact('teachers'));
     }
 
     public function store(Request $request)
@@ -51,6 +53,7 @@ class PlanController extends Controller
             // plan details
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:5000',
+            'teacher_id' => 'nullable|exists:users,id',
             'price' => 'required|numeric|min:0',
             'currency' => 'nullable|string|size:3',
 
@@ -77,6 +80,7 @@ class PlanController extends Controller
             $plan = Plan::create([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
+                'teacher_id' => $validated['teacher_id'] ?? null,
                 'price' => $validated['price'],
                 'currency' => strtoupper($validated['currency'] ?? 'MYR'),
 
@@ -161,9 +165,10 @@ class PlanController extends Controller
  public function edit(Plan $plan)
 {
     // if you want to edit sessions on this page later:
+    $teachers = User::where('role', 'teacher')->get();
     $plan->load(['sessions' => fn($q) => $q->orderBy('start_time')]);
 
-    return view('admin.plans.edit', compact('plan'));
+    return view('admin.plans.edit', compact('plan', 'teachers'));
 }
 
 public function update(Request $request, Plan $plan)
@@ -171,6 +176,7 @@ public function update(Request $request, Plan $plan)
     $validated = $request->validate([
         'name' => 'required|string|max:255',
         'description' => 'nullable|string|max:5000',
+        'teacher_id' => 'nullable|exists:users,id',
         'price' => 'required|numeric|min:0',
         'currency' => 'nullable|string|size:3',
 
@@ -197,6 +203,7 @@ public function update(Request $request, Plan $plan)
         $plan->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
+            'teacher_id' => $validated['teacher_id'] ?? null,
             'price' => $validated['price'],
             'currency' => strtoupper($validated['currency'] ?? ($plan->currency ?? 'MYR')),
 

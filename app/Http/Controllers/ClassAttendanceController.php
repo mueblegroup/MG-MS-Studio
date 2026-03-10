@@ -40,6 +40,9 @@ class ClassAttendanceController extends Controller
         Attendance::updateOrCreate(
             ['class_session_assignment_id' => $assignment->id],
             [
+                'user_id' => $assignment->user_id,
+                'class_session_id' => $classSessionId,
+                'class_session_assignment_id' => $assignmentId,
                 'status' => $validated['status'],
                 'attended_at' => $validated['status'] === 'attended' ? now() : null,
             ]

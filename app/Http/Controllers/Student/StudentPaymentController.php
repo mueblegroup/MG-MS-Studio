@@ -1,72 +1,38 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Student;
 
-use App\Models\Payment;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
-class PaymentHistoryController extends Controller
+class StudentPaymentController extends Controller
 {
     public function index(Request $request)
     {
-        $q = trim((string) $request->query('q', ''));
-        $status = (string) $request->query('status', '');
-        $provider = (string) $request->query('provider', '');
+        $studentId = Auth::id();
 
-        $payments = Payment::query()
-            ->with([
-                'user',
-                'order.items.purchasable',
-            ])
-            ->when($status !== '', fn ($qq) => $qq->where('status', $status))
-            ->when($provider !== '', fn ($qq) => $qq->where('provider', $provider))
-            ->when($q !== '', function ($qq) use ($q) {
-                $qq->where(function ($sub) use ($q) {
-                    $sub->where('reference', 'like', "%{$q}%")
-                        ->orWhere('provider_reference', 'like', "%{$q}%")
-                        ->orWhereHas('user', function ($u) use ($q) {
-                            $u->where('name', 'like', "%{$q}%")
-                              ->orWhere('email', 'like', "%{$q}%");
-                        })
-                        ->orWhereHas('order.items', function ($oi) use ($q) {
-                            $oi->where('meta', 'like', "%{$q}%")
-                               ->orWhere('purchasable_type', 'like', "%{$q}%");
-                        });
-                });
-            })
-            ->latest('id')
-            ->paginate(20)
-            ->withQueryString();
+        $payments = DB::table('payments')
+            ->where('user_id', $studentId)
+            ->orderByDesc('created_at')
+            ->paginate(15);
 
-        return view('admin.payments.index', compact('payments', 'q', 'status', 'provider'));
+        return view('student.payments.index', compact('payments'));
     }
-
-    public function show(int $id)
+        public function downloadReceipt(int $id)
     {
         $payment = Payment::query()
             ->with([
                 'user',
                 'order.items.purchasable',
             ])
-            ->findOrFail($id);
-
-        return view('admin.payments.show', compact('payment'));
-    }
-
-    public function downloadReceipt(int $id)
-    {
-        $payment = Payment::query()
-            ->with([
-                'user',
-                'order.items.purchasable',
-            ])
+            ->where('user_id', Auth::id())
             ->findOrFail($id);
 
         $payload = $this->normalizePayload($payment->payload ?? null);
 
         $invoiceNumber = $this->makeInvoiceNumber($payment);
-
         $issuedAt = $payment->paid_at ?? $payment->created_at;
 
         $subtotal = (float) ($payment->order->items->sum(function ($item) {
@@ -94,7 +60,7 @@ class PaymentHistoryController extends Controller
             ],
         ];
 
-        $pdf = Pdf::loadView('admin.payments.receipt-pdf', $data)
+        $pdf = Pdf::loadView('receipts.payment-receipt-pdf', $data)
             ->setPaper('a4', 'portrait');
 
         $filename = 'receipt-' . ($payment->reference ?: $payment->id) . '.pdf';

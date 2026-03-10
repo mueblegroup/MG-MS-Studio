@@ -9,6 +9,11 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                     {{ $plan->description ?: 'No description.' }}
                 </p>
+                @if($plan->teacher)
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                        Teacher: {{ $plan->teacher->name }}
+                    </div>
+                @endif
             </div>
 
             <div class="flex items-center gap-2">

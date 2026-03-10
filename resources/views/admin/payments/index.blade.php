@@ -46,7 +46,7 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Provider</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Status</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">Amount</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">Action</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">Actions</th>
                         </tr>
                     </thead>
 
@@ -114,11 +114,16 @@
                                               text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition">
                                         <i class="bx bx-receipt"></i> View
                                     </a>
+                                    <a href="{{ route('payments.receipt.download', $pay->id) }}"
+                                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold
+                                              text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition">
+                                        <i class="bx bx-receipt"></i> Receipt
+                                    </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <td colspan="7" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                                     No payments found.
                                 </td>
                             </tr>

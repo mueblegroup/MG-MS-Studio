@@ -1,61 +1,122 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<p align="center"><a href="https://mueblegroup.com" target="_blank"><img src="https://mueblegroup.com/wp-content/uploads/2024/02/MUEBLE-LOGO-drak.png" width="400" alt="Mueble Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# Studio Management System (Laravel)
 
-## About Laravel
+A modern, self-hosted **Studio / LMS Management System** built with Laravel.  
+Designed for dance studios, gyms, and training centers to manage classes, students, payments, and attendance efficiently.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🚀 Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Core Management
+- Admin, Teacher, and Student roles
+- Secure authentication & role-based access
+- Dashboard with key metrics (earnings, users, classes)
 
-## Learning Laravel
+### Class & Booking System
+- Individual classes (recurring & one-time)
+- Monthly / yearly class plans
+- Classcard system (fixed number of lessons with expiry)
+- Attendance tracking & booking history
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Payments
+- Stripe payment integration
+- Order & payment records
+- Automatic fulfillment after successful payment
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### Communication
+- Announcements for students & teachers
+- Email notifications (via SMTP / PHPMailer)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### System & Developer Features
+- Laravel MVC architecture
+- Database migrations for safe deployments
+- Environment-based configuration
+- Optimized for self-hosted production environments
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## 🛠 Tech Stack
 
-### Premium Partners
+- **Backend:** Laravel (PHP)
+- **Database:** MySQL / MariaDB
+- **Frontend:** Blade + Tailwind CSS
+- **Payments:** Stripe
+- **Server:** Linux (Nginx / Apache)
+- **Version Control:** Git + GitHub
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+## 📦 Installation
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Requirements
+- PHP 8.1+
+- Composer
+- MySQL / MariaDB
+- Node.js & NPM (for assets)
+- Web server (Nginx / Apache)
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 1️⃣ Clone the Repository
 
-## Security Vulnerabilities
+```bash
+git clone https://github.com/mueblegroup/MG-MS-Studio.git
+cd MG-MS-Studio
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 2️⃣ Install Dependencies
 
-## License
+```bash
+composer install
+npm install
+npm run build
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### 3️⃣ Environment Setup
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+### 4️⃣ Database Setup
+
+```bash
+php artisan migrate
+```
+
+### 5️⃣ Storage & Permissions
+
+```bash
+php artisan storage:link
+chmod -R 775 storage bootstrap/cache
+```
+
+### 6️⃣ Run the Application
+
+```bash
+php artisan serve
+```
+- Production servers should use Nginx/Apache, not artisan serve.
+
+### ⚠️ Important Notes
+- .env files are not tracked in Git
+- vendor/, node_modules/, logs, and cache are ignored
+- All database changes must be done via migrations
+- Do not edit production code directly
+
+### ⚠️ Security
+- Environment variables protect sensitive credentials
+- Role-based permissions enforced at controller level
+- CSRF protection enabled by default
+- Payment handling delegated to Stripe
+
+### 📄 License
+- This project is proprietary and owned by Mueble Group.
+- Unauthorized distribution or resale is not permitted.
+
+### 👨‍💻 Maintained By
+#### Mueble Group
+#### Web Development · LMS Solutions · Digital Services

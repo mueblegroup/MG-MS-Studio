@@ -3,6 +3,13 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\Teacher\TeacherClassController;
+use App\Http\Controllers\Teacher\TeacherPlanController;
+use App\Http\Controllers\Teacher\TeacherScheduleController;
+use App\Http\Controllers\Teacher\TeacherClassAttendanceController;
+use App\Http\Controllers\Teacher\TeacherPlanAttendanceController;
+use App\Http\Controllers\Teacher\TeacherClassCardController;
+use App\Http\Controllers\Teacher\TeacherClassCardAttendanceController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\PlanSessionController;
@@ -21,6 +28,10 @@ use App\Http\Controllers\ClassCardAttendanceController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\PaymentHistoryController;
 use App\Http\Controllers\StudioSettingsController;
+use App\Http\Controllers\Student\StudentDashboardController;
+use App\Http\Controllers\Student\StudentAttendanceController;
+use App\Http\Controllers\Student\StudentScheduleController;
+use App\Http\Controllers\Student\StudentPaymentController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -49,7 +60,11 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::delete('/profile', function () {
+    abort_unless(auth()->user()->role === 'admin', 403);
+    return app(\App\Http\Controllers\ProfileController::class)->destroy(request());
+})->middleware('auth')->name('profile.destroy');
     Route::get('/logout', [LogoutController::class, 'logout'])->name('logout')->middleware('auth');
 });
 
@@ -296,6 +311,7 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
 Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/payments', [PaymentHistoryController::class, 'index'])->name('payments.index');
     Route::get('/payments/{id}', [PaymentHistoryController::class, 'show'])->name('payments.show');
+    Route::get('/payments/{id}/receipt', [PaymentHistoryController::class, 'downloadReceipt'])->name('payments.receipt.download');
 });
 
 /******** Studio Settings Routes (Admin) ********/
@@ -311,7 +327,59 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
 /* -------------------------------- */
 
 /*----- Teacher Routes (Teacher)------*/
-Route::middleware(['auth', 'role:teacher'])->group(function () {
-    Route::get('/teacher/dashboard', [TeacherController::class, 'dashboard'])->name('teacher.dashboard');
+
+Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
+
+    Route::get('/dashboard', [TeacherController::class, 'index'])->name('dashboard');
+
+    // Classes
+    Route::get('/classes', [TeacherClassController::class, 'index'])->name('classes.index');
+    Route::get('/classes/{class}', [TeacherClassController::class, 'show'])->name('classes.show');
+
+    // Class session attendance
+    Route::get('/classes/sessions/{session}/attendance', [TeacherClassAttendanceController::class, 'show'])
+        ->name('classes.attendance.show');
+    Route::post('/classes/sessions/{session}/attendance/{assignment}/mark', [TeacherClassAttendanceController::class, 'mark'])
+        ->name('classes.attendance.mark');
+
+    // Plans
+    Route::get('/plans', [TeacherPlanController::class, 'index'])->name('plans.index');
+    Route::get('/plans/{plan}', [TeacherPlanController::class, 'show'])->name('plans.show');
+
+    // Plan session attendance
+    Route::get('/plans/{plan}/sessions/{session}/attendance', [TeacherPlanAttendanceController::class, 'show'])
+        ->name('plans.sessions.attendance.show');
+    Route::post('/plans/{plan}/sessions/{session}/attendance/{user}/mark', [TeacherPlanAttendanceController::class, 'mark'])
+        ->name('plans.sessions.attendance.mark');
+
+    // Teacher Class Cards (view all)
+    Route::get('/classcards', [TeacherClassCardController::class, 'index'])->name('classcards.index');
+    Route::get('/classcards/{classCard}', [TeacherClassCardController::class, 'show'])->name('classcards.show');
+
+    // Mark Class Card usage (-1)
+    Route::post('/classcards/usage/{userClassCard}/mark', [TeacherClassCardAttendanceController::class, 'mark'])
+        ->name('classcards.usage.mark');
+
+    // Schedule
+    Route::get('/schedule', [TeacherScheduleController::class, 'index'])->name('schedule.index');
 });
+
+/*----- Student Routes (Student)------*/
+Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')->group(function () {
+    Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/attendance', [StudentAttendanceController::class, 'index'])->name('attendance.index');
+
+    Route::get('/schedule', [StudentScheduleController::class, 'index'])->name('schedule.index');
+
+    Route::get('/payments', [StudentPaymentController::class, 'index'])->name('payments.index');
+    Route::get('/payments/{id}/receipt', [StudentPaymentController::class, 'downloadReceipt'])->name('student.payments.receipt.download');
+
+
+    // recommended extras:
+    // Route::get('/my-products', [StudentProductsController::class, 'index'])->name('products.index');
+    // Route::get('/bookings', [StudentBookingsController::class, 'index'])->name('bookings.index');
+});
+
+
 require __DIR__ . '/auth.php';

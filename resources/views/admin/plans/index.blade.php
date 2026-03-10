@@ -81,6 +81,7 @@
                     <thead class="bg-gray-50 dark:bg-gray-700/40 sticky top-0 z-10">
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Plan</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Teacher</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Price</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Sessions</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Recurring</th>
@@ -114,6 +115,14 @@
                                     <div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
                                         {{ $plan->description ?? '' }}
                                     </div>
+                                </td>
+
+                                <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">
+                                    @if($plan->teacher)
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                                            {{ $plan->teacher->name }}
+                                        </div>
+                                    @endif
                                 </td>
 
                                 <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">

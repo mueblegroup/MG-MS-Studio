@@ -68,6 +68,18 @@
                     </div>
 
                     <div>
+                        <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Teacher</label>
+                        <select name="teacher_id" class="mt-1 w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            <option value="">Select Teacher</option>
+                            @foreach($teachers as $teacher)
+                                <option value="{{ $teacher->id }}" {{ old('teacher_id', $plan->teacher_id) == $teacher->id ? 'selected' : '' }}>
+                                    {{ $teacher->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
                         <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Price</label>
                         <input
                             name="price"

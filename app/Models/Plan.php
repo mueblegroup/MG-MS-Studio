@@ -12,6 +12,7 @@ class Plan extends Model
     protected $fillable = [
         'name',
         'description',
+        'teacher_id',
         'price',
         'is_recurring',
         'recurrence_frequency',
@@ -34,5 +35,10 @@ class Plan extends Model
     public function userPlans()
     {
         return $this->hasMany(\App\Models\UserPlan::class, 'plan_id');
+    }
+
+    public function teacher()
+    {
+        return $this->belongsTo(User::class, 'teacher_id');
     }
 }

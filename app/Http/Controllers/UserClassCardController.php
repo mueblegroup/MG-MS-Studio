@@ -45,6 +45,44 @@ class UserClassCardController extends Controller
         return view('admin.classcards.classcard-purchases.create', compact('cards', 'students'));
     }
 
+public function store(Request $request)
+{
+    $validated = $request->validate([
+        'user_id'        => 'required|exists:users,id',
+        'class_card_id'  => 'required|exists:class_cards,id',
+        'purchased_at'   => 'nullable|date',
+        'classes_remaining' => 'nullable|integer|min:0', // ✅ not required
+        'expires_at'     => 'nullable|date|after_or_equal:purchased_at',
+    ]);
+
+    $card = ClassCard::findOrFail($validated['class_card_id']);
+
+    $purchasedAt = !empty($validated['purchased_at'])
+        ? Carbon::parse($validated['purchased_at'])
+        : now();
+
+    $expiresAt = !empty($validated['expires_at'])
+        ? Carbon::parse($validated['expires_at'])
+        : $purchasedAt->copy()->addWeeks((int)$card->validity_weeks);
+
+    // ✅ default remaining from card total_classes
+    $classesRemaining = array_key_exists('classes_remaining', $validated) && $validated['classes_remaining'] !== null
+        ? (int)$validated['classes_remaining']
+        : (int)$card->total_classes;
+
+    $userClassCard = UserClassCard::create([
+        'user_id'           => (int)$validated['user_id'],
+        'class_card_id'     => (int)$card->id,
+        'purchased_at'      => $purchasedAt,
+        'expires_at'        => $expiresAt,
+        'classes_remaining' => $classesRemaining,
+        'status'            => $expiresAt->lt(now()) ? 'expired' : 'active',
+    ]);
+
+    return redirect()
+        ->route('admin.classcards.classcard-purchases')
+        ->with('success', 'Class card assigned to student.');
+}
     public function show(UserClassCard $userClassCard)
     {
         return view('admin.classcards.classcard-purchases.show', compact('userClassCard'));
@@ -57,6 +95,8 @@ class UserClassCardController extends Controller
 
         return view('admin.classcards.classcard-purchases.edit', compact('userClassCard', 'cards', 'students'));
     }
+    
+
 
     public function update(Request $request, UserClassCard $userClassCard)
     {

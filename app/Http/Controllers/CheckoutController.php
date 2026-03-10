@@ -23,6 +23,8 @@ class CheckoutController extends Controller
             return redirect()->route('shop.cart.index')->with('error', 'Your cart is empty.');
         }
         $currency = strtoupper($settings->get('currency', 'MYR'));
+        $enabledProviders = (array) $settings->get('default_payment_provider', ['stripe']);
+        $defaultProvider = (string) $settings->get('default_payment_provider', $enabledProviders[0] ?? 'stripe');
 
         $summary = [
             'currency' => $currency,
@@ -30,13 +32,14 @@ class CheckoutController extends Controller
             'total'    => (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price),
         ];
 
-        return view('shop.checkout', compact('cartModel', 'summary'));
+        return view('shop.checkout', compact('cartModel', 'summary','enabledProviders', 'defaultProvider'));
     }
 
     public function pay(Request $request, CartService $cart, StudioSettingsService $settings, HitPayService $hitpay)
     {
+        $enabledProviders = (array) $settings->get('default_payment_provider', ['stripe']);
         $validated = $request->validate([
-            'provider' => 'required|in:stripe,hitpay',
+            'provider' => 'required|string|in:' . implode(',', $enabledProviders),
         ]);
 
         $cartModel = $cart->currentCart()->load('items.purchasable');

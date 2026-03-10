@@ -62,21 +62,30 @@
                     </div>
 
                     <div class="mt-5 space-y-2">
+                            @php
+                                $enabled = $enabledProviders ?? ['stripe'];
+                            @endphp
+
                             <form method="POST" action="{{ route('shop.checkout.pay') }}" class="space-y-2">
                                 @csrf
 
-                                <button name="provider" value="stripe"
-                                    class="w-full inline-flex justify-center items-center gap-2 px-4 py-3 rounded-xl
-                                        text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
-                                    <i class="bx bxl-stripe"></i> Pay with Stripe
-                                </button>
+                                @if(in_array('stripe', $enabled, true))
+                                    <button name="provider" value="stripe"
+                                        class="w-full inline-flex justify-center items-center gap-2 px-4 py-3 rounded-xl
+                                            text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
+                                        <i class="bx bxl-stripe"></i> Pay with Stripe
+                                    </button>
+                                @endif
 
-                                <button name="provider" value="hitpay"
-                                    class="w-full inline-flex justify-center items-center gap-2 px-4 py-3 rounded-xl
-                                        text-sm font-semibold text-white bg-gray-800 hover:bg-gray-900 transition shadow">
-                                    <i class="bx bx-link"></i> Pay with HitPay
-                                </button>
+                                @if(in_array('hitpay', $enabled, true))
+                                    <button name="provider" value="hitpay"
+                                        class="w-full inline-flex justify-center items-center gap-2 px-4 py-3 rounded-xl
+                                            text-sm font-semibold text-white bg-gray-800 hover:bg-gray-900 transition shadow">
+                                        <i class="bx bx-link"></i> Pay with HitPay
+                                    </button>
+                                @endif
                             </form>
+
                     </div>
                 </div>
             </div>

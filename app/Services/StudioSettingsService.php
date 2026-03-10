@@ -42,6 +42,11 @@ class StudioSettingsService
         return (string) $this->get('currency', $default);
     }
 
+    public function defaultPaymentProvider(): string
+    {
+        return (string) $this->get('default_payment_provider', 'stripe');
+    }
+
     private function castValue(?string $value)
     {
         if ($value === null) return null;
