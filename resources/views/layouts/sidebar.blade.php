@@ -34,7 +34,8 @@ switch (Auth::user()->role) {
             ],
             [
                 'label' => 'Notifications',
-                'route' => 'admin.notifications.index',
+                'url' => '/admin/notifications',
+                'active' => 'admin.notifications.*',
                 'icon'  => 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9'
             ],
             [
@@ -52,7 +53,7 @@ switch (Auth::user()->role) {
             ['label' => 'My Plans', 'route' => 'teacher.plans.index', 'icon'  => 'M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z'],
             ['label' => 'Class Cards', 'route' => 'teacher.classcards.index', 'icon'  => 'M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z'],
             ['label' => 'Schedule', 'route' => 'teacher.schedule.index', 'icon'  => 'M8 7V3m8 4V3M4 11h16M6 21h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z'],
-            ['label' => 'Notifications', 'route' => 'notifications.index', 'icon' => 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9'],
+            ['label' => 'Notifications', 'url' => '/notifications', 'active' => 'notifications.*', 'icon' => 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9'],
         ];
         break;
 
@@ -62,7 +63,7 @@ switch (Auth::user()->role) {
             ['label' => 'Attendance', 'route' => 'student.attendance.index', 'icon' => 'M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z'],
             ['label' => 'Schedule', 'route' => 'student.schedule.index', 'icon' => 'M8 7V3m8 4V3M4 11h16M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z'],
             ['label' => 'Payments', 'route' => 'student.payments.index', 'icon' => 'M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'],
-            ['label' => 'Notifications', 'route' => 'notifications.index', 'icon' => 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9'],
+            ['label' => 'Notifications', 'url' => '/notifications', 'active' => 'notifications.*', 'icon' => 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9'],
             ['label' => 'My Profile', 'route' => 'profile.edit', 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
         ];
         break;
@@ -106,10 +107,11 @@ switch (Auth::user()->role) {
                 </div>
             @else
                 @php
-                    $isActive = request()->routeIs($link['route']);
+                    $isActive = isset($link['active']) ? request()->routeIs($link['active']) : request()->routeIs($link['route']);
+                    $href = isset($link['url']) ? url($link['url']) : ($link['route'] == '#' ? '#' : route($link['route']));
                 @endphp
 
-                <a href="{{ $link['route'] == '#' ? '#' : route($link['route']) }}" class="{{ $isActive ? 'bg-[#fff3df] text-[#9a4f00] ring-1 ring-[#f4d7ae] dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-900/40' : 'text-[#6b5f52] hover:bg-[#fff3df] hover:text-[#9a4f00] dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-amber-200' }} group flex items-center gap-3 rounded-xl p-3 transition-all duration-200">
+                <a href="{{ $href }}" class="{{ $isActive ? 'bg-[#fff3df] text-[#9a4f00] ring-1 ring-[#f4d7ae] dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-900/40' : 'text-[#6b5f52] hover:bg-[#fff3df] hover:text-[#9a4f00] dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-amber-200' }} group flex items-center gap-3 rounded-xl p-3 transition-all duration-200">
                     <svg class="h-5 w-5 shrink-0 {{ $isActive ? 'text-[#d97706] dark:text-amber-300' : 'text-[#9a8c7d] group-hover:text-[#d97706] dark:text-gray-500 dark:group-hover:text-amber-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="{{ $link['icon'] }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
