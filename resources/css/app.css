@@ -1,3 +1,83 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        background: #f7f2ea;
+    }
+
+    body {
+        color: #171717;
+    }
+}
+
+@layer components {
+    .mg-page {
+        @apply min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-[#f7f2ea] dark:bg-gray-950;
+    }
+
+    .mg-page-inner {
+        @apply w-full max-w-full min-w-0 space-y-5;
+    }
+
+    .mg-card {
+        @apply rounded-2xl border border-[#eadfce] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900;
+    }
+
+    .mg-card-soft {
+        @apply rounded-2xl border border-[#eadfce] bg-[#fffaf3] shadow-sm dark:border-gray-800 dark:bg-gray-900;
+    }
+
+    .mg-title {
+        @apply text-2xl font-bold tracking-tight text-[#171717] dark:text-white;
+    }
+
+    .mg-subtitle {
+        @apply text-sm text-[#6b5f52] dark:text-gray-400;
+    }
+
+    .mg-btn-primary {
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#d97706] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#b45309] focus:outline-none focus:ring-2 focus:ring-[#f59e0b] focus:ring-offset-2 dark:focus:ring-offset-gray-950;
+    }
+
+    .mg-btn-secondary {
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-4 py-2 text-xs font-bold text-[#31261d] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#f59e0b] focus:ring-offset-2 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:focus:ring-offset-gray-950;
+    }
+
+    .mg-btn-danger {
+        @apply inline-flex min-h-9 items-center justify-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30;
+    }
+
+    .mg-input {
+        @apply w-full rounded-xl border-[#eadfce] bg-white text-sm text-[#171717] placeholder:text-[#9a8c7d] shadow-sm focus:border-[#d97706] focus:ring-[#d97706] dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500;
+    }
+
+    .mg-select {
+        @apply min-h-10 rounded-xl border-[#eadfce] bg-white px-3 py-2 text-xs font-bold text-[#31261d] shadow-sm focus:border-[#d97706] focus:ring-[#d97706] dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200;
+    }
+
+    .mg-table-wrap {
+        @apply hidden overflow-hidden rounded-2xl border border-[#eadfce] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 md:block;
+    }
+
+    .mg-table-scroll {
+        @apply max-h-[70vh] overflow-y-auto overflow-x-auto;
+    }
+
+    .mg-th {
+        @apply px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-[#6b5f52] dark:text-gray-300;
+    }
+
+    .mg-td {
+        @apply px-4 py-4 text-sm text-[#31261d] dark:text-gray-200;
+    }
+
+    .mg-badge {
+        @apply inline-flex items-center rounded-full bg-[#fff3df] px-2.5 py-1 text-xs font-bold text-[#9a4f00] dark:bg-amber-950/30 dark:text-amber-200;
+    }
+}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-gray-100"
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-[#f7f2ea]" overflow-x-hidden
     :class="{ 'dark': darkMode }"
     x-data="sidebarState()">
 
@@ -23,11 +23,11 @@
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
 
-<body class="font-sans antialiased h-full">
-    <div class="h-full flex">
+<body class="font-sans antialiased h-full overflow-x-hidden bg-[#f7f2ea] text-[#171717] dark:bg-gray-950">
+    <div class="h-full flex min-w-0 overflow-x-hidden">
 
         <!-- Desktop Sidebar -->
-        <aside class="hidden md:flex flex-col h-screen bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-100 transition-all duration-300"
+        <aside class="hidden md:flex shrink-0 flex-col h-screen bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-100 transition-all duration-300 border-r border-[#eadfce] dark:border-gray-800"
             :class="collapsed ? 'w-20' : 'w-64'">
             @include('layouts.sidebar')
         </aside>
@@ -45,10 +45,10 @@
         </div>
 
         <!-- Main content -->
-        <div class="flex-1 flex flex-col transition-all duration-300">
+        <div class="flex-1 min-w-0 flex flex-col transition-all duration-300 overflow-x-hidden">
 
             <!-- Mobile Header -->
-            <header class="flex items-center justify-between p-4 bg-white shadow md:hidden">
+            <header class="flex items-center justify-between p-4 bg-white shadow-sm md:hidden border-b border-[#eadfce] dark:border-gray-800 dark:bg-gray-900">
                 <button @click="sidebarOpen = !sidebarOpen"
                     class="text-gray-500 hover:text-gray-600 focus:outline-none focus:text-gray-600"
                     aria-label="Toggle sidebar">
@@ -82,24 +82,23 @@
             </header>
 
             <!-- Desktop Header -->
- <header class="hidden md:flex items-center justify-between h-16 px-4 bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-30">
-    
-    <div class="flex items-center">
-        <button @click="collapsed = !collapsed"
-            aria-label="Toggle sidebar"
-            class="p-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition focus:outline-none">
-            <svg x-show="collapsed" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-            <svg x-show="!collapsed" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </button>
-    </div>
+            <header class="hidden md:flex items-center justify-between h-16 px-4 bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-30 border-b border-[#eadfce] dark:border-gray-800">    
+                <div class="flex items-center">
+                    <button @click="collapsed = !collapsed"
+                        aria-label="Toggle sidebar"
+                        class="p-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition focus:outline-none">
+                        <svg x-show="collapsed" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <svg x-show="!collapsed" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
 
-    <div class="hidden lg:block font-semibold text-gray-800 dark:text-gray-100">
-        Welcome, {{ Auth::user()->name }}
-    </div>
+                <div class="hidden lg:block font-semibold text-gray-800 dark:text-gray-100">
+                    Welcome, {{ Auth::user()->name }}
+                </div>
 
     <div class="flex items-center space-x-2 md:space-x-4">
 
@@ -157,8 +156,8 @@ fill="currentColor" viewBox="0 0 24 24" >
 </header>
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900">
-                <div class="container mx-auto px-6 py-8">
+            <main class="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-[#f7f2ea] dark:bg-gray-950">
+                <div class="w-full max-w-full min-w-0 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
                     @isset($header)
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md px-4 py-6 mb-6">
                         <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100">{{ $header }}</h2>

@@ -1,207 +1,329 @@
 <x-app-layout>
-    <div class="p-6 sm:p-8 bg-gray-50/60 dark:bg-gray-900 min-h-screen">
+    <div class="mg-page">
+        <div class="mg-page-inner">
 
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Classes</h1>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                    View and manage class sessions.
-                </p>
-            </div>
+            <div class="flex flex-col gap-4 rounded-3xl bg-gradient-to-br from-[#fffaf3] to-white p-4 shadow-sm border border-[#eadfce] dark:from-gray-900 dark:to-gray-950 dark:border-gray-800 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+                <div class="min-w-0">
+                    <div class="inline-flex items-center gap-2 rounded-full bg-[#fff3df] px-3 py-1 text-xs font-bold text-[#9a4f00] dark:bg-amber-950/30 dark:text-amber-200">
+                        <i class="bx bx-book-open"></i>
+                        Studio Management
+                    </div>
 
-            <div class="flex items-center gap-2">
-                {{-- Assign Class --}}
-                <a href="{{ route('admin.class-assignments.index') }}"
-                   class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
-                          text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700
-                          hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                    <i class="bx bx-user-plus"></i> Assign Class
-                </a>
-                <a href="{{ route('admin.classes.create') }}"
-                   class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
-                          text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
-                    <i class="bx bx-plus"></i> Add Class    
-                </a>
-            </div>
-        </div>
+                    <h1 class="mg-title mt-3">Classes</h1>
 
-        @if(session('success'))
-            <div class="mb-4 p-3 rounded-xl bg-green-50 text-green-700 border border-green-200">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        {{-- Filters --}}
-        <div class="mb-4">
-            <form method="GET" action="{{ route('admin.classes') }}" class="flex flex-col sm:flex-row gap-2">
-                <div class="flex-1">
-                    <input
-                        name="q"
-                        value="{{ $search }}"
-                        placeholder="Search class name, description, teacher..."
-                        class="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white
-                               focus:border-indigo-500 focus:ring-indigo-500"
-                    />
+                    <p class="mg-subtitle mt-1">
+                        View, filter, and manage class sessions without breaking mobile layout.
+                    </p>
                 </div>
-                <div class="flex gap-2">
-                    <button
-                        type="submit"
-                        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
-                               text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
-                        Search
-                    </button>
 
-                    <a href="{{ route('admin.classes') }}"
-                       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
-                              text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
-                        Reset
+                <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
+                    <a href="{{ route('admin.class-assignments.index') }}" class="mg-btn-secondary w-full sm:w-auto">
+                        <i class="bx bx-user-plus"></i>
+                        Assign Class
                     </a>
-                    <select name="per_page"
-                        onchange="this.form.submit()"
-                        class="inline-flex items-center gap-4 px-8 py-2 rounded-xl
-                           text-xs font-semibold text-gray-700 dark:text-gray-300
-                           bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                        @foreach([10, 25, 50, 100] as $size)
-                            <option value="{{ $size }}" @selected(request('per_page',10) == $size)>
-                                {{ $size }} rows
-                            </option>
-                        @endforeach
-                    </select>
 
+                    <a href="{{ route('admin.classes.create') }}" class="mg-btn-primary w-full sm:w-auto">
+                        <i class="bx bx-plus"></i>
+                        Add Class
+                    </a>
                 </div>
-            </form>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="overflow-x-auto max-h-[70vh]">
-                <table class="w-full border-collapse">
-                    <thead class="bg-gray-50 dark:bg-gray-700/40 sticky top-0 z-10">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Class</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Teacher</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Time</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Capacity</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Price</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Type</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">Actions</th>
-                        </tr>
-                    </thead>
-
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                        @forelse($sessions as $session)
-                            @php
-                                $class = $session->classModel;
-                                $teacher = $class?->teacher;
-                                $date = optional($session->start_time)->format('Y-m-d');
-                                $start = optional($session->start_time)->format('H:i');
-                                $end = optional($session->end_time)->format('H:i');
-                            @endphp
-
-                            <tr class="dark:hover:bg-gray-700/30 transition">
-                                <td class="px-4 py-4">
-                                    <div class="font-semibold text-gray-900 dark:text-white">
-                                        {{ $class->name ?? '-' }}
-                                    </div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                                        {{ $class->description ?? '' }}
-                                    </div>
-                                </td>
-
-                                <td class="px-4 py-4">
-                                    <div class="text-sm text-gray-900 dark:text-white">
-                                        {{ $teacher->name ?? '-' }}
-                                    </div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">
-                                        {{ $teacher->email ?? '-' }}
-                                    </div>
-                                </td>
-
-                                <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">
-                                    {{ $date }}
-                                </td>
-
-                                <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">
-                                    {{ $start }} - {{ $end }}
-                                </td>
-
-                                <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">
-                                    {{ $session->capacity ?? ($class->capacity ?? '-') }}
-                                </td>
-
-                                <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">
-                                    RM {{ number_format($class->price ?? 0, 2) }}
-                                </td>
-
-                                <td class="px-4 py-4">
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                                        {{ ($class->type ?? 'single') === 'recurring'
-                                            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200 px-2'
-                                            : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 px-2' }}">
-                                        {{ ucfirst($class->type ?? 'single') }}
-                                    </span>
-                                </td>
-
-                                <td class="px-4 py-4 text-right">
-                                    <div class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                                            bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200 px-2">
-                                    <a href="{{ route('admin.classes.edit', $session->id) }}"
-                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl
-                                              text-xs font-semibold text-indigo-600 hover:bg-indigo-50
-                                              dark:hover:bg-indigo-900/20 transition mr-2">
-                                        <i class="bx bx-edit"></i> Edit
-                                    </a>
-
-                                    <a href="{{ route('admin.classes.attendance', $session->id) }}"
-                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl
-                                              text-xs font-semibold text-indigo-600 hover:bg-indigo-50
-                                              dark:hover:bg-indigo-900/20 transition mr-2">
-                                        <i class="bx bx-edit"></i> Attendance
-                                    </a>
-
-                                    <form method="POST"
-                                          action="{{ route('admin.classes.destroy', $session->id) }}"
-                                          onsubmit="return confirm('Remove this session?')"
-                                          class="inline">
-                                        @csrf
-                                        @method('DELETE')
-
-                                        <button type="submit"
-                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl
-                                              text-xs font-semibold text-red-600 hover:bg-red-50
-                                              dark:hover:bg-red-900/20 transition mr-2">
-                                            <i class="bx bx-trash"></i> Remove
-                                        </button>
-                                    </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    No class sessions found.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
             </div>
 
-            <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div class="text-xs text-gray-500 dark:text-gray-400">
-                    Showing
-                    <span class="font-semibold">{{ $sessions->firstItem() }}</span>
-                    to
-                    <span class="font-semibold">{{ $sessions->lastItem() }}</span>
-                    of
-                    <span class="font-semibold">{{ $sessions->total() }}</span>
-                    results
+            @if(session('success'))
+                <div class="rounded-2xl border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-300">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            <div class="mg-card-soft p-4">
+                <form method="GET" action="{{ route('admin.classes') }}" class="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+                    <div class="min-w-0">
+                        <input
+                            name="q"
+                            value="{{ $search }}"
+                            placeholder="Search class name, description, teacher..."
+                            class="mg-input"
+                        />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+                        <button type="submit" class="mg-btn-primary">
+                            <i class="bx bx-search"></i>
+                            Search
+                        </button>
+
+                        <a href="{{ route('admin.classes') }}" class="mg-btn-secondary">
+                            <i class="bx bx-reset"></i>
+                            Reset
+                        </a>
+
+                        <select
+                            name="per_page"
+                            onchange="this.form.submit()"
+                            class="mg-select col-span-2 sm:col-span-1"
+                        >
+                            @foreach([10, 25, 50, 100] as $size)
+                                <option value="{{ $size }}" @selected(request('per_page', 10) == $size)>
+                                    {{ $size }} rows
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </form>
+            </div>
+
+            {{-- Mobile Card View --}}
+            <div class="space-y-3 md:hidden">
+                @forelse($sessions as $session)
+                    @php
+                        $class = $session->classModel;
+                        $teacher = $class?->teacher;
+                        $date = optional($session->start_time)->format('Y-m-d');
+                        $start = optional($session->start_time)->format('H:i');
+                        $end = optional($session->end_time)->format('H:i');
+                    @endphp
+
+                    <div class="mg-card p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h2 class="truncate text-base font-bold text-[#171717] dark:text-white">
+                                    {{ $class->name ?? '-' }}
+                                </h2>
+
+                                <p class="mt-1 line-clamp-2 text-xs text-[#6b5f52] dark:text-gray-400">
+                                    {{ $class->description ?? 'No description available.' }}
+                                </p>
+                            </div>
+
+                            <span class="mg-badge shrink-0">
+                                {{ ucfirst($class->type ?? 'single') }}
+                            </span>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 gap-3 text-sm">
+                            <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
+                                <div class="text-xs font-bold uppercase tracking-wide text-[#9a8c7d] dark:text-gray-500">
+                                    Teacher
+                                </div>
+                                <div class="mt-1 font-semibold text-[#31261d] dark:text-gray-200">
+                                    {{ $teacher->name ?? '-' }}
+                                </div>
+                                <div class="break-words text-xs text-[#6b5f52] dark:text-gray-400">
+                                    {{ $teacher->email ?? '-' }}
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
+                                    <div class="text-xs font-bold uppercase tracking-wide text-[#9a8c7d] dark:text-gray-500">
+                                        Date
+                                    </div>
+                                    <div class="mt-1 font-semibold text-[#31261d] dark:text-gray-200">
+                                        {{ $date ?? '-' }}
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
+                                    <div class="text-xs font-bold uppercase tracking-wide text-[#9a8c7d] dark:text-gray-500">
+                                        Time
+                                    </div>
+                                    <div class="mt-1 font-semibold text-[#31261d] dark:text-gray-200">
+                                        {{ $start ?? '-' }} - {{ $end ?? '-' }}
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
+                                    <div class="text-xs font-bold uppercase tracking-wide text-[#9a8c7d] dark:text-gray-500">
+                                        Capacity
+                                    </div>
+                                    <div class="mt-1 font-semibold text-[#31261d] dark:text-gray-200">
+                                        {{ $session->capacity ?? ($class->capacity ?? '-') }}
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
+                                    <div class="text-xs font-bold uppercase tracking-wide text-[#9a8c7d] dark:text-gray-500">
+                                        Price
+                                    </div>
+                                    <div class="mt-1 font-semibold text-[#31261d] dark:text-gray-200">
+                                        RM {{ number_format($class->price ?? 0, 2) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            <a href="{{ route('admin.classes.edit', $session->id) }}" class="mg-btn-secondary">
+                                <i class="bx bx-edit"></i>
+                                Edit
+                            </a>
+
+                            <a href="{{ route('admin.classes.attendance', $session->id) }}" class="mg-btn-secondary">
+                                <i class="bx bx-check-square"></i>
+                                Attendance
+                            </a>
+
+                            <form
+                                method="POST"
+                                action="{{ route('admin.classes.destroy', $session->id) }}"
+                                onsubmit="return confirm('Remove this session?')"
+                            >
+                                @csrf
+                                @method('DELETE')
+
+                                <button type="submit" class="mg-btn-danger w-full border border-red-100 bg-white dark:border-red-900/40 dark:bg-gray-900">
+                                    <i class="bx bx-trash"></i>
+                                    Remove
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @empty
+                    <div class="mg-card p-8 text-center">
+                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#fff3df] text-[#d97706]">
+                            <i class="bx bx-calendar-x text-2xl"></i>
+                        </div>
+                        <p class="mt-3 text-sm font-semibold text-[#31261d] dark:text-gray-200">
+                            No class sessions found.
+                        </p>
+                    </div>
+                @endforelse
+            </div>
+
+            {{-- Desktop / Tablet Table View --}}
+            <div class="mg-table-wrap">
+                <div class="mg-table-scroll">
+                    <table class="min-w-full table-auto border-collapse">
+                        <thead class="sticky top-0 z-10 bg-[#fffaf3] dark:bg-gray-800">
+                            <tr>
+                                <th class="mg-th">Class</th>
+                                <th class="mg-th">Teacher</th>
+                                <th class="mg-th">Date</th>
+                                <th class="mg-th">Time</th>
+                                <th class="mg-th">Capacity</th>
+                                <th class="mg-th">Price</th>
+                                <th class="mg-th">Type</th>
+                                <th class="mg-th text-right">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-[#f0e5d4] dark:divide-gray-800">
+                            @forelse($sessions as $session)
+                                @php
+                                    $class = $session->classModel;
+                                    $teacher = $class?->teacher;
+                                    $date = optional($session->start_time)->format('Y-m-d');
+                                    $start = optional($session->start_time)->format('H:i');
+                                    $end = optional($session->end_time)->format('H:i');
+                                @endphp
+
+                                <tr class="transition hover:bg-[#fffaf3] dark:hover:bg-gray-800/70">
+                                    <td class="mg-td">
+                                        <div class="max-w-[260px]">
+                                            <div class="truncate font-bold text-[#171717] dark:text-white">
+                                                {{ $class->name ?? '-' }}
+                                            </div>
+
+                                            <div class="line-clamp-1 text-xs text-[#6b5f52] dark:text-gray-400">
+                                                {{ $class->description ?? '' }}
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="mg-td">
+                                        <div class="max-w-[220px]">
+                                            <div class="truncate font-semibold text-[#31261d] dark:text-gray-200">
+                                                {{ $teacher->name ?? '-' }}
+                                            </div>
+
+                                            <div class="truncate text-xs text-[#6b5f52] dark:text-gray-400">
+                                                {{ $teacher->email ?? '-' }}
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="mg-td whitespace-nowrap">
+                                        {{ $date ?? '-' }}
+                                    </td>
+
+                                    <td class="mg-td whitespace-nowrap">
+                                        {{ $start ?? '-' }} - {{ $end ?? '-' }}
+                                    </td>
+
+                                    <td class="mg-td whitespace-nowrap">
+                                        {{ $session->capacity ?? ($class->capacity ?? '-') }}
+                                    </td>
+
+                                    <td class="mg-td whitespace-nowrap font-semibold">
+                                        RM {{ number_format($class->price ?? 0, 2) }}
+                                    </td>
+
+                                    <td class="mg-td">
+                                        <span class="mg-badge">
+                                            {{ ucfirst($class->type ?? 'single') }}
+                                        </span>
+                                    </td>
+
+                                    <td class="mg-td">
+                                        <div class="flex flex-wrap items-center justify-end gap-2">
+                                            <a href="{{ route('admin.classes.edit', $session->id) }}" class="mg-btn-secondary min-h-9 px-3 py-1.5">
+                                                <i class="bx bx-edit"></i>
+                                                Edit
+                                            </a>
+
+                                            <a href="{{ route('admin.classes.attendance', $session->id) }}" class="mg-btn-secondary min-h-9 px-3 py-1.5">
+                                                <i class="bx bx-check-square"></i>
+                                                Attendance
+                                            </a>
+
+                                            <form
+                                                method="POST"
+                                                action="{{ route('admin.classes.destroy', $session->id) }}"
+                                                onsubmit="return confirm('Remove this session?')"
+                                            >
+                                                @csrf
+                                                @method('DELETE')
+
+                                                <button type="submit" class="mg-btn-danger">
+                                                    <i class="bx bx-trash"></i>
+                                                    Remove
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="px-4 py-12 text-center text-sm text-[#6b5f52] dark:text-gray-400">
+                                        No class sessions found.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="mg-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="text-xs text-[#6b5f52] dark:text-gray-400">
+                    @if($sessions->total() > 0)
+                        Showing
+                        <span class="font-bold text-[#31261d] dark:text-gray-200">{{ $sessions->firstItem() }}</span>
+                        to
+                        <span class="font-bold text-[#31261d] dark:text-gray-200">{{ $sessions->lastItem() }}</span>
+                        of
+                        <span class="font-bold text-[#31261d] dark:text-gray-200">{{ $sessions->total() }}</span>
+                        results
+                    @else
+                        No results found.
+                    @endif
                 </div>
 
-                <div>
+                <div class="max-w-full overflow-x-auto">
                     {{ $sessions->links() }}
                 </div>
             </div>
+
         </div>
     </div>
 </x-app-layout>
