@@ -1,6 +1,15 @@
 @php
 $sidebarLinks = [];
 $brandName = config('app.name', 'Mueble LMS');
+
+try {
+    if (\Illuminate\Support\Facades\Schema::hasTable('studio_settings')) {
+        $brandName = app(\App\Services\StudioSettingsService::class)->get('studio_name', $brandName) ?: $brandName;
+    }
+} catch (\Throwable $e) {
+    $brandName = config('app.name', 'Mueble LMS');
+}
+
 $brandInitials = collect(explode(' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', $brandName)))
     ->filter()
     ->map(fn ($part) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($part, 0, 1)))
@@ -13,7 +22,7 @@ switch (Auth::user()->role) {
             [
                 'label' => 'Dashboard',
                 'route' => 'admin.dashboard',
-                'icon'  => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'
+                'icon'  => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 001 1v4a1 1 0 001 1m-6 0h6'
             ],
             [
                 'label' => 'Manage Users',
