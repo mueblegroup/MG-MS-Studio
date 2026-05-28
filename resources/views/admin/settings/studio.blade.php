@@ -14,6 +14,19 @@
             </div>
         @endif
 
+        @if(session('mail_test_success'))
+            <div class="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-green-700">
+                {{ session('mail_test_success') }}
+            </div>
+        @endif
+
+        @if(session('mail_test_error'))
+            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">
+                <div class="font-bold">Test email failed.</div>
+                <div class="mt-1 break-words text-sm">{{ session('mail_test_error') }}</div>
+            </div>
+        @endif
+
         @if($errors->any())
             <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">
                 <ul class="ml-5 list-disc">
@@ -24,7 +37,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('settings.studio.update') }}" class="max-w-5xl space-y-6">
+        <form id="studio-settings-form" method="POST" action="{{ route('settings.studio.update') }}" class="max-w-5xl space-y-6">
             @csrf
 
             <section class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
@@ -45,7 +58,6 @@
                         <input name="studio_display_name" value="{{ old('studio_display_name', $data['studio_display_name']) }}"
                                class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                     </div>
-                    
 
                     <div>
                         <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Currency</label>
@@ -174,6 +186,23 @@
                                class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                         <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Useful for Office365/cPanel SMTP. Usually your app domain without https://.</div>
                     </div>
+
+                    <div class="md:col-span-2 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
+                        <div class="mb-3">
+                            <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">Send Test Email</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Save your mail settings first, then send a test email to confirm SMTP is working.</p>
+                        </div>
+
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            <input form="mail-test-form" type="email" name="test_email" value="{{ old('test_email', auth()->user()->email ?? '') }}"
+                                   placeholder="test@example.com"
+                                   class="min-w-0 flex-1 rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                            <button form="mail-test-form" type="submit"
+                                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-xs font-semibold text-white shadow transition hover:bg-emerald-700">
+                                <i class="bx bx-send"></i> Send Test Email
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -182,6 +211,10 @@
                     <i class="bx bx-save"></i> Save Settings
                 </button>
             </div>
+        </form>
+
+        <form id="mail-test-form" method="POST" action="{{ route('settings.studio.test-email') }}" class="hidden">
+            @csrf
         </form>
 
     </div>
