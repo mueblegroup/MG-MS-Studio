@@ -159,12 +159,13 @@ class CheckoutController extends Controller
     {
         $orderId = (int) $request->query('order');
 
-        $order = Order::where('id', $orderId)
+        $order = Order::with('items')
+            ->where('id', $orderId)
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
         if ($order->status === 'paid') {
-            $cart->clear();
+            $cart->clearPurchasedItems($order);
         }
 
         return view('shop.checkout-success', compact('order'));
