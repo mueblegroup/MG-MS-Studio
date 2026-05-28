@@ -1,5 +1,11 @@
 @php
 $sidebarLinks = [];
+$brandName = config('app.name', 'Mueble LMS');
+$brandInitials = collect(explode(' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', $brandName)))
+    ->filter()
+    ->map(fn ($part) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($part, 0, 1)))
+    ->take(2)
+    ->implode('') ?: 'APP';
 
 switch (Auth::user()->role) {
     case 'admin':
@@ -74,9 +80,9 @@ switch (Auth::user()->role) {
 <div class="flex h-full min-h-0 flex-col bg-white transition-all duration-300 dark:bg-gray-900">
     <div class="flex h-16 shrink-0 items-center border-b border-[#eadfce] px-4 dark:border-gray-800">
         <div class="flex min-w-0 items-center gap-3">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#d97706] text-sm font-extrabold text-white shadow-sm">MG</div>
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#d97706] text-sm font-extrabold text-white shadow-sm">{{ $brandInitials }}</div>
             <div x-show="!collapsed" x-transition.opacity class="min-w-0">
-                <div class="truncate text-sm font-extrabold text-[#171717] dark:text-white">Mueble LMS</div>
+                <div class="truncate text-sm font-extrabold text-[#171717] dark:text-white">{{ $brandName }}</div>
                 <div class="truncate text-xs font-medium text-[#6b5f52] dark:text-gray-400">Studio System</div>
             </div>
         </div>
