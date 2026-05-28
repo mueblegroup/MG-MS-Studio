@@ -32,7 +32,8 @@ use App\Http\Controllers\Student\StudentDashboardController;
 use App\Http\Controllers\Student\StudentAttendanceController;
 use App\Http\Controllers\Student\StudentScheduleController;
 use App\Http\Controllers\Student\StudentPaymentController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\AppNotificationController as AdminAppNotificationController;
+use App\Http\Controllers\AppNotificationController;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
@@ -221,6 +222,19 @@ Route::middleware(['auth','role:admin'])
     Route::delete('plan-assignments/{userPlan}', [UserPlanController::class, 'destroy'])->name('planassignments.destroy');
     });
 
+/*---- Notification ----*/
+Route::middleware(['auth', 'role:admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('notifications', [AdminAppNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('notifications/{notification}/show', [AdminAppNotificationController::class, 'show'])->name('notifications.show');
+        Route::get('notifications/{notification}/edit', [AdminAppNotificationController::class, 'edit'])->name('notifications.edit');
+        Route::put('notifications/{notification}/update', [AdminAppNotificationController::class, 'update'])->name('notifications.update');
+        Route::delete('notifications/{notification}/destroy', [AdminAppNotificationController::class, 'destroy'])->name('notifications.destroy');
+        Route::get('notifications/create', [AdminAppNotificationController::class, 'create'])->name('notifications.create');
+        Route::post('notifications/store', [AdminAppNotificationController::class, 'store'])->name('notifications.store');
+    });
     
 /*----- Class Card Routes (Admin)------*/
 Route::middleware(['auth', 'role:admin'])
@@ -362,7 +376,18 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')
 
     // Schedule
     Route::get('/schedule', [TeacherScheduleController::class, 'index'])->name('schedule.index');
+
+    /*---- Notification Routes (Teacher)------*/
+    Route::get('notifications', [AppNotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{notification}/show', [AppNotificationController::class, 'show'])->name('notifications.show');
+    Route::get('notifications/{notification}/edit', [AppNotificationController::class, 'edit'])->name('notifications.edit');
+    Route::put('notifications/{notification}/update', [AppNotificationController::class, 'update'])->name('notifications.update');
+    Route::delete('notifications/{notification}/destroy', [AppNotificationController::class, 'destroy'])->name('notifications.destroy');
+    Route::get('notifications/create', [AppNotificationController::class, 'create'])->name('notifications.create');
+    Route::post('notifications/store', [AppNotificationController::class, 'store'])->name('notifications.store');
 });
+
+
 
 /*----- Student Routes (Student)------*/
 Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')->group(function () {
@@ -380,6 +405,20 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     // Route::get('/my-products', [StudentProductsController::class, 'index'])->name('products.index');
     // Route::get('/bookings', [StudentBookingsController::class, 'index'])->name('bookings.index');
 });
+
+/*---- Notification Routes (Student)------*/
+Route::middleware(['auth', 'role:student'])
+    ->prefix('student')
+    ->name('student.')
+    ->group(function () {
+        Route::get('notifications', [AppNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('notifications/{notification}/show', [AppNotificationController::class, 'show'])->name('notifications.show');
+        Route::get('notifications/{notification}/edit', [AppNotificationController::class, 'edit'])->name('notifications.edit');
+        Route::put('notifications/{notification}/update', [AppNotificationController::class, 'update'])->name('notifications.update');
+        Route::delete('notifications/{notification}/destroy', [AppNotificationController::class, 'destroy'])->name('notifications.destroy');
+        Route::get('notifications/create', [AppNotificationController::class, 'create'])->name('notifications.create');
+        Route::post('notifications/store', [AppNotificationController::class, 'store'])->name('notifications.store');
+    });
 
 
 require __DIR__ . '/auth.php';
