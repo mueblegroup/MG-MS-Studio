@@ -11,6 +11,7 @@ class StudioSettingsController extends Controller
     {
         $data = [
             'studio_name' => $settings->get('studio_name', config('app.name')),
+            'studio_display_name' => $settings->get('studio_display_name', config('app.name')),
             'currency' => $settings->get('currency', 'MYR'),
             'default_payment_provider' => $settings->get('default_payment_provider', 'stripe'),
             'shop_class_early_cutoff_days' => (int) $settings->get('shop_class_early_cutoff_days', (int) env('SHOP_CLASS_EARLY_CUTOFF_DAYS', 0)),
@@ -35,6 +36,7 @@ class StudioSettingsController extends Controller
     {
         $validated = $request->validate([
             'studio_name' => 'required|string|max:120',
+            'studio_display_name' => 'required|string|max:120',
             'currency' => 'required|string|max:10',
             'default_payment_provider' => 'required|in:stripe,hitpay',
 
@@ -55,6 +57,7 @@ class StudioSettingsController extends Controller
 
         $settings->setMany([
             'studio_name' => $validated['studio_name'],
+            'studio_display_name' => $validated['studio_display_name'],
             'currency' => strtoupper($validated['currency']),
             'default_payment_provider' => $validated['default_payment_provider'],
             'shop_class_early_cutoff_days' => (int) $validated['shop_class_early_cutoff_days'],

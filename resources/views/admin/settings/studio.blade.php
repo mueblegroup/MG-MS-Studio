@@ -40,6 +40,13 @@
                                class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                     </div>
 
+                    <div class="md:col-span-2">
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Studio Display Name</label>
+                        <input name="studio_display_name" value="{{ old('studio_display_name', $data['studio_display_name']) }}"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    </div>
+                    
+
                     <div>
                         <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Currency</label>
                         <input name="currency" value="{{ old('currency', $data['currency']) }}"
