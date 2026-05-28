@@ -57,6 +57,9 @@ class StudioSettingsController extends Controller
             'mail_ehlo_domain' => 'nullable|string|max:255',
         ]);
 
+        $existingPassword = (string) $settings->get('mail_password', env('MAIL_PASSWORD', ''));
+        $newPassword = $request->filled('mail_password') ? (string) $validated['mail_password'] : $existingPassword;
+
         $settings->setMany([
             'studio_name' => $validated['studio_name'],
             'studio_display_name' => $validated['studio_display_name'],
@@ -70,7 +73,7 @@ class StudioSettingsController extends Controller
             'mail_host' => $validated['mail_host'] ?? '',
             'mail_port' => (int) ($validated['mail_port'] ?? 587),
             'mail_username' => $validated['mail_username'] ?? '',
-            'mail_password' => $validated['mail_password'] ?? '',
+            'mail_password' => $newPassword,
             'mail_encryption' => ($validated['mail_encryption'] ?? 'tls') === 'none' ? '' : ($validated['mail_encryption'] ?? 'tls'),
             'mail_from_address' => $validated['mail_from_address'] ?? '',
             'mail_from_name' => $validated['mail_from_name'] ?? config('app.name'),
