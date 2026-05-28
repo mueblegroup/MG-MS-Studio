@@ -50,6 +50,7 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
     public function classSessionBookings()
     {
         return $this->hasMany(\App\Models\ClassSessionBooking::class, 'student_id');
@@ -58,11 +59,20 @@ class User extends Authenticatable
     public function plans()
     {
         return $this->hasMany(\App\Models\UserPlan::class, 'user_id');
-}
+    }
 
-public function classSessionAssignments()
-{
-    return $this->hasMany(\App\Models\ClassSessionAssignment::class, 'user_id');
-}
+    public function classSessionAssignments()
+    {
+        return $this->hasMany(\App\Models\ClassSessionAssignment::class, 'user_id');
+    }
 
+    public function appNotifications()
+    {
+        return $this->hasMany(\App\Models\AppNotification::class, 'user_id');
+    }
+
+    public function unreadAppNotifications()
+    {
+        return $this->hasMany(\App\Models\AppNotification::class, 'user_id')->whereNull('read_at');
+    }
 }
