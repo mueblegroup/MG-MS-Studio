@@ -1,9 +1,20 @@
 <x-app-layout>
+    @php
+        $cartCount = (int) $cartModel->items->sum('quantity');
+    @endphp
+
     <div class="p-6 sm:p-8 bg-gray-50/60 dark:bg-gray-900 min-h-screen">
 
         <div class="flex items-center justify-between mb-6">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Cart</h1>
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                    Cart
+                    @if($cartCount > 0)
+                        <span class="ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-[#d97706] px-2 text-xs font-extrabold text-white">
+                            {{ $cartCount > 99 ? '99+' : $cartCount }}
+                        </span>
+                    @endif
+                </h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Review your items before checkout.</p>
             </div>
 
@@ -15,7 +26,7 @@
                     <i class="bx bx-store"></i> Continue Shopping
                 </a>
 
-                @if(!empty($cart))
+                @if($cartCount > 0)
                     <form method="POST" action="{{ route('shop.cart.clear') }}">
                         @csrf
                         @method('DELETE')
@@ -43,7 +54,12 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
             <div class="lg:col-span-8 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-                    <h2 class="font-bold text-gray-900 dark:text-white">Items</h2>
+                    <h2 class="font-bold text-gray-900 dark:text-white">
+                        Items
+                        @if($cartCount > 0)
+                            <span class="ml-2 text-sm font-semibold text-[#d97706]">{{ $cartCount }} total</span>
+                        @endif
+                    </h2>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -150,6 +166,11 @@
                     <h2 class="font-bold text-gray-900 dark:text-white">Summary</h2>
 
                     <div class="mt-4 space-y-2 text-sm mb-6">
+                        <div class="flex items-center justify-between text-gray-600 dark:text-gray-300">
+                            <span>Items</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ $cartCount }}</span>
+                        </div>
+
                         <div class="flex items-center justify-between text-gray-600 dark:text-gray-300">
                             <span>Subtotal</span>
                             <span class="font-semibold text-gray-900 dark:text-white">
