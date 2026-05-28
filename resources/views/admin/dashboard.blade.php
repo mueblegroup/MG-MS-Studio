@@ -11,7 +11,6 @@
                     ['label' => 'Total Earnings', 'value' => $currency.' '.number_format($total_profit, 2), 'icon' => 'bx-wallet', 'color' => 'indigo', 'link' => route('payments.index')],
                     ['label' => 'Total Teachers', 'value' => $total_teachers, 'icon' => 'bxs-user-voice', 'color' => 'indigo', 'link' => route('admin.teachers')],
                     ['label' => 'Total Students', 'value' => $total_students, 'icon' => 'bxs-graduation', 'color' => 'indigo', 'link' => route('admin.students')],
-                    ['label' => 'Unverified Users', 'value' => $total_unverified, 'icon' => 'bx-shield-quarter', 'color' => 'indigo', 'link' => '#'],
                 ];
             @endphp
 
