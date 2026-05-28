@@ -25,6 +25,7 @@
     @php
         $cartItemCount = 0;
         $unreadNotificationCount = 0;
+        $latestNotifications = collect();
 
         try {
             $cartItemCount = app(\App\Services\CartService::class)->currentCartItemCount();
@@ -34,13 +35,21 @@
 
         try {
             if (auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('app_notifications')) {
-                $unreadNotificationCount = \App\Models\AppNotification::query()
-                    ->where('user_id', auth()->id())
+                $notificationQuery = \App\Models\AppNotification::query()
+                    ->where('user_id', auth()->id());
+
+                $unreadNotificationCount = (clone $notificationQuery)
                     ->whereNull('read_at')
                     ->count();
+
+                $latestNotifications = (clone $notificationQuery)
+                    ->latest()
+                    ->limit(5)
+                    ->get();
             }
         } catch (\Throwable $e) {
             $unreadNotificationCount = 0;
+            $latestNotifications = collect();
         }
     @endphp
 
@@ -78,14 +87,12 @@
                 <span class="truncate px-3 text-sm font-extrabold text-[#171717] dark:text-white">Studio System</span>
 
                 <div class="flex items-center gap-1.5">
-                    <a href="{{ url('/notifications') }}" class="relative rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Notifications">
-                        <i class="bx bx-bell text-xl"></i>
-                        @if($unreadNotificationCount > 0)
-                            <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
-                                {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
-                            </span>
-                        @endif
-                    </a>
+                    @include('layouts.partials.notification-bell', [
+                        'notifications' => $latestNotifications,
+                        'unreadCount' => $unreadNotificationCount,
+                        'buttonClass' => 'relative rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300',
+                        'panelClass' => 'fixed right-3 top-16 w-[calc(100vw-1.5rem)] max-w-sm sm:absolute sm:right-0 sm:top-12 sm:w-96',
+                    ])
 
                     <a href="{{ url('/shop') }}" class="rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Shop">
                         <i class="bx bx-store text-xl"></i>
@@ -132,14 +139,12 @@
                 </div>
 
                 <div class="flex shrink-0 items-center gap-2 md:gap-3">
-                    <a href="{{ url('/notifications') }}" class="relative rounded-full p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Notifications">
-                        <i class="bx bx-bell text-xl"></i>
-                        @if($unreadNotificationCount > 0)
-                            <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
-                                {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
-                            </span>
-                        @endif
-                    </a>
+                    @include('layouts.partials.notification-bell', [
+                        'notifications' => $latestNotifications,
+                        'unreadCount' => $unreadNotificationCount,
+                        'buttonClass' => 'relative rounded-full p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300',
+                        'panelClass' => 'absolute right-0 top-12 w-96 max-w-[calc(100vw-2rem)]',
+                    ])
 
                     <a href="{{ url('/shop') }}" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-3 py-2 text-xs font-bold text-[#31261d] shadow-sm transition hover:bg-[#fff3df] hover:text-[#d97706] dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800" aria-label="Shop">
                         <i class="bx bx-store text-lg"></i>
