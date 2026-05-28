@@ -24,23 +24,32 @@
 <body class="min-h-screen overflow-x-hidden bg-[#f7f2ea] font-sans text-[#171717] antialiased dark:bg-gray-950 dark:text-gray-100">
     @php
         $cartItemCount = 0;
+        $unreadNotificationCount = 0;
 
         try {
             $cartItemCount = app(\App\Services\CartService::class)->currentCartItemCount();
         } catch (\Throwable $e) {
             $cartItemCount = 0;
         }
+
+        try {
+            if (auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('app_notifications')) {
+                $unreadNotificationCount = \App\Models\AppNotification::query()
+                    ->where('user_id', auth()->id())
+                    ->whereNull('read_at')
+                    ->count();
+            }
+        } catch (\Throwable $e) {
+            $unreadNotificationCount = 0;
+        }
     @endphp
 
     <div class="min-h-screen w-full overflow-x-hidden md:flex">
-
-        <!-- Desktop Sidebar -->
         <aside class="hidden shrink-0 border-r border-[#eadfce] bg-white text-gray-600 transition-all duration-300 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 md:sticky md:top-0 md:flex md:h-screen md:flex-col"
                :class="collapsed ? 'md:w-20' : 'md:w-64'">
             @include('layouts.sidebar')
         </aside>
 
-        <!-- Mobile Sidebar Overlay -->
         <div class="fixed inset-0 z-50 flex md:hidden"
              x-cloak
              x-show="sidebarOpen"
@@ -53,16 +62,10 @@
             <aside class="flex h-full w-72 max-w-[85vw] shrink-0 flex-col bg-white text-gray-700 shadow-xl dark:bg-gray-900 dark:text-gray-100">
                 @include('layouts.sidebar')
             </aside>
-            <button type="button"
-                    class="min-w-0 flex-1 bg-black/50"
-                    aria-label="Close sidebar"
-                    @click="sidebarOpen = false"></button>
+            <button type="button" class="min-w-0 flex-1 bg-black/50" aria-label="Close sidebar" @click="sidebarOpen = false"></button>
         </div>
 
-        <!-- Right Side -->
         <div class="min-w-0 flex-1">
-
-            <!-- Mobile Header -->
             <header class="sticky top-0 z-30 flex items-center justify-between border-b border-[#eadfce] bg-white/95 p-4 shadow-sm backdrop-blur md:hidden dark:border-gray-800 dark:bg-gray-900/95">
                 <button @click="sidebarOpen = !sidebarOpen"
                         class="rounded-xl p-2 text-[#31261d] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#d97706] dark:text-gray-200 dark:hover:bg-gray-800"
@@ -75,13 +78,17 @@
                 <span class="truncate px-3 text-sm font-extrabold text-[#171717] dark:text-white">Studio System</span>
 
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('shop.index') }}"
-                       class="relative rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300"
-                       aria-label="Shop cart">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M19.1 2.8c-.38-.5-.97-.8-1.6-.8h-11c-.63 0-1.22.3-1.6.8L2.2 6.4c-.13.17-.2.38-.2.6v1c0 1.04.41 1.98 1.06 2.69-.03.1-.06.2-.06.31v9c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-9c0-.11-.03-.21-.06-.31C21.59 9.98 22 9.04 22 8V7c0-.22-.07-.43-.2-.6zm.9 4.53V8c0 1.1-.9 2-2 2s-2-.9-2-2V7q0-.12-.03-.24L15.28 4h2.22zM10.78 4h2.44L14 7.12V8c0 1.1-.9 2-2 2s-2-.9-2-2v-.88zM4 7.33 6.5 4h2.22l-.69 2.76Q8 6.88 8 7v1c0 1.1-.9 2-2 2s-2-.9-2-2zM10 20v-4h4v4zm6 0v-4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v4H5v-8.14c.32.08.65.14 1 .14 1.2 0 2.27-.54 3-1.38.73.84 1.8 1.38 3 1.38s2.27-.54 3-1.38c.73.84 1.8 1.38 3 1.38.35 0 .68-.06 1-.14V20z"></path>
-                        </svg>
+                    <a href="{{ route('notifications.index') }}" class="relative rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Notifications">
+                        <i class="bx bx-bell text-xl"></i>
+                        @if($unreadNotificationCount > 0)
+                            <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
+                                {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
+                            </span>
+                        @endif
+                    </a>
 
+                    <a href="{{ route('shop.cart.index') }}" class="relative rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Cart">
+                        <i class="bx bx-cart text-xl"></i>
                         @if($cartItemCount > 0)
                             <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d97706] px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
                                 {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
@@ -89,9 +96,7 @@
                         @endif
                     </a>
 
-                    <button @click="toggleDarkMode()"
-                            aria-label="Toggle dark mode"
-                            class="rounded-xl p-2 text-[#d97706] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#d97706] dark:hover:bg-gray-800">
+                    <button @click="toggleDarkMode()" aria-label="Toggle dark mode" class="rounded-xl p-2 text-[#d97706] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#d97706] dark:hover:bg-gray-800">
                         <template x-if="!darkMode">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.485-8.485h-1M4.515 12.515h-1M16.95 7.05l-.707-.707M7.757 16.243l-.707-.707M16.95 16.95l-.707.707M7.757 7.757l-.707.707M12 7a5 5 0 100 10 5 5 0 000-10z" />
@@ -106,12 +111,9 @@
                 </div>
             </header>
 
-            <!-- Desktop Header -->
             <header class="sticky top-0 z-30 hidden h-16 items-center justify-between border-b border-[#eadfce] bg-white/95 px-4 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 md:flex">
                 <div class="flex min-w-0 items-center gap-3">
-                    <button @click="collapsed = !collapsed"
-                            aria-label="Toggle sidebar"
-                            class="rounded-xl p-2 text-[#31261d] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#d97706] dark:text-gray-200 dark:hover:bg-gray-800">
+                    <button @click="collapsed = !collapsed" aria-label="Toggle sidebar" class="rounded-xl p-2 text-[#31261d] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#d97706] dark:text-gray-200 dark:hover:bg-gray-800">
                         <svg x-show="collapsed" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
@@ -126,13 +128,17 @@
                 </div>
 
                 <div class="flex shrink-0 items-center gap-2 md:gap-4">
-                    <a href="{{ route('shop.index') }}"
-                       class="relative rounded-full p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300"
-                       aria-label="Shop cart">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M19.1 2.8c-.38-.5-.97-.8-1.6-.8h-11c-.63 0-1.22.3-1.6.8L2.2 6.4c-.13.17-.2.38-.2.6v1c0 1.04.41 1.98 1.06 2.69-.03.1-.06.2-.06.31v9c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-9c0-.11-.03-.21-.06-.31C21.59 9.98 22 9.04 22 8V7c0-.22-.07-.43-.2-.6zm.9 4.53V8c0 1.1-.9 2-2 2s-2-.9-2-2V7q0-.12-.03-.24L15.28 4h2.22zM10.78 4h2.44L14 7.12V8c0 1.1-.9 2-2 2s-2-.9-2-2v-.88zM4 7.33 6.5 4h2.22l-.69 2.76Q8 6.88 8 7v1c0 1.1-.9 2-2 2s-2-.9-2-2zM10 20v-4h4v4zm6 0v-4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v4H5v-8.14c.32.08.65.14 1 .14 1.2 0 2.27-.54 3-1.38.73.84 1.8 1.38 3 1.38s2.27-.54 3-1.38c.73.84 1.8 1.38 3 1.38.35 0 .68-.06 1-.14V20z"></path>
-                        </svg>
+                    <a href="{{ route('notifications.index') }}" class="relative rounded-full p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Notifications">
+                        <i class="bx bx-bell text-xl"></i>
+                        @if($unreadNotificationCount > 0)
+                            <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
+                                {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
+                            </span>
+                        @endif
+                    </a>
 
+                    <a href="{{ route('shop.cart.index') }}" class="relative rounded-full p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Cart">
+                        <i class="bx bx-cart text-xl"></i>
                         @if($cartItemCount > 0)
                             <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d97706] px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
                                 {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
@@ -140,8 +146,7 @@
                         @endif
                     </a>
 
-                    <button @click="toggleDarkMode()"
-                            class="rounded-full p-2 text-[#d97706] transition hover:bg-[#fff3df] dark:hover:bg-gray-800">
+                    <button @click="toggleDarkMode()" class="rounded-full p-2 text-[#d97706] transition hover:bg-[#fff3df] dark:hover:bg-gray-800">
                         <template x-if="!darkMode">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.485-8.485h-1M4.515 12.515h-1M16.95 7.05l-.707-.707M7.757 16.243l-.707-.707M16.95 16.95l-.707.707M7.757 7.757l-.707.707M12 7a5 5 0 100 10 5 5 0 000-10z" />
@@ -158,9 +163,7 @@
                         <x-slot name="trigger">
                             <button class="flex items-center rounded-xl p-2 text-sm font-medium text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#31261d] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200">
                                 <span class="hidden sm:inline-block mr-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5m0-8c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3M4 22h16c.55 0 1-.45 1-1v-1c0-3.86-3.14-7-7-7h-4c-3.86 0-7 3.14-7 7v1c0 .55.45 1 1 1m6-7h4c2.76 0 5 2.24 5 5H5c0-2.76 2.24-5 5-5"></path>
-                                    </svg>
+                                    <i class="bx bx-user text-xl"></i>
                                 </span>
                                 <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
@@ -170,6 +173,7 @@
 
                         <x-slot name="content">
                             <x-dropdown-link :href="route('profile.edit')">Profile</x-dropdown-link>
+                            <x-dropdown-link :href="route('notifications.index')">Notifications</x-dropdown-link>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">
@@ -181,7 +185,6 @@
                 </div>
             </header>
 
-            <!-- Normal Page Content -->
             <main class="w-full min-w-0 bg-[#f7f2ea] dark:bg-gray-950">
                 <div class="w-full min-w-0 px-4 py-5 sm:px-6 lg:px-8">
                     @isset($header)
