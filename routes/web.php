@@ -235,7 +235,7 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('notifications/create', [AdminAppNotificationController::class, 'create'])->name('notifications.create');
         Route::post('notifications/store', [AdminAppNotificationController::class, 'store'])->name('notifications.store');
     });
-    
+     
 /*----- Class Card Routes (Admin)------*/
 Route::middleware(['auth', 'role:admin'])
     ->prefix('admin')
@@ -332,6 +332,7 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
 Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/settings/studio', [StudioSettingsController::class, 'edit'])->name('settings.studio');
     Route::post('/settings/studio', [StudioSettingsController::class, 'update'])->name('settings.studio.update');
+    Route::post('/settings/studio/test-email', [StudioSettingsController::class, 'sendTestEmail'])->name('settings.studio.test-email');
 });
 
 
