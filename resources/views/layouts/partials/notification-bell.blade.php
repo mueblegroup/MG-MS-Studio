@@ -1,9 +1,9 @@
-@props([
-    'notifications' => collect(),
-    'unreadCount' => 0,
-    'buttonClass' => 'relative rounded-full p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300',
-    'panelClass' => 'absolute right-0 top-12 w-[min(24rem,calc(100vw-2rem))]',
-])
+@php
+    $notifications = $notifications ?? collect();
+    $unreadCount = $unreadCount ?? 0;
+    $buttonClass = $buttonClass ?? 'relative rounded-full p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300';
+    $panelClass = $panelClass ?? 'absolute right-0 top-12 w-[min(24rem,calc(100vw-2rem))]';
+@endphp
 
 <div class="relative" x-data="{ open: false }" @keydown.escape.window="open = false">
     <button type="button"
