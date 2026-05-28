@@ -1,22 +1,22 @@
 <x-app-layout>
-    <div class="p-6 sm:p-8 bg-gray-50/60 dark:bg-gray-900 min-h-screen">
+    <div class="min-h-screen bg-gray-50/60 p-6 dark:bg-gray-900 sm:p-8">
 
-        <div class="flex items-center justify-between mb-6">
+        <div class="mb-6 flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Studio Settings</h1>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Configure studio defaults used across the system.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Configure studio defaults, checkout settings, and mail server settings.</p>
             </div>
         </div>
 
         @if(session('success'))
-            <div class="mb-4 p-3 rounded-xl bg-green-50 text-green-700 border border-green-200">
+            <div class="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-green-700">
                 {{ session('success') }}
             </div>
         @endif
 
         @if($errors->any())
-            <div class="mb-4 p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">
-                <ul class="list-disc ml-5">
+            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">
+                <ul class="ml-5 list-disc">
                     @foreach($errors->all() as $e)
                         <li>{{ $e }}</li>
                     @endforeach
@@ -24,74 +24,154 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('settings.studio.update') }}"
-              class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-3xl">
+        <form method="POST" action="{{ route('settings.studio.update') }}" class="max-w-5xl space-y-6">
             @csrf
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">Studio Name</label>
-                    <input name="studio_name" value="{{ old('studio_name', $data['studio_name']) }}"
-                           class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+            <section class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-5">
+                    <h2 class="text-lg font-extrabold text-gray-900 dark:text-white">General Settings</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Basic studio and checkout defaults.</p>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">Currency</label>
-                    <input name="currency" value="{{ old('currency', $data['currency']) }}"
-                           class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                           placeholder="MYR" />
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Used as default in shop/checkout/payment history.
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="md:col-span-2">
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Studio Name</label>
+                        <input name="studio_name" value="{{ old('studio_name', $data['studio_name']) }}"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Currency</label>
+                        <input name="currency" value="{{ old('currency', $data['currency']) }}"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                               placeholder="MYR" />
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Used as default in shop, checkout, and payment history.</div>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Default Payment Gateway</label>
+                        <select name="default_payment_provider"
+                                class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            @foreach(['stripe' => 'Stripe', 'hitpay' => 'HitPay'] as $k => $label)
+                                <option value="{{ $k }}" @selected(old('default_payment_provider', $data['default_payment_provider']) === $k)>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Used as default selection on checkout.</div>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Class Early Cutoff Days</label>
+                        <input type="number" min="0" max="365"
+                               name="shop_class_early_cutoff_days"
+                               value="{{ old('shop_class_early_cutoff_days', $data['shop_class_early_cutoff_days']) }}"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Hide classes that start within N days from today.</div>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Plan Early Cutoff Days</label>
+                        <input type="number" min="0" max="365"
+                               name="shop_plan_early_cutoff_days"
+                               value="{{ old('shop_plan_early_cutoff_days', $data['shop_plan_early_cutoff_days']) }}"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Hide plans that end within N days from today.</div>
                     </div>
                 </div>
+            </section>
 
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">Default Payment Gateway</label>
-                    <select name="default_payment_provider"
-                            class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
-                        @foreach(['stripe' => 'Stripe', 'hitpay' => 'HitPay'] as $k => $label)
-                            <option value="{{ $k }}" @selected(old('default_payment_provider', $data['default_payment_provider']) === $k)>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Used as default selection on checkout.
+            <section class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                    <div>
+                        <h2 class="text-lg font-extrabold text-gray-900 dark:text-white">Mail Server Settings</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Configure SMTP without editing the server .env file.</p>
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">
-                        Class Early Cutoff Days
+                    <label class="inline-flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-sm font-bold text-gray-700 ring-1 ring-gray-200 dark:bg-gray-900 dark:text-gray-200 dark:ring-gray-700">
+                        <input type="hidden" name="mail_enabled" value="0">
+                        <input type="checkbox" name="mail_enabled" value="1" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                               @checked(old('mail_enabled', $data['mail_enabled']) == true)>
+                        Enable custom mail server
                     </label>
-                    <input type="number" min="0" max="365"
-                           name="shop_class_early_cutoff_days"
-                           value="{{ old('shop_class_early_cutoff_days', $data['shop_class_early_cutoff_days']) }}"
-                           class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Hide classes that start within N days from today.
-                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-600 dark:text-gray-300 mb-2">
-                        Plan Early Cutoff Days
-                    </label>
-                    <input type="number" min="0" max="365"
-                           name="shop_plan_early_cutoff_days"
-                           value="{{ old('shop_plan_early_cutoff_days', $data['shop_plan_early_cutoff_days']) }}"
-                           class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Hide plans that end within N days from today.
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Mailer</label>
+                        <select name="mail_mailer"
+                                class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            @foreach(['smtp' => 'SMTP', 'log' => 'Log only', 'array' => 'Array/testing', 'sendmail' => 'Sendmail'] as $k => $label)
+                                <option value="{{ $k }}" @selected(old('mail_mailer', $data['mail_mailer']) === $k)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">Encryption</label>
+                        <select name="mail_encryption"
+                                class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            @foreach(['tls' => 'TLS', 'ssl' => 'SSL', 'none' => 'None'] as $k => $label)
+                                <option value="{{ $k }}" @selected(old('mail_encryption', $data['mail_encryption'] ?: 'none') === $k)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">SMTP Host</label>
+                        <input name="mail_host" value="{{ old('mail_host', $data['mail_host']) }}"
+                               placeholder="smtp.office365.com"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">SMTP Port</label>
+                        <input type="number" min="1" max="65535" name="mail_port" value="{{ old('mail_port', $data['mail_port']) }}"
+                               placeholder="587"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">SMTP Username</label>
+                        <input name="mail_username" value="{{ old('mail_username', $data['mail_username']) }}"
+                               autocomplete="off"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">SMTP Password</label>
+                        <input type="password" name="mail_password" value="{{ old('mail_password', $data['mail_password']) }}"
+                               autocomplete="new-password"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Stored in studio settings. Use an app password where possible.</div>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">From Email</label>
+                        <input name="mail_from_address" value="{{ old('mail_from_address', $data['mail_from_address']) }}"
+                               placeholder="noreply@example.com"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">From Name</label>
+                        <input name="mail_from_name" value="{{ old('mail_from_name', $data['mail_from_name']) }}"
+                               placeholder="{{ config('app.name') }}"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">EHLO / Local Domain</label>
+                        <input name="mail_ehlo_domain" value="{{ old('mail_ehlo_domain', $data['mail_ehlo_domain']) }}"
+                               placeholder="example.com"
+                               class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Useful for Office365/cPanel SMTP. Usually your app domain without https://.</div>
                     </div>
                 </div>
+            </section>
 
-            </div>
-
-            <div class="mt-6 flex items-center gap-2">
-                <button class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
-                               text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
+            <div class="flex items-center gap-2">
+                <button class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-semibold text-white shadow transition hover:bg-indigo-700">
                     <i class="bx bx-save"></i> Save Settings
                 </button>
             </div>
