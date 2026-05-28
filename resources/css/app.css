@@ -3,22 +3,49 @@
 @tailwind utilities;
 
 @layer base {
+    :root {
+        --mg-bg: #f7f2ea;
+        --mg-surface: #ffffff;
+        --mg-surface-soft: #fffaf3;
+        --mg-border: #eadfce;
+        --mg-text: #171717;
+        --mg-muted: #6b5f52;
+        --mg-primary: #d97706;
+        --mg-primary-hover: #b45309;
+        --mg-primary-soft: #fff3df;
+        --mg-primary-text: #9a4f00;
+    }
+
     html,
     body {
         width: 100%;
+        min-height: 100%;
         max-width: 100%;
         overflow-x: hidden;
-        background: #f7f2ea;
+        background: var(--mg-bg);
     }
 
     body {
-        color: #171717;
+        color: var(--mg-text);
+    }
+
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+
+    img,
+    video,
+    canvas,
+    svg {
+        max-width: 100%;
     }
 }
 
 @layer components {
     .mg-page {
-        @apply min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-[#f7f2ea] dark:bg-gray-950;
+        @apply w-full max-w-full min-w-0 overflow-x-hidden bg-transparent;
     }
 
     .mg-page-inner {
@@ -42,15 +69,15 @@
     }
 
     .mg-btn-primary {
-        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#d97706] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#b45309] focus:outline-none focus:ring-2 focus:ring-[#f59e0b] focus:ring-offset-2 dark:focus:ring-offset-gray-950;
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-transparent bg-[#d97706] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#b45309] focus:outline-none focus:ring-2 focus:ring-[#f59e0b] focus:ring-offset-2 disabled:opacity-50 dark:focus:ring-offset-gray-950;
     }
 
     .mg-btn-secondary {
-        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-4 py-2 text-xs font-bold text-[#31261d] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#f59e0b] focus:ring-offset-2 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:focus:ring-offset-gray-950;
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-4 py-2 text-xs font-bold text-[#31261d] shadow-sm transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#f59e0b] focus:ring-offset-2 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:focus:ring-offset-gray-950;
     }
 
     .mg-btn-danger {
-        @apply inline-flex min-h-9 items-center justify-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30;
+        @apply inline-flex min-h-9 items-center justify-center gap-1 rounded-xl border border-transparent px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 dark:hover:bg-red-950/30 dark:focus:ring-offset-gray-950;
     }
 
     .mg-input {
@@ -66,7 +93,7 @@
     }
 
     .mg-table-scroll {
-        @apply max-h-[70vh] overflow-y-auto overflow-x-auto;
+        @apply max-w-full overflow-x-auto overflow-y-visible;
     }
 
     .mg-th {
@@ -79,5 +106,76 @@
 
     .mg-badge {
         @apply inline-flex items-center rounded-full bg-[#fff3df] px-2.5 py-1 text-xs font-bold text-[#9a4f00] dark:bg-amber-950/30 dark:text-amber-200;
+    }
+}
+
+@layer utilities {
+    .no-x-scroll {
+        overflow-x: hidden !important;
+        max-width: 100% !important;
+    }
+
+    /* System-wide color fallback for older pages that still use raw Tailwind indigo buttons. */
+    .bg-indigo-50 {
+        background-color: #fff3df !important;
+    }
+
+    .bg-indigo-100 {
+        background-color: #ffedd5 !important;
+    }
+
+    .bg-indigo-600,
+    .hover\:bg-indigo-600:hover,
+    .focus\:bg-indigo-600:focus {
+        background-color: #d97706 !important;
+    }
+
+    .bg-indigo-700,
+    .hover\:bg-indigo-700:hover,
+    .focus\:bg-indigo-700:focus,
+    .active\:bg-indigo-700:active {
+        background-color: #b45309 !important;
+    }
+
+    .text-indigo-400,
+    .text-indigo-500,
+    .text-indigo-600,
+    .text-indigo-700,
+    .hover\:text-indigo-600:hover,
+    .focus\:text-indigo-700:focus {
+        color: #d97706 !important;
+    }
+
+    .border-indigo-400,
+    .border-indigo-500,
+    .border-indigo-600,
+    .focus\:border-indigo-500:focus,
+    .focus\:border-indigo-700:focus {
+        border-color: #d97706 !important;
+    }
+
+    .ring-indigo-500,
+    .focus\:ring-indigo-500:focus {
+        --tw-ring-color: #f59e0b !important;
+    }
+
+    .from-indigo-500 {
+        --tw-gradient-from: #d97706 var(--tw-gradient-from-position) !important;
+        --tw-gradient-to: rgb(217 119 6 / 0) var(--tw-gradient-to-position) !important;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+    }
+
+    .to-indigo-600 {
+        --tw-gradient-to: #b45309 var(--tw-gradient-to-position) !important;
+    }
+
+    /* Make common raw tables safer on small screens without editing every page immediately. */
+    table {
+        max-width: 100%;
+    }
+
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 }
