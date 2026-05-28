@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\StudioSettingsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class StudioSettingsController extends Controller
 {
@@ -76,5 +78,48 @@ class StudioSettingsController extends Controller
         ]);
 
         return back()->with('success', 'Studio settings updated.');
+    }
+
+    public function sendTestEmail(Request $request, StudioSettingsService $settings)
+    {
+        $validated = $request->validate([
+            'test_email' => 'required|email|max:255',
+        ]);
+
+        if (!$settings->get('mail_enabled', false)) {
+            return back()->withErrors([
+                'test_email' => 'Custom mail server is disabled. Enable it, save settings, then send a test email.',
+            ]);
+        }
+
+        $mailer = (string) config('mail.default', 'log');
+        $host = (string) config('mail.mailers.smtp.host', '');
+        $port = (string) config('mail.mailers.smtp.port', '');
+        $fromAddress = (string) config('mail.from.address', '');
+        $fromName = (string) config('mail.from.name', config('app.name'));
+
+        try {
+            Mail::raw(
+                "This is a test email from {$fromName}.\n\n" .
+                "Mailer: {$mailer}\n" .
+                "Host: {$host}\n" .
+                "Port: {$port}\n" .
+                "Sent at: " . now()->format('Y-m-d H:i:s') . "\n",
+                function ($message) use ($validated, $fromAddress, $fromName) {
+                    $message->to($validated['test_email'])
+                        ->subject('Test Email - ' . $fromName);
+
+                    if ($fromAddress !== '') {
+                        $message->from($fromAddress, $fromName);
+                    }
+                }
+            );
+
+            return back()->with('mail_test_success', "Test email sent to {$validated['test_email']} using {$mailer}.");
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('mail_test_error', $e->getMessage());
+        }
     }
 }
