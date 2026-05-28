@@ -3,6 +3,7 @@ namespace App\Services;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Order;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -128,6 +129,19 @@ class CartService
     {
         $cart = $this->currentCart();
         CartItem::where('cart_id', $cart->id)->delete();
+    }
+
+    public function clearPurchasedItems(Order $order): void
+    {
+        $cart = $this->currentCart();
+        $order->loadMissing('items');
+
+        foreach ($order->items as $orderItem) {
+            CartItem::where('cart_id', $cart->id)
+                ->where('purchasable_type', $orderItem->purchasable_type)
+                ->where('purchasable_id', $orderItem->purchasable_id)
+                ->delete();
+        }
     }
 
     protected function mergeCarts(Cart $from, Cart $to): void
