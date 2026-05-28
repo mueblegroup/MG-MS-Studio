@@ -22,6 +22,16 @@
 </head>
 
 <body class="min-h-screen overflow-x-hidden bg-[#f7f2ea] font-sans text-[#171717] antialiased dark:bg-gray-950 dark:text-gray-100">
+    @php
+        $cartItemCount = 0;
+
+        try {
+            $cartItemCount = app(\App\Services\CartService::class)->currentCartItemCount();
+        } catch (\Throwable $e) {
+            $cartItemCount = 0;
+        }
+    @endphp
+
     <div class="min-h-screen w-full overflow-x-hidden md:flex">
 
         <!-- Desktop Sidebar -->
@@ -64,20 +74,36 @@
 
                 <span class="truncate px-3 text-sm font-extrabold text-[#171717] dark:text-white">Studio System</span>
 
-                <button @click="toggleDarkMode()"
-                        aria-label="Toggle dark mode"
-                        class="rounded-xl p-2 text-[#d97706] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#d97706] dark:hover:bg-gray-800">
-                    <template x-if="!darkMode">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.485-8.485h-1M4.515 12.515h-1M16.95 7.05l-.707-.707M7.757 16.243l-.707-.707M16.95 16.95l-.707.707M7.757 7.757l-.707.707M12 7a5 5 0 100 10 5 5 0 000-10z" />
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('shop.index') }}"
+                       class="relative rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300"
+                       aria-label="Shop cart">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19.1 2.8c-.38-.5-.97-.8-1.6-.8h-11c-.63 0-1.22.3-1.6.8L2.2 6.4c-.13.17-.2.38-.2.6v1c0 1.04.41 1.98 1.06 2.69-.03.1-.06.2-.06.31v9c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-9c0-.11-.03-.21-.06-.31C21.59 9.98 22 9.04 22 8V7c0-.22-.07-.43-.2-.6zm.9 4.53V8c0 1.1-.9 2-2 2s-2-.9-2-2V7q0-.12-.03-.24L15.28 4h2.22zM10.78 4h2.44L14 7.12V8c0 1.1-.9 2-2 2s-2-.9-2-2v-.88zM4 7.33 6.5 4h2.22l-.69 2.76Q8 6.88 8 7v1c0 1.1-.9 2-2 2s-2-.9-2-2zM10 20v-4h4v4zm6 0v-4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v4H5v-8.14c.32.08.65.14 1 .14 1.2 0 2.27-.54 3-1.38.73.84 1.8 1.38 3 1.38s2.27-.54 3-1.38c.73.84 1.8 1.38 3 1.38.35 0 .68-.06 1-.14V20z"></path>
                         </svg>
-                    </template>
-                    <template x-if="darkMode">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-                        </svg>
-                    </template>
-                </button>
+
+                        @if($cartItemCount > 0)
+                            <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d97706] px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
+                                {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
+                            </span>
+                        @endif
+                    </a>
+
+                    <button @click="toggleDarkMode()"
+                            aria-label="Toggle dark mode"
+                            class="rounded-xl p-2 text-[#d97706] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#d97706] dark:hover:bg-gray-800">
+                        <template x-if="!darkMode">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.485-8.485h-1M4.515 12.515h-1M16.95 7.05l-.707-.707M7.757 16.243l-.707-.707M16.95 16.95l-.707.707M7.757 7.757l-.707.707M12 7a5 5 0 100 10 5 5 0 000-10z" />
+                            </svg>
+                        </template>
+                        <template x-if="darkMode">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                            </svg>
+                        </template>
+                    </button>
+                </div>
             </header>
 
             <!-- Desktop Header -->
@@ -101,10 +127,17 @@
 
                 <div class="flex shrink-0 items-center gap-2 md:gap-4">
                     <a href="{{ route('shop.index') }}"
-                       class="rounded-full p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300">
+                       class="relative rounded-full p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300"
+                       aria-label="Shop cart">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M19.1 2.8c-.38-.5-.97-.8-1.6-.8h-11c-.63 0-1.22.3-1.6.8L2.2 6.4c-.13.17-.2.38-.2.6v1c0 1.04.41 1.98 1.06 2.69-.03.1-.06.2-.06.31v9c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-9c0-.11-.03-.21-.06-.31C21.59 9.98 22 9.04 22 8V7c0-.22-.07-.43-.2-.6zm.9 4.53V8c0 1.1-.9 2-2 2s-2-.9-2-2V7q0-.12-.03-.24L15.28 4h2.22zM10.78 4h2.44L14 7.12V8c0 1.1-.9 2-2 2s-2-.9-2-2v-.88zM4 7.33 6.5 4h2.22l-.69 2.76Q8 6.88 8 7v1c0 1.1-.9 2-2 2s-2-.9-2-2zM10 20v-4h4v4zm6 0v-4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v4H5v-8.14c.32.08.65.14 1 .14 1.2 0 2.27-.54 3-1.38.73.84 1.8 1.38 3 1.38s2.27-.54 3-1.38c.73.84 1.8 1.38 3 1.38.35 0 .68-.06 1-.14V20z"></path>
                         </svg>
+
+                        @if($cartItemCount > 0)
+                            <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d97706] px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
+                                {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
+                            </span>
+                        @endif
                     </a>
 
                     <button @click="toggleDarkMode()"
