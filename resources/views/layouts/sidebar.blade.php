@@ -25,8 +25,6 @@ switch (Auth::user()->role) {
                     ['label' => 'Classes', 'route' => 'admin.classes'],
                     ['label' => 'Plans', 'route' => 'admin.plans'],
                     ['label' => 'Class Cards', 'route' => 'admin.classcards.index'],
-                    
-
                 ]
             ],
             [
@@ -84,58 +82,65 @@ switch (Auth::user()->role) {
 }
 @endphp
 
-<div class="flex flex-col h-full bg-white dark:bg-gray-800 transition-all duration-300"
-     :class="collapsed ? 'w-20' : 'w-64'">
-    
-    <nav class="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
+<div class="flex h-full min-h-0 flex-col bg-white transition-all duration-300 dark:bg-gray-900">
+    <div class="flex h-16 shrink-0 items-center border-b border-[#eadfce] px-4 dark:border-gray-800">
+        <div class="flex min-w-0 items-center gap-3">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#d97706] text-sm font-extrabold text-white shadow-sm">
+                MG
+            </div>
+            <div x-show="!collapsed" x-transition.opacity class="min-w-0">
+                <div class="truncate text-sm font-extrabold text-[#171717] dark:text-white">
+                    Mueble LMS
+                </div>
+                <div class="truncate text-xs font-medium text-[#6b5f52] dark:text-gray-400">
+                    Studio System
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
         @foreach($sidebarLinks as $link)
             @if(isset($link['subLinks']))
                 <div x-data="{ open: false }">
-                    {{-- Dropdown Button --}}
-                    <button @click="collapsed ? (collapsed = false, open = true) : open = !open" 
-                        class="flex items-center justify-between w-full p-3 rounded-lg 
-                               text-gray-600 dark:text-gray-300 
-                               hover:bg-gray-600 hover:text-white 
-                               dark:hover:bg-gray-500 dark:hover:text-white 
-                               transition-all duration-200 group">
-                        
-                        <div class="flex items-center gap-3">
-                            <svg class="w-6 h-6 shrink-0 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button @click="collapsed ? (collapsed = false, open = true) : open = !open"
+                            class="group flex w-full items-center justify-between rounded-xl p-3 text-[#6b5f52] transition-all duration-200 hover:bg-[#fff3df] hover:text-[#9a4f00] dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-amber-200">
+                        <div class="flex min-w-0 items-center gap-3">
+                            <svg class="h-5 w-5 shrink-0 text-[#9a8c7d] group-hover:text-[#d97706] dark:text-gray-500 dark:group-hover:text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path d="{{ $link['icon'] }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            <span x-show="!collapsed" x-transition.opacity class="font-medium whitespace-nowrap">{{ $link['label'] }}</span>
+                            <span x-show="!collapsed" x-transition.opacity class="truncate text-sm font-bold">{{ $link['label'] }}</span>
                         </div>
 
-                        <svg x-show="!collapsed" :class="open ? 'rotate-180' : ''" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg x-show="!collapsed" :class="open ? 'rotate-180' : ''" class="h-4 w-4 shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
 
-                    {{-- Dropdown Content --}}
-                    <div x-show="open && !collapsed" x-cloak x-collapse class="mt-1 ml-10 space-y-1">
+                    <div x-show="open && !collapsed" x-cloak x-collapse class="mt-1 space-y-1 pl-10">
                         @foreach($link['subLinks'] as $sub)
                             <a href="{{ route($sub['route']) }}"
-                               class="block p-2 text-sm text-gray-500 dark:text-gray-400 rounded-md 
-                                      hover:text-indigo-600 dark:hover:text-white 
-                                      hover:bg-indigo-50 dark:hover:bg-gray-700 transition-all">
+                               class="block rounded-lg px-3 py-2 text-sm font-semibold text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#9a4f00] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-200">
                                 {{ $sub['label'] }}
                             </a>
                         @endforeach
                     </div>
                 </div>
             @else
-                {{-- Standard Link --}}
+                @php
+                    $isActive = request()->routeIs($link['route']);
+                @endphp
+
                 <a href="{{ $link['route'] == '#' ? '#' : route($link['route']) }}"
-                   class="{{ request()->routeIs($link['route']) 
-                        ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-white' 
-                    }} flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group">
-                    
-                    <svg class="w-6 h-6 shrink-0 {{ request()->routeIs($link['route']) ? 'text-indigo-600' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="{{ $isActive
+                        ? 'bg-[#fff3df] text-[#9a4f00] ring-1 ring-[#f4d7ae] dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-900/40'
+                        : 'text-[#6b5f52] hover:bg-[#fff3df] hover:text-[#9a4f00] dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-amber-200'
+                    }} group flex items-center gap-3 rounded-xl p-3 transition-all duration-200">
+                    <svg class="h-5 w-5 shrink-0 {{ $isActive ? 'text-[#d97706] dark:text-amber-300' : 'text-[#9a8c7d] group-hover:text-[#d97706] dark:text-gray-500 dark:group-hover:text-amber-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="{{ $link['icon'] }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
-                    
-                    <span x-show="!collapsed" x-transition.opacity class="font-medium whitespace-nowrap">{{ $link['label'] }}</span>
+
+                    <span x-show="!collapsed" x-transition.opacity class="truncate text-sm font-bold">{{ $link['label'] }}</span>
                 </a>
             @endif
         @endforeach
