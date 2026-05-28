@@ -1,4 +1,14 @@
 <x-app-layout>
+    @php
+        $cartCount = 0;
+
+        try {
+            $cartCount = app(\App\Services\CartService::class)->currentCartItemCount();
+        } catch (\Throwable $e) {
+            $cartCount = 0;
+        }
+    @endphp
+
     <div class="p-6 sm:p-8 bg-gray-50/60 dark:bg-gray-900 min-h-screen">
 
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
@@ -9,7 +19,7 @@
                 </p>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <form method="GET" action="{{ route('shop.index') }}" class="flex items-center gap-2">
                     <input type="hidden" name="tab" value="{{ $tab }}">
                     <input name="q" value="{{ $q }}" placeholder="Search…"
@@ -22,14 +32,13 @@
                 </form>
 
                 <a href="{{ route('shop.cart.index') }}"
-                   class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
+                   class="relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
                           text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
                     <i class="bx bx-cart"></i>
                     Cart
-                    @php $cartCount = collect(session('cart', []))->sum('qty'); @endphp
                     @if($cartCount > 0)
-                        <span class="ml-1 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded-full bg-white/20 text-white text-[11px] font-bold">
-                            {{ $cartCount }}
+                        <span class="ml-1 inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-white px-1 text-[11px] font-extrabold text-[#d97706]">
+                            {{ $cartCount > 99 ? '99+' : $cartCount }}
                         </span>
                     @endif
                 </a>
