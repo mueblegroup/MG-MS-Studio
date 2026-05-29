@@ -8,5 +8,7 @@ Route::middleware(['auth', 'role:admin'])
     ->name('admin.')
     ->group(function () {
         Route::get('api-tokens/docs', [ApiTokenController::class, 'docs'])->name('api-tokens.docs');
-        Route::resource('api-tokens', ApiTokenController::class)->only(['index', 'create', 'store', 'destroy']);
+        Route::resource('api-tokens', ApiTokenController::class)
+            ->parameters(['api-tokens' => 'apiToken'])
+            ->only(['index', 'create', 'store', 'destroy']);
     });
