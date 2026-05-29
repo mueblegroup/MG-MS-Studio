@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="{ darkMode: localStorage.getItem('dark') === 'true' }"
+<html lang="en" x-data="{ darkMode: localStorage.getItem('dark') === 'true', showPassword: false, showConfirmPassword: false }"
     x-init="$watch('darkMode', val => localStorage.setItem('dark', val)); document.documentElement.classList.toggle('dark', darkMode)">
 
 <head>
@@ -61,20 +61,40 @@
                 <!-- Password -->
                 <div>
                     <label for="password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Password</label>
-                    <input type="password" id="password" name="password" required autocomplete="new-password"
-                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+                    <div class="relative">
+                        <input :type="showPassword ? 'text' : 'password'" id="password" name="password" required autocomplete="new-password"
+                            class="w-full px-4 py-2 pr-14 rounded-lg border border-gray-300 dark:border-gray-600
                                   focus:outline-none focus:ring-2 focus:ring-blue-400
                                   bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400">
+
+                        <button type="button"
+                            @click="showPassword = !showPassword"
+                            class="absolute inset-y-0 right-0 flex items-center px-3 text-xs font-bold text-gray-500 transition hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                            :aria-label="showPassword ? 'Hide password' : 'Show password'">
+                            <span x-show="!showPassword">Show</span>
+                            <span x-show="showPassword">Hide</span>
+                        </button>
+                    </div>
                     @error('password') <p class="text-red-500 text-sm mt-1">{{ $message }}</p> @enderror
                 </div>
 
                 <!-- Confirm Password -->
                 <div>
                     <label for="password_confirmation" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label>
-                    <input type="password" id="password_confirmation" name="password_confirmation" required autocomplete="new-password"
-                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+                    <div class="relative">
+                        <input :type="showConfirmPassword ? 'text' : 'password'" id="password_confirmation" name="password_confirmation" required autocomplete="new-password"
+                            class="w-full px-4 py-2 pr-14 rounded-lg border border-gray-300 dark:border-gray-600
                                   focus:outline-none focus:ring-2 focus:ring-blue-400
                                   bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400">
+
+                        <button type="button"
+                            @click="showConfirmPassword = !showConfirmPassword"
+                            class="absolute inset-y-0 right-0 flex items-center px-3 text-xs font-bold text-gray-500 transition hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                            :aria-label="showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'">
+                            <span x-show="!showConfirmPassword">Show</span>
+                            <span x-show="showConfirmPassword">Hide</span>
+                        </button>
+                    </div>
                     @error('password_confirmation') <p class="text-red-500 text-sm mt-1">{{ $message }}</p> @enderror
                 </div>
 
