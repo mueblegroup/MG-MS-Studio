@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html x-data="{ darkMode: localStorage.getItem('dark') === 'true' }"
+<html x-data="{ darkMode: localStorage.getItem('dark') === 'true', showPassword: false }"
     x-init="$watch('darkMode', val => localStorage.setItem('dark', val)); 
               document.documentElement.classList.toggle('dark', darkMode)">
 
@@ -67,9 +67,19 @@
                 <!-- Password Input Field -->
                 <div>
                     <label for="password" class="block text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">Password</label>
-                    <input type="password" id="password" name="password" required
-                        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        placeholder="••••••••">
+                    <div class="relative">
+                        <input :type="showPassword ? 'text' : 'password'" id="password" name="password" required
+                            class="w-full px-4 py-2 pr-14 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            placeholder="••••••••">
+
+                        <button type="button"
+                            @click="showPassword = !showPassword"
+                            class="absolute inset-y-0 right-0 flex items-center px-3 text-xs font-bold text-gray-500 transition hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                            :aria-label="showPassword ? 'Hide password' : 'Show password'">
+                            <span x-show="!showPassword">Show</span>
+                            <span x-show="showPassword">Hide</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Forgot Password Link -->
