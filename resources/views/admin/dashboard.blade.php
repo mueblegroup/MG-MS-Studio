@@ -81,95 +81,116 @@
         .fc .fc-button-primary:hover { background-color: #4338ca; }
     </style>
 
+    @php
+        $dashboardMonths = $months ?? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        $dashboardRevenueData = $revenue_data ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        $dashboardCalendarEvents = $calendar_events ?? [];
+        $dashboardUserDistribution = [
+            (int) $total_teachers,
+            (int) $total_students,
+            (int) $total_unverified,
+        ];
+    @endphp
+
     @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const revenueLabels = @json($months ?? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
-            const revenueData = @json($revenue_data ?? [0,0,0,0,0,0,0,0,0,0,0,0]);
+            const revenueLabels = @json($dashboardMonths);
+            const revenueData = @json($dashboardRevenueData);
+            const userDistributionData = @json($dashboardUserDistribution);
+            const calendarEvents = @json($dashboardCalendarEvents);
 
             // 1. Line Chart (Revenue)
-            const ctxLine = document.getElementById('paymentHistoryChart').getContext('2d');
-            const gradient = ctxLine.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
-            gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+            const revenueCanvas = document.getElementById('paymentHistoryChart');
+            if (revenueCanvas) {
+                const ctxLine = revenueCanvas.getContext('2d');
+                const gradient = ctxLine.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
+                gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
 
-            new Chart(ctxLine, {
-                type: 'line',
-                data: {
-                    labels: revenueLabels,
-                    datasets: [{
-                        label: 'Revenue',
-                        data: revenueData,
-                        borderColor: '#10b981',
-                        backgroundColor: gradient,
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 3,
-                        pointRadius: 3,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return '{{ $currency }} ' + Number(context.parsed.y || 0).toLocaleString(undefined, {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2
-                                    });
+                new Chart(ctxLine, {
+                    type: 'line',
+                    data: {
+                        labels: revenueLabels,
+                        datasets: [{
+                            label: 'Revenue',
+                            data: revenueData,
+                            borderColor: '#10b981',
+                            backgroundColor: gradient,
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return '{{ $currency }} ' + Number(context.parsed.y || 0).toLocaleString(undefined, {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        });
+                                    }
                                 }
                             }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: 'rgba(156, 163, 175, 0.14)' },
-                            ticks: { color: '#9ca3af' }
                         },
-                        x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(156, 163, 175, 0.14)' },
+                                ticks: { color: '#9ca3af' }
+                            },
+                            x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+                        }
                     }
-                }
-            });
+                });
+            }
 
             // 2. Pie Chart (User Distribution)
-            const ctxPie = document.getElementById('userDistChart').getContext('2d');
-            new Chart(ctxPie, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Teachers', 'Students', 'Unverified'],
-                    datasets: [{
-                        data: [{{ $total_teachers }}, {{ $total_students }}, {{ $total_unverified }}],
-                        backgroundColor: ['#3b82f6', '#6366f1', '#f43f5e'],
-                        borderWidth: 0,
-                        hoverOffset: 10
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '70%',
-                    plugins: {
-                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+            const userCanvas = document.getElementById('userDistChart');
+            if (userCanvas) {
+                const ctxPie = userCanvas.getContext('2d');
+                new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Teachers', 'Students', 'Unverified'],
+                        datasets: [{
+                            data: userDistributionData,
+                            backgroundColor: ['#3b82f6', '#6366f1', '#f43f5e'],
+                            borderWidth: 0,
+                            hoverOffset: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+                        }
                     }
-                }
-            });
+                });
+            }
 
             // 3. Calendar
             const calendarEl = document.getElementById('calendar');
-            const calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                headerToolbar: { left: 'prev', center: 'title', right: 'next' },
-                height: 'auto',
-                events: @json($calendar_events ?? [])
-            });
-            calendar.render();
+            if (calendarEl) {
+                const calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    headerToolbar: { left: 'prev', center: 'title', right: 'next' },
+                    height: 'auto',
+                    events: calendarEvents
+                });
+                calendar.render();
+            }
         });
     </script>
     @endpush
