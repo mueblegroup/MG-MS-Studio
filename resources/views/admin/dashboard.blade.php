@@ -5,23 +5,25 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Welcome back {{ Auth::user()->name }}!</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 mb-8">
             @php
                 $stats = [
                     ['label' => 'Total Earnings', 'value' => $currency.' '.number_format($total_profit, 2), 'icon' => 'bx-wallet', 'color' => 'indigo', 'link' => route('payments.index')],
-                    ['label' => 'Total Teachers', 'value' => $total_teachers, 'icon' => 'bxs-user-voice', 'color' => 'indigo', 'link' => route('admin.teachers')],
-                    ['label' => 'Total Students', 'value' => $total_students, 'icon' => 'bxs-graduation', 'color' => 'indigo', 'link' => route('admin.students')],
+                    ['label' => 'This Month', 'value' => $currency.' '.number_format($this_month_revenue ?? 0, 2), 'icon' => 'bx-line-chart', 'color' => 'emerald', 'link' => route('payments.index')],
+                    ['label' => 'Pending Orders', 'value' => $pending_orders ?? 0, 'icon' => 'bx-time-five', 'color' => 'amber', 'link' => route('payments.index')],
+                    ['label' => 'Total Teachers', 'value' => $total_teachers, 'icon' => 'bxs-user-voice', 'color' => 'blue', 'link' => route('admin.teachers')],
+                    ['label' => 'Total Students', 'value' => $total_students, 'icon' => 'bxs-graduation', 'color' => 'violet', 'link' => route('admin.students')],
                 ];
             @endphp
 
             @foreach($stats as $stat)
-            <a href="{{ $stat['link'] }}" class="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-{{ $stat['color'] }}-400 transition-all duration-300 hover:shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div>
+            <a href="{{ $stat['link'] }}" class="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:shadow-lg">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="min-w-0">
                         <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">{{ $stat['label'] }}</p>
-                        <h3 class="text-2xl font-bold text-gray-800 dark:text-white group-hover:text-{{ $stat['color'] }}-600 transition-colors">{{ $stat['value'] }}</h3>
+                        <h3 class="truncate text-2xl font-bold text-gray-800 dark:text-white transition-colors">{{ $stat['value'] }}</h3>
                     </div>
-                    <div class="p-3 bg-{{ $stat['color'] }}-50 dark:bg-{{ $stat['color'] }}-900/20 rounded-xl text-{{ $stat['color'] }}-600">
+                    <div class="shrink-0 p-3 rounded-xl bg-gray-50 text-gray-700 dark:bg-gray-900 dark:text-gray-200">
                         <i class="bx {{ $stat['icon'] }} text-3xl"></i>
                     </div>
                 </div>
@@ -30,17 +32,28 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-            
             <div class="lg:col-span-8 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="font-bold text-gray-800 dark:text-white">Revenue Analytics</h3>
-                    <select class="text-xs border-gray-200 dark:bg-gray-700 dark:border-gray-600 rounded-lg">
-                        <option>This Year</option>
-                        <option>Last Year</option>
-                    </select>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
+                    <div>
+                        <h3 class="font-bold text-gray-800 dark:text-white">Revenue Analytics</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Paid payments grouped by month for {{ now()->year }}.</p>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300">
+                        {{ now()->year }}
+                    </div>
                 </div>
-                <div class="h-[350px]">
+
+                <div class="relative h-[350px]">
                     <canvas id="paymentHistoryChart"></canvas>
+
+                    @if(collect($revenue_data ?? [])->sum() <= 0)
+                        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                            <div class="rounded-2xl bg-white/90 px-4 py-3 text-center shadow-sm ring-1 ring-gray-100 dark:bg-gray-900/90 dark:ring-gray-700">
+                                <div class="text-sm font-bold text-gray-800 dark:text-white">No paid revenue yet</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Paid orders will appear here automatically.</div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -73,6 +86,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const revenueLabels = @json($months ?? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+            const revenueData = @json($revenue_data ?? [0,0,0,0,0,0,0,0,0,0,0,0]);
+
             // 1. Line Chart (Revenue)
             const ctxLine = document.getElementById('paymentHistoryChart').getContext('2d');
             const gradient = ctxLine.createLinearGradient(0, 0, 0, 400);
@@ -82,24 +98,41 @@
             new Chart(ctxLine, {
                 type: 'line',
                 data: {
-                    labels: {!! json_encode($months ?? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']) !!},
+                    labels: revenueLabels,
                     datasets: [{
-                        data: {!! json_encode($revenue_data ?? [0,0,0,0,0,0,0,0,0,0,0,0]) !!},
+                        label: 'Revenue',
+                        data: revenueData,
                         borderColor: '#10b981',
                         backgroundColor: gradient,
                         fill: true,
                         tension: 0.4,
                         borderWidth: 3,
-                        pointRadius: 0,
+                        pointRadius: 3,
                         pointHoverRadius: 6
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return '{{ $currency }} ' + Number(context.parsed.y || 0).toLocaleString(undefined, {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    });
+                                }
+                            }
+                        }
+                    },
                     scales: {
-                        y: { grid: { display: false }, ticks: { color: '#9ca3af' } },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(156, 163, 175, 0.14)' },
+                            ticks: { color: '#9ca3af' }
+                        },
                         x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
                     }
                 }
@@ -122,8 +155,8 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     cutout: '70%',
-                    plugins: { 
-                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } 
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
                     }
                 }
             });
