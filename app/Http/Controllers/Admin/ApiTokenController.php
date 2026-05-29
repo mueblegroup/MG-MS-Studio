@@ -7,6 +7,7 @@ use App\Models\ApiRequestLog;
 use App\Support\ApiAbilities;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -66,10 +67,14 @@ class ApiTokenController extends Controller
                 ->withInput();
         }
 
+        $expiresAt = !empty($validated['expires_at'])
+            ? Carbon::parse($validated['expires_at'])
+            : null;
+
         $newToken = $request->user()->createToken(
             $validated['name'],
             $abilities,
-            $validated['expires_at'] ?? null,
+            $expiresAt,
         );
 
         return redirect()
