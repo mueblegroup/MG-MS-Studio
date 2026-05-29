@@ -6,6 +6,9 @@ use App\Models\User;
 use App\Models\Payment;
 use App\Models\ClassModel;
 use App\Models\ClassSession;
+use App\Models\Order;
+use App\Services\StudioSettingsService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -14,26 +17,82 @@ class AdminController extends Controller
     /* ============================
      * Show Dashboard
      * ============================ */
-    public function dashboard()
+    public function dashboard(StudioSettingsService $settings)
     {
-        // Total profit (sum of all payments)
-        $totalProfit = Payment::sum('amount');
+        $year = (int) now()->year;
+        $monthLabels = collect(range(1, 12))
+            ->map(fn ($month) => Carbon::create($year, $month, 1)->format('M'))
+            ->values();
 
-        // Total teachers
-        $totalTeachers = User::where('role', 'teacher')->count();
+        $paidPayments = Payment::query()
+            ->where('status', 'paid')
+            ->where(function ($query) use ($year) {
+                $query->whereYear('paid_at', $year)
+                    ->orWhere(function ($fallback) use ($year) {
+                        $fallback->whereNull('paid_at')
+                            ->whereYear('created_at', $year);
+                    });
+            })
+            ->get(['amount', 'paid_at', 'created_at']);
 
-        // Total students
-        $totalStudents = User::where('role', 'student')->count();
+        $monthlyRevenue = array_fill(1, 12, 0.0);
 
-        // Unverified users
-        $totalUnverified = User::whereNull('email_verified_at')->count();
+        foreach ($paidPayments as $payment) {
+            $date = $payment->paid_at ?: $payment->created_at;
+
+            if (!$date) {
+                continue;
+            }
+
+            $monthlyRevenue[(int) $date->month] += (float) $payment->amount;
+        }
+
+        $revenueData = array_values(array_map(
+            fn ($amount) => round((float) $amount, 2),
+            $monthlyRevenue
+        ));
+
+        $totalProfit = Payment::where('status', 'paid')->sum('amount');
+        $thisMonthRevenue = Payment::where('status', 'paid')
+            ->where(function ($query) {
+                $query->whereBetween('paid_at', [now()->startOfMonth(), now()->endOfMonth()])
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('paid_at')
+                            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]);
+                    });
+            })
+            ->sum('amount');
+
+        $pendingOrders = Order::where('status', 'pending')->count();
+
+        $calendarEvents = ClassSession::query()
+            ->with('classModel:id,name')
+            ->whereNotNull('start_time')
+            ->where('start_time', '>=', now()->subMonth())
+            ->where('start_time', '<=', now()->addMonths(2))
+            ->orderBy('start_time')
+            ->limit(100)
+            ->get()
+            ->map(function (ClassSession $session) {
+                return [
+                    'title' => $session->classModel?->name ?? 'Class Session',
+                    'start' => optional($session->start_time)->toIso8601String(),
+                    'end' => optional($session->end_time)->toIso8601String(),
+                ];
+            })
+            ->values();
 
         return view('admin.dashboard', [
-            'total_profit'     => $totalProfit,
-            'total_teachers'   => $totalTeachers,
-            'total_students'   => $totalStudents,
-            'total_unverified' => $totalUnverified,
-            'currency'         => config('app.currency', 'MYR'),
+            'total_profit'       => $totalProfit,
+            'this_month_revenue' => $thisMonthRevenue,
+            'pending_orders'     => $pendingOrders,
+            'total_teachers'     => User::where('role', 'teacher')->count(),
+            'total_students'     => User::where('role', 'student')->count(),
+            'total_unverified'   => User::whereNull('email_verified_at')->count(),
+            'currency'           => strtoupper($settings->get('currency', config('app.currency', 'MYR'))),
+            'months'             => $monthLabels,
+            'revenue_data'       => $revenueData,
+            'calendar_events'    => $calendarEvents,
         ]);
     }
 
