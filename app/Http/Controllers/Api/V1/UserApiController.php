@@ -13,8 +13,11 @@ class UserApiController extends BaseApiController
     public function index(Request $request): JsonResponse
     {
         $query = User::query()->latest();
+        $forcedRole = $request->route('role');
 
-        if ($request->filled('role')) {
+        if ($forcedRole) {
+            $query->where('role', $forcedRole);
+        } elseif ($request->filled('role')) {
             $query->where('role', $request->string('role'));
         }
 
@@ -32,14 +35,17 @@ class UserApiController extends BaseApiController
 
     public function store(Request $request): JsonResponse
     {
+        $forcedRole = $request->route('role');
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', Rule::in(['admin', 'teacher', 'student'])],
+            'role' => [$forcedRole ? 'nullable' : 'required', Rule::in(['admin', 'teacher', 'student'])],
             'phone_number' => ['nullable', 'string', 'max:50'],
         ]);
 
+        $validated['role'] = $forcedRole ?: $validated['role'];
         $validated['password'] = Hash::make($validated['password']);
 
         $user = User::create($validated);
