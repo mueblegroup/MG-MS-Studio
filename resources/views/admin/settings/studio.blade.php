@@ -37,6 +37,54 @@
             </div>
         @endif
 
+        @if(!empty($envIssues))
+            <div class="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
+                <div class="flex items-start gap-3">
+                    <div class="mt-0.5 text-xl">
+                        <i class="bx bx-error-circle"></i>
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <div class="font-extrabold">Required setup is incomplete</div>
+                        <p class="mt-1 text-sm">
+                            Some required environment or studio settings are missing. Add the missing values, then run
+                            <code class="rounded bg-amber-100 px-1 py-0.5 text-xs dark:bg-amber-900">php artisan optimize:clear</code>
+                            if your server uses cached config.
+                        </p>
+
+                        <div class="mt-3 space-y-2">
+                            @foreach($envIssues as $issue)
+                                <div class="rounded-xl border border-amber-200 bg-white/70 p-3 text-sm dark:border-amber-800 dark:bg-gray-900/70">
+                                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-100">
+                                                {{ $issue['type'] }}
+                                            </span>
+
+                                            <code class="ml-2 rounded bg-gray-100 px-2 py-1 text-xs font-bold text-gray-800 dark:bg-gray-800 dark:text-gray-100">
+                                                {{ $issue['key'] }}
+                                            </code>
+                                        </div>
+
+                                        @if(!empty($issue['link']))
+                                            <a href="{{ $issue['link'] }}"
+                                               class="text-xs font-bold text-indigo-700 underline dark:text-indigo-300">
+                                                Open related page
+                                            </a>
+                                        @endif
+                                    </div>
+
+                                    <div class="mt-2 text-xs text-amber-800 dark:text-amber-100">
+                                        {{ $issue['message'] }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <form id="studio-settings-form" method="POST" action="{{ route('settings.studio.update') }}" class="max-w-5xl space-y-6">
             @csrf
 
