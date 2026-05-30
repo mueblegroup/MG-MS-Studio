@@ -31,7 +31,9 @@ class StudioSettingsController extends Controller
             'mail_ehlo_domain' => $settings->get('mail_ehlo_domain', env('MAIL_EHLO_DOMAIN', parse_url((string) config('app.url'), PHP_URL_HOST))),
         ];
 
-        return view('admin.settings.studio', compact('data'));
+        $envIssues = $this->getStudioSetupIssues($data);
+
+        return view('admin.settings.studio', compact('data', 'envIssues'));
     }
 
     public function update(Request $request, StudioSettingsService $settings)
@@ -124,5 +126,95 @@ class StudioSettingsController extends Controller
 
             return back()->with('mail_test_error', $e->getMessage());
         }
+    }
+
+    private function getStudioSetupIssues(array $data): array
+    {
+        $issues = [];
+
+        $this->pushMissing($issues, 'APP_KEY', config('app.key'), 'Required for Laravel encryption, sessions, and secure app operation.');
+        $this->pushMissing($issues, 'APP_URL', config('app.url'), 'Required for correct checkout redirect URLs, webhook URLs, receipts, and links.');
+        $this->pushMissing($issues, 'APP_NAME', config('app.name'), 'Used as the fallback studio/app name.');
+
+        if (blank($data['studio_name'] ?? null)) {
+            $issues[] = [
+                'type' => 'Studio Setting',
+                'key' => 'studio_name',
+                'message' => 'Studio Name is empty. Add it in this Studio Settings page.',
+                'link' => route('settings.studio'),
+            ];
+        }
+
+        if (blank($data['studio_display_name'] ?? null)) {
+            $issues[] = [
+                'type' => 'Studio Setting',
+                'key' => 'studio_display_name',
+                'message' => 'Studio Display Name is empty. Add it in this Studio Settings page.',
+                'link' => route('settings.studio'),
+            ];
+        }
+
+        if (blank($data['currency'] ?? null)) {
+            $issues[] = [
+                'type' => 'Studio Setting',
+                'key' => 'currency',
+                'message' => 'Currency is empty. Add a default currency like MYR.',
+                'link' => route('settings.studio'),
+            ];
+        }
+
+        if (($data['default_payment_provider'] ?? 'stripe') === 'stripe') {
+            $this->pushMissing($issues, 'STRIPE_SECRET', config('services.stripe.secret'), 'Stripe is selected, but the secret key is missing.');
+            $this->pushMissing($issues, 'STRIPE_PUBLISHABLE_KEY', config('services.stripe.key'), 'Stripe is selected, but the publishable key is missing.');
+            $this->pushMissing($issues, 'STRIPE_WEBHOOK_SECRET', config('services.stripe.webhook_secret'), 'Stripe webhook verification needs this key. Webhook URL: ' . route('webhooks.stripe'));
+        }
+
+        if (($data['default_payment_provider'] ?? 'stripe') === 'hitpay') {
+            $this->pushMissing($issues, 'HITPAY_API_KEY', config('services.hitpay.api_key'), 'HitPay is selected, but the API key is missing.');
+            $this->pushMissing($issues, 'HITPAY_BASE_URL', config('services.hitpay.base_url'), 'HitPay is selected, but the base URL is missing.');
+
+            if (blank(config('services.hitpay.event_webhook_salt_key')) && blank(config('services.hitpay.salt'))) {
+                $issues[] = [
+                    'type' => '.env',
+                    'key' => 'HITPAY_EVENT_WEBHOOK_SALT_KEY or HITPAY_SALT',
+                    'message' => 'HitPay webhook validation needs at least one salt key. Webhook URL: ' . route('webhooks.hitpay'),
+                    'link' => route('webhooks.hitpay'),
+                ];
+            }
+        }
+
+        if (!empty($data['mail_enabled'])) {
+            foreach ([
+                'mail_host' => 'SMTP Host is required when custom mail server is enabled.',
+                'mail_port' => 'SMTP Port is required when custom mail server is enabled.',
+                'mail_from_address' => 'From Email is required when custom mail server is enabled.',
+                'mail_from_name' => 'From Name is required when custom mail server is enabled.',
+            ] as $key => $message) {
+                if (blank($data[$key] ?? null)) {
+                    $issues[] = [
+                        'type' => 'Studio Setting',
+                        'key' => $key,
+                        'message' => $message,
+                        'link' => route('settings.studio'),
+                    ];
+                }
+            }
+        }
+
+        return $issues;
+    }
+
+    private function pushMissing(array &$issues, string $key, mixed $value, string $message): void
+    {
+        if (!blank($value)) {
+            return;
+        }
+
+        $issues[] = [
+            'type' => '.env',
+            'key' => $key,
+            'message' => $message,
+            'link' => route('settings.studio'),
+        ];
     }
 }
