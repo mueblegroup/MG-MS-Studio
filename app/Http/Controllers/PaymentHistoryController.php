@@ -105,7 +105,7 @@ class PaymentHistoryController extends Controller
     protected function makeInvoiceNumber(Payment $payment): string
     {
         $date = ($payment->paid_at ?? $payment->created_at)?->format('Ymd') ?? now()->format('Ymd');
-        return 'INV-' . $date . '-' . str_pad((string) $payment->id, 6, STR_PAD_LEFT);
+        return 'INV-' . $date . '-' . str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT);
     }
 
     protected function normalizePayload($payload): array
