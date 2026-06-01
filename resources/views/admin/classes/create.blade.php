@@ -182,7 +182,6 @@
                 const isRecurringType = classType.value === 'recurring' || isSubscription;
                 subscriptionPanel.classList.toggle('hidden', !isSubscription);
                 if (isRecurringType) recurrence.value = 'yes';
-                recurrence.disabled = isSubscription;
                 syncRecurrence();
             }
 
