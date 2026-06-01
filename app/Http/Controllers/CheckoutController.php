@@ -9,46 +9,60 @@ use App\Models\Payment;
 use App\Services\CartService;
 use App\Services\StudioSettingsService;
 use App\Services\HitPayService;
+use App\Services\SubscriptionClassService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
-    public function index(CartService $cart, StudioSettingsService $settings)
+    public function index(CartService $cart, StudioSettingsService $settings, SubscriptionClassService $subscriptions)
     {
-        $cartModel = $cart->currentCart()->load('items.purchasable');
+        $cartModel = $cart->currentCart()->load('items.purchasable.classModel');
 
         if ($cartModel->items->isEmpty()) {
             return redirect()->route('shop.cart.index')->with('error', 'Your cart is empty.');
         }
+
+        if ($message = $subscriptions->validateSubscriptionCart($cartModel)) {
+            return redirect()->route('shop.cart.index')->with('error', $message);
+        }
+
         $currency = strtoupper($settings->get('currency', 'MYR'));
         $enabledProviders = (array) $settings->get('default_payment_provider', ['stripe']);
         $defaultProvider = (string) $settings->get('default_payment_provider', $enabledProviders[0] ?? 'stripe');
+        $hasSubscriptionClass = $subscriptions->cartHasSubscriptionClass($cartModel);
 
         $summary = [
             'currency' => $currency,
             'subtotal' => (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price),
             'total'    => (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price),
+            'is_subscription' => $hasSubscriptionClass,
         ];
 
-        return view('shop.checkout', compact('cartModel', 'summary','enabledProviders', 'defaultProvider'));
+        return view('shop.checkout', compact('cartModel', 'summary','enabledProviders', 'defaultProvider', 'hasSubscriptionClass'));
     }
 
-    public function pay(Request $request, CartService $cart, StudioSettingsService $settings, HitPayService $hitpay)
+    public function pay(Request $request, CartService $cart, StudioSettingsService $settings, HitPayService $hitpay, SubscriptionClassService $subscriptions)
     {
         $enabledProviders = (array) $settings->get('default_payment_provider', ['stripe']);
         $validated = $request->validate([
             'provider' => 'required|string|in:' . implode(',', $enabledProviders),
         ]);
 
-        $cartModel = $cart->currentCart()->load('items.purchasable');
+        $cartModel = $cart->currentCart()->load('items.purchasable.classModel');
 
         if ($cartModel->items->isEmpty()) {
             return redirect()->route('shop.cart.index')->with('error', 'Your cart is empty.');
         }
 
-        [$order, $payment] = DB::transaction(function () use ($cartModel, $validated, $settings) {
+        if ($message = $subscriptions->validateSubscriptionCart($cartModel)) {
+            return redirect()->route('shop.cart.index')->with('error', $message);
+        }
+
+        $hasSubscriptionClass = $subscriptions->cartHasSubscriptionClass($cartModel);
+
+        [$order, $payment] = DB::transaction(function () use ($cartModel, $validated, $settings, $hasSubscriptionClass) {
             $currency = strtoupper($settings->get('currency', 'MYR'));
             $subtotal = (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price);
 
@@ -59,6 +73,7 @@ class CheckoutController extends Controller
                 'total'            => $subtotal,
                 'status'           => 'pending',
                 'payment_provider' => $validated['provider'],
+                'billing_reason'   => $hasSubscriptionClass ? 'subscription_initial' : null,
             ]);
 
             foreach ($cartModel->items as $item) {
@@ -80,12 +95,20 @@ class CheckoutController extends Controller
                 'currency'  => $order->currency,
                 'method'    => $validated['provider'],
                 'provider'  => $validated['provider'],
-                'reference' => 'ORD-' . $order->id . '-' . Str::upper(Str::random(6)),
+                'reference' => ($hasSubscriptionClass ? 'SUB-' : 'ORD-') . $order->id . '-' . Str::upper(Str::random(6)),
                 'status'    => 'pending',
             ]);
 
             return [$order, $payment];
         });
+
+        if ($hasSubscriptionClass) {
+            $subscription = $subscriptions->createPendingSubscriptionFromOrder($order);
+
+            return $validated['provider'] === 'stripe'
+                ? $this->paySubscriptionWithStripe($order->fresh('items'), $payment->fresh(), $subscription, $subscriptions)
+                : $this->payWithHitpay($order->fresh(), $payment->fresh(), $hitpay);
+        }
 
         return $validated['provider'] === 'stripe'
             ? $this->payWithStripe($order, $payment)
@@ -121,7 +144,22 @@ class CheckoutController extends Controller
             ],
         ]);
 
-        // store provider reference on BOTH order + payment
+        $order->update(['provider_reference' => $session->id]);
+        $payment->update(['provider_reference' => $session->id]);
+
+        return redirect()->away($session->url);
+    }
+
+    protected function paySubscriptionWithStripe(Order $order, Payment $payment, $subscription, SubscriptionClassService $subscriptions)
+    {
+        if (!$subscription) {
+            throw new \RuntimeException('Unable to create subscription record for this class.');
+        }
+
+        \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
+
+        $session = $subscriptions->createStripeCheckoutSession($order, $payment, $subscription);
+
         $order->update(['provider_reference' => $session->id]);
         $payment->update(['provider_reference' => $session->id]);
 
@@ -133,11 +171,15 @@ class CheckoutController extends Controller
         $amount = number_format((float) $order->total, 2, '.', '');
         $currency = strtoupper($order->currency ?? 'MYR');
 
+        $purpose = $order->billing_reason === 'subscription_initial'
+            ? 'Subscription class Order #' . $order->id
+            : 'Order #' . $order->id;
+
         $resp = $hitpay->createPaymentRequest([
             'amount'            => $amount,
             'currency'          => $currency,
-            'purpose'           => 'Order #' . $order->id,
-            'reference_number'  => (string) $order->id, // easiest mapping
+            'purpose'           => $purpose,
+            'reference_number'  => (string) $order->id,
             'redirect_url'      => route('shop.checkout.success', [], true) . '?order=' . $order->id,
             'webhook'           => route('webhooks.hitpay', [], true),
         ]);
@@ -188,7 +230,7 @@ class CheckoutController extends Controller
         return view('shop.checkout-cancel');
     }
 
-    public function stripeWebhook(Request $request)
+    public function stripeWebhook(Request $request, SubscriptionClassService $subscriptions)
     {
         $payload = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature');
@@ -214,16 +256,26 @@ class CheckoutController extends Controller
                     payload: $session
                 );
 
+                $subscriptions->activateFromStripeSession($session);
+
                 if ($didMarkPaid) {
                     FulfillOrderJob::dispatch($orderId);
                 }
             }
         }
 
+        if ($event->type === 'invoice.payment_succeeded') {
+            $subscriptions->handleStripeInvoicePayment($event->data->object);
+        }
+
+        if (in_array($event->type, ['customer.subscription.updated', 'customer.subscription.deleted'], true)) {
+            $subscriptions->syncFromStripeSubscription($event->data->object);
+        }
+
         return response()->json(['ok' => true]);
     }
 
-    public function hitpayWebhook(Request $request, HitPayService $hitpay)
+    public function hitpayWebhook(Request $request, HitPayService $hitpay, SubscriptionClassService $subscriptions)
     {
         $data = $request->all();
 
@@ -249,6 +301,8 @@ class CheckoutController extends Controller
                 payload: $data
             );
 
+            $this->activateHitpaySubscriptionIfNeeded($orderId, $subscriptions);
+
             if ($didMarkPaid) {
                 FulfillOrderJob::dispatch($orderId);
             }
@@ -264,7 +318,6 @@ class CheckoutController extends Controller
      */
     protected function normalizePayloadForDb(mixed $payload): array
     {
-        // Stripe objects support ->toArray()
         if (is_object($payload) && method_exists($payload, 'toArray')) {
             return (array) $payload->toArray();
         }
@@ -296,7 +349,6 @@ class CheckoutController extends Controller
             $order = Order::lockForUpdate()->find($orderId);
             if (!$order) return;
 
-            // already paid => idempotent
             if ($order->status === 'paid') {
                 return;
             }
@@ -308,44 +360,36 @@ class CheckoutController extends Controller
 
             $safePayload = $this->normalizePayloadForDb($payload);
 
-            // Prefer exact match by provider + provider_reference
             $paymentQuery = Payment::query()
                 ->where('provider', $provider);
 
+            $paymentUpdate = [
+                'status'  => 'paid',
+                'paid_at' => now(),
+                'payload' => $safePayload,
+                'provider' => $provider,
+            ];
+
             if ($providerReference) {
+                $paymentUpdate['provider_reference'] = $providerReference;
+
                 $updated = (clone $paymentQuery)
                     ->where('provider_reference', $providerReference)
-                    ->update([
-                        'status'  => 'paid',
-                        'paid_at' => now(),
-                        'payload' => $safePayload,
-                    ]);
+                    ->update($paymentUpdate);
 
-                // fallback: latest pending payment for this order
                 if ($updated === 0) {
                     Payment::where('order_id', $orderId)
                         ->where('status', 'pending')
                         ->orderByDesc('id')
                         ->limit(1)
-                        ->update([
-                            'status'             => 'paid',
-                            'paid_at'            => now(),
-                            'payload'            => $safePayload,
-                            'provider'           => $provider,
-                            'provider_reference' => $providerReference,
-                        ]);
+                        ->update($paymentUpdate);
                 }
             } else {
                 Payment::where('order_id', $orderId)
                     ->where('status', 'pending')
                     ->orderByDesc('id')
                     ->limit(1)
-                    ->update([
-                        'status'  => 'paid',
-                        'paid_at' => now(),
-                        'payload' => $safePayload,
-                        'provider' => $provider,
-                    ]);
+                    ->update($paymentUpdate);
             }
 
             $didMarkPaid = true;
@@ -370,5 +414,24 @@ class CheckoutController extends Controller
                 ->where('status', 'pending')
                 ->update(['status' => 'cancelled']);
         });
+    }
+
+    protected function activateHitpaySubscriptionIfNeeded(int $orderId, SubscriptionClassService $subscriptions): void
+    {
+        $order = Order::with('studioSubscription')->find($orderId);
+        if (!$order || !$order->studioSubscription) {
+            return;
+        }
+
+        $subscription = $order->studioSubscription;
+        $interval = $subscription->billing_interval ?: 'month';
+
+        $subscription->update([
+            'status' => 'active',
+            'started_at' => $subscription->started_at ?: now(),
+            'current_period_start' => now(),
+            'current_period_end' => $subscriptions->nextBillingAt($interval),
+            'next_billing_at' => $subscriptions->nextBillingAt($interval),
+        ]);
     }
 }
