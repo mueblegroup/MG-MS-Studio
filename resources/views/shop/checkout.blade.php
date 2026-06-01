@@ -14,6 +14,15 @@
             </a>
         </div>
 
+        @if(!empty($hasSubscriptionClass))
+            <div class="mb-5 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-800 dark:text-amber-100">
+                <div class="font-bold">Subscription checkout</div>
+                <div class="mt-1">
+                    This class starts recurring billing. Stripe subscriptions renew automatically. HitPay subscription renewals are generated as due payment requests and will appear in payment history.
+                </div>
+            </div>
+        @endif
+
         <div class="grid grid-cols-1 lg:grid-cols-12">
             <div class="lg:col-span-8 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
                 <h2 class="font-bold text-gray-900 dark:text-white">Order Items</h2>
@@ -30,6 +39,9 @@
                                     <div class="font-semibold text-gray-900 dark:text-white">{{ $label }}</div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                         Qty: {{ $item->quantity }}
+                                        @if(($meta['class_type'] ?? null) === 'subscription')
+                                            <span class="ml-2 inline-flex rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-100">Subscription</span>
+                                        @endif
                                     </div>
 
                                     @if(!empty($meta))
@@ -47,6 +59,9 @@
 
                                 <div class="text-right font-semibold text-gray-900 dark:text-white">
                                     {{ $item->currency ?? 'MYR' }} {{ number_format($line, 2) }}
+                                    @if(($meta['class_type'] ?? null) === 'subscription')
+                                        <div class="text-xs font-normal text-gray-500 dark:text-gray-400">recurring</div>
+                                    @endif
                                 </div>
                             </div>
                         @endforeach
@@ -60,6 +75,9 @@
                     <div class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
                         {{ $summary['currency'] }} {{ number_format($summary['total'], 2) }}
                     </div>
+                    @if(!empty($hasSubscriptionClass))
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Recurring subscription amount</div>
+                    @endif
 
                     <div class="mt-5 space-y-2">
                             @php
@@ -73,7 +91,7 @@
                                     <button name="provider" value="stripe"
                                         class="w-full inline-flex justify-center items-center gap-2 px-4 py-3 rounded-xl
                                             text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
-                                        <i class="bx bxl-stripe"></i> Pay with Stripe
+                                        <i class="bx bxl-stripe"></i> {{ !empty($hasSubscriptionClass) ? 'Subscribe with Stripe' : 'Pay with Stripe' }}
                                     </button>
                                 @endif
 
@@ -81,7 +99,7 @@
                                     <button name="provider" value="hitpay"
                                         class="w-full inline-flex justify-center items-center gap-2 px-4 py-3 rounded-xl
                                             text-sm font-semibold text-white bg-gray-800 hover:bg-gray-900 transition shadow">
-                                        <i class="bx bx-link"></i> Pay with HitPay
+                                        <i class="bx bx-link"></i> {{ !empty($hasSubscriptionClass) ? 'Start with HitPay' : 'Pay with HitPay' }}
                                     </button>
                                 @endif
                             </form>
