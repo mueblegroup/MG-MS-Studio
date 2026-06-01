@@ -18,7 +18,7 @@ class CheckoutController extends Controller
 {
     public function index(CartService $cart, StudioSettingsService $settings, SubscriptionClassService $subscriptions)
     {
-        $cartModel = $cart->currentCart()->load('items.purchasable.classModel');
+        $cartModel = $cart->currentCart()->load('items.purchasable');
 
         if ($cartModel->items->isEmpty()) {
             return redirect()->route('shop.cart.index')->with('error', 'Your cart is empty.');
@@ -40,7 +40,7 @@ class CheckoutController extends Controller
             'is_subscription' => $hasSubscriptionClass,
         ];
 
-        return view('shop.checkout', compact('cartModel', 'summary','enabledProviders', 'defaultProvider', 'hasSubscriptionClass'));
+        return view('shop.checkout', compact('cartModel', 'summary', 'enabledProviders', 'defaultProvider', 'hasSubscriptionClass'));
     }
 
     public function pay(Request $request, CartService $cart, StudioSettingsService $settings, HitPayService $hitpay, SubscriptionClassService $subscriptions)
@@ -50,7 +50,7 @@ class CheckoutController extends Controller
             'provider' => 'required|string|in:' . implode(',', $enabledProviders),
         ]);
 
-        $cartModel = $cart->currentCart()->load('items.purchasable.classModel');
+        $cartModel = $cart->currentCart()->load('items.purchasable');
 
         if ($cartModel->items->isEmpty()) {
             return redirect()->route('shop.cart.index')->with('error', 'Your cart is empty.');
@@ -313,9 +313,6 @@ class CheckoutController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /**
-     * Convert payload into something that is ALWAYS valid JSON for DB.
-     */
     protected function normalizePayloadForDb(mixed $payload): array
     {
         if (is_object($payload) && method_exists($payload, 'toArray')) {
@@ -337,10 +334,6 @@ class CheckoutController extends Controller
         return ['raw' => (string) $payload];
     }
 
-    /**
-     * Marks order + payment as paid in an idempotent way.
-     * Returns true only if it actually transitioned pending -> paid.
-     */
     protected function markOrderPaid(int $orderId, string $provider, ?string $providerReference, mixed $payload): bool
     {
         $didMarkPaid = false;
@@ -360,9 +353,6 @@ class CheckoutController extends Controller
 
             $safePayload = $this->normalizePayloadForDb($payload);
 
-            $paymentQuery = Payment::query()
-                ->where('provider', $provider);
-
             $paymentUpdate = [
                 'status'  => 'paid',
                 'paid_at' => now(),
@@ -372,25 +362,13 @@ class CheckoutController extends Controller
 
             if ($providerReference) {
                 $paymentUpdate['provider_reference'] = $providerReference;
-
-                $updated = (clone $paymentQuery)
-                    ->where('provider_reference', $providerReference)
-                    ->update($paymentUpdate);
-
-                if ($updated === 0) {
-                    Payment::where('order_id', $orderId)
-                        ->where('status', 'pending')
-                        ->orderByDesc('id')
-                        ->limit(1)
-                        ->update($paymentUpdate);
-                }
-            } else {
-                Payment::where('order_id', $orderId)
-                    ->where('status', 'pending')
-                    ->orderByDesc('id')
-                    ->limit(1)
-                    ->update($paymentUpdate);
             }
+
+            Payment::where('order_id', $orderId)
+                ->where('status', 'pending')
+                ->orderByDesc('id')
+                ->limit(1)
+                ->update($paymentUpdate);
 
             $didMarkPaid = true;
         });
@@ -425,13 +403,14 @@ class CheckoutController extends Controller
 
         $subscription = $order->studioSubscription;
         $interval = $subscription->billing_interval ?: 'month';
+        $nextBillingAt = $subscriptions->nextBillingAt($interval);
 
         $subscription->update([
             'status' => 'active',
             'started_at' => $subscription->started_at ?: now(),
             'current_period_start' => now(),
-            'current_period_end' => $subscriptions->nextBillingAt($interval),
-            'next_billing_at' => $subscriptions->nextBillingAt($interval),
+            'current_period_end' => $nextBillingAt,
+            'next_billing_at' => $nextBillingAt,
         ]);
     }
 }
