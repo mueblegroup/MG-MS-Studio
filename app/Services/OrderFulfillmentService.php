@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\ClassSession;
 use App\Models\Order;
-use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
 
 class OrderFulfillmentService
@@ -39,6 +39,11 @@ class OrderFulfillmentService
 
                 if ($type === 'ClassSession') {
                     $this->grantIndividualClass($order->user_id, $pid, $order->id, $item->meta ?? []);
+
+                    if (!empty($order->studio_subscription_id)) {
+                        $this->advanceSubscriptionAfterClassFulfillment((int) $order->studio_subscription_id, $pid);
+                    }
+
                     continue;
                 }
 
@@ -89,6 +94,7 @@ class OrderFulfillmentService
         if (!empty($meta['label'])) $noteParts[] = "Item: " . $meta['label'];
         if (!empty($meta['date']))  $noteParts[] = "Date: " . $meta['date'];
         if (!empty($meta['time']))  $noteParts[] = "Time: " . $meta['time'];
+        if (!empty($meta['billing_reason'])) $noteParts[] = "Billing: " . $meta['billing_reason'];
         $noteParts[] = "Purchased via Order #" . $orderId;
         $notes = implode(" | ", $noteParts);
 
@@ -173,5 +179,31 @@ class OrderFulfillmentService
                 'deleted_at' => null,
             ]);
         }
+    }
+
+    protected function advanceSubscriptionAfterClassFulfillment(int $subscriptionId, int $fulfilledClassSessionId): void
+    {
+        $subscription = DB::table('studio_subscriptions')
+            ->lockForUpdate()
+            ->where('id', $subscriptionId)
+            ->first();
+
+        if (!$subscription) {
+            return;
+        }
+
+        $nextSession = ClassSession::query()
+            ->where('class_id', $subscription->class_id)
+            ->where('start_time', '>', ClassSession::whereKey($fulfilledClassSessionId)->value('start_time'))
+            ->orderBy('start_time')
+            ->first();
+
+        DB::table('studio_subscriptions')
+            ->where('id', $subscriptionId)
+            ->update([
+                'last_fulfilled_class_session_id' => $fulfilledClassSessionId,
+                'current_class_session_id' => $nextSession?->id,
+                'updated_at' => now(),
+            ]);
     }
 }
