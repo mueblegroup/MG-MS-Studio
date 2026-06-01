@@ -2,17 +2,14 @@
 
 namespace App\Models;
 
-
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Order;
-use App\Models\User;
 
 class Payment extends Model
 {
     protected $fillable = [
         'user_id',
         'order_id',
+        'studio_subscription_id',
         'amount',
         'currency',
         'method',
@@ -21,12 +18,16 @@ class Payment extends Model
         'provider_reference',
         'payload',
         'paid_at',
+        'billing_period_start',
+        'billing_period_end',
         'status',
     ];
 
     protected $casts = [
         'payload' => 'array',
         'paid_at' => 'datetime',
+        'billing_period_start' => 'datetime',
+        'billing_period_end' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -34,6 +35,11 @@ class Payment extends Model
     public function order()
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function studioSubscription()
+    {
+        return $this->belongsTo(StudioSubscription::class, 'studio_subscription_id');
     }
 
     public function user()
