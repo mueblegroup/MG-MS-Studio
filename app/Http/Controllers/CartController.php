@@ -36,24 +36,30 @@ class CartController extends Controller
 
         $qty = (int) ($validated['qty'] ?? 1);
 
-        // Global studio currency (fallback MYR)
         $currency = $settings->currency('MYR');
 
         if ($validated['type'] === 'class_session') {
             $session = ClassSession::with('classModel')->findOrFail($validated['id']);
             $price = (float) ($session->classModel->price ?? 0);
+            $classType = $session->classModel->type ?? 'single';
+            $billingInterval = $session->classModel->billing_interval ?? null;
 
-            $cart->addItem($session, 1, $price, $currency, [
+            $meta = [
                 'label' => $session->classModel->name ?? 'Class',
                 'date'  => optional($session->start_time)->format('Y-m-d'),
                 'time'  => optional($session->start_time)->format('H:i') . ' - ' . optional($session->end_time)->format('H:i'),
-            ]);
+                'class_type' => $classType,
+            ];
+
+            if ($classType === 'subscription') {
+                $meta['billing'] = 'Recurring ' . ucfirst($billingInterval ?: 'monthly');
+            }
+
+            $cart->addItem($session, 1, $price, $currency, $meta);
         }
 
         if ($validated['type'] === 'plan') {
             $plan = Plan::findOrFail($validated['id']);
-
-            // If you still want per-plan currency, keep this line; else use global.
             $planCurrency = $plan->currency ?: $currency;
 
             $cart->addItem($plan, 1, (float) $plan->price, $planCurrency, [
@@ -63,8 +69,6 @@ class CartController extends Controller
 
         if ($validated['type'] === 'class_card') {
             $card = ClassCard::findOrFail($validated['id']);
-
-            // If you still want per-card currency, keep this line; else use global.
             $cardCurrency = $card->currency ?: $currency;
 
             $cart->addItem($card, $qty, (float) $card->price, $cardCurrency, [
