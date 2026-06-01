@@ -63,7 +63,7 @@ return new class extends Migration
             $table->json('meta')->nullable();
             $table->timestamps();
 
-            $table->unique(['user_id', 'class_id', 'provider', 'status'], 'studio_sub_unique_active_like');
+            $table->index(['user_id', 'class_id', 'provider', 'status'], 'studio_sub_lookup_idx');
         });
     }
 
