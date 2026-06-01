@@ -14,7 +14,7 @@ class StudentAttendanceController extends Controller
     {
         $studentId = Auth::id();
 
-        $type = $request->get('type');     // class|plan|null
+        $type = $request->get('type');     // class|subscription|plan|null
         $status = $request->get('status'); // attended|no_show|null
         $range = $request->get('range', 'month'); // month|all
 
@@ -24,7 +24,8 @@ class StudentAttendanceController extends Controller
         }
 
         // ---------
-        // Class attendance rows
+        // Class attendance rows. Subscription classes are still tied to the real class_session_id,
+        // so attendance dates always reflect the actual generated session date.
         // ---------
         $classRows = DB::table('class_session_assignments as a')
             ->join('class_sessions as s', 'a.class_session_id', '=', 's.id')
@@ -34,12 +35,16 @@ class StudentAttendanceController extends Controller
             ->where('a.user_id', $studentId)
             ->when($from, fn($q) => $q->where('s.start_time', '>=', $from))
             ->when($status, fn($q) => $q->where('at.status', $status))
+            ->when($type === 'class', fn($q) => $q->where(function ($qq) {
+                $qq->where('c.type', '!=', 'subscription')->orWhereNull('c.type');
+            }))
+            ->when($type === 'subscription', fn($q) => $q->where('c.type', 'subscription'))
             ->select([
                 's.start_time',
                 's.end_time',
                 's.venue_name',
                 'c.name as title',
-                DB::raw("'class' as type"),
+                DB::raw("CASE WHEN c.type = 'subscription' THEN 'subscription' ELSE 'class' END as type"),
                 'at.status',
                 'at.attended_at',
             ]);
@@ -79,10 +84,10 @@ class StudentAttendanceController extends Controller
 
         $items = collect();
 
-        if ($type !== 'plan') {
+        if (!in_array($type, ['plan'], true)) {
             $items = $items->merge($classRows->get());
         }
-        if ($type !== 'class') {
+        if (!in_array($type, ['class', 'subscription'], true)) {
             $items = $items->merge($planRows->get());
         }
 
