@@ -27,11 +27,27 @@ class ShopController extends Controller
         $classCutoffDays = (int) config('shop.class_early_cutoff_days', 0);
         $classMinStart = $now->copy()->startOfDay()->addDays($classCutoffDays);
 
+        $subscriptionFirstSessionIds = ClassSession::query()
+            ->selectRaw('MIN(class_sessions.id)')
+            ->join('classes', 'classes.id', '=', 'class_sessions.class_id')
+            ->where('classes.type', 'subscription')
+            ->whereNotNull('class_sessions.start_time')
+            ->where('class_sessions.start_time', '>=', $classMinStart)
+            ->groupBy('class_sessions.class_id');
+
         $classes = ClassSession::query()
             ->with(['classModel.teacher:id,name,email'])
             ->whereNotNull('start_time')
             // ✅ hide past + apply early cutoff
             ->where('start_time', '>=', $classMinStart)
+            // ✅ subscription classes are displayed once only, using the first upcoming session as the subscription start item
+            ->where(function ($query) use ($subscriptionFirstSessionIds) {
+                $query->whereHas('classModel', function ($classQuery) {
+                        $classQuery->where('type', '!=', 'subscription')
+                            ->orWhereNull('type');
+                    })
+                    ->orWhereIn('id', $subscriptionFirstSessionIds);
+            })
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($wrap) use ($q) {
                     $wrap->whereHas('classModel', function ($c) use ($q) {
@@ -127,7 +143,6 @@ class ShopController extends Controller
         }
 
         $cart[$key]['qty'] = min(20, (int)$cart[$key]['qty'] + $qty);
-
         session(['cart' => $cart]);
 
         return redirect()->route('shop.cart')->with('success', 'Added to cart.');
@@ -205,9 +220,11 @@ class ShopController extends Controller
 
             $start = optional($session->start_time)->format('Y-m-d H:i');
             $teacher = $session->classModel->teacher?->name ?? '-';
+            $isSubscription = ($session->classModel->type ?? null) === 'subscription';
+            $billingInterval = $session->classModel->billing_interval ?? null;
 
             return [
-                'name' => ($session->classModel->name ?? 'Class') . " ({$start})",
+                'name' => ($session->classModel->name ?? 'Class') . ($isSubscription ? ' Subscription' : " ({$start})"),
                 'price' => (float)($session->classModel->price ?? 0),
                 'currency' => 'MYR',
                 'meta' => [
@@ -215,6 +232,9 @@ class ShopController extends Controller
                     'time' => optional($session->start_time)->format('H:i') . ' - ' . optional($session->end_time)->format('H:i'),
                     'teacher' => $teacher,
                     'venue' => $session->venue_name,
+                    'class_type' => $session->classModel->type ?? 'single',
+                    'billing' => $isSubscription && $billingInterval ? 'Recurring ' . ucfirst($billingInterval) : null,
+                    'subscription_start_session_id' => $isSubscription ? $session->id : null,
                 ],
             ];
         }
