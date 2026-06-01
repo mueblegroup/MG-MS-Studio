@@ -9,13 +9,21 @@ class Order extends Model
 {
     protected $fillable = [
         'user_id',
+        'studio_subscription_id',
         'currency',
         'subtotal',
         'total',
         'status',
         'payment_provider',
+        'billing_reason',
         'provider_reference',
         'paid_at',
+        'fulfilled_at',
+    ];
+
+    protected $casts = [
+        'paid_at' => 'datetime',
+        'fulfilled_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -63,6 +71,11 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function studioSubscription()
+    {
+        return $this->belongsTo(StudioSubscription::class, 'studio_subscription_id');
+    }
+
     protected function createUserNotification(string $title, string $message, string $type): void
     {
         try {
@@ -79,7 +92,9 @@ class Order extends Model
                 'action_url' => '/student/payments',
                 'data' => [
                     'order_id' => $this->id,
+                    'studio_subscription_id' => $this->studio_subscription_id,
                     'status' => $this->status,
+                    'billing_reason' => $this->billing_reason,
                     'total' => $this->total,
                     'currency' => $this->currency,
                 ],
