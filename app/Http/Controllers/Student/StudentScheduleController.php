@@ -16,7 +16,8 @@ class StudentScheduleController extends Controller
         $startMonth = Carbon::now()->startOfMonth();
         $endMonth   = Carbon::now()->endOfMonth();
 
-        // Class sessions assigned
+        // Class sessions assigned. Subscription classes are still assigned by the real class_session_id,
+        // so schedule dates always come from the actual generated session date.
         $classItems = DB::table('class_session_assignments as a')
             ->join('class_sessions as s', 'a.class_session_id', '=', 's.id')
             ->join('classes as c', 's.class_id', '=', 'c.id')
@@ -29,7 +30,7 @@ class StudentScheduleController extends Controller
                 's.end_time as end',
                 's.venue_name as venue',
                 'c.name as title',
-                DB::raw("'class' as type"),
+                DB::raw("CASE WHEN c.type = 'subscription' THEN 'subscription' ELSE 'class' END as type"),
             ])
             ->get();
 
