@@ -9,6 +9,7 @@ class UserPlan extends Model
 {
 
     protected $fillable = [
+        'studio_id',
         'plan_id',
         'user_id',
         'starts_on',
