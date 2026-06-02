@@ -10,6 +10,7 @@ class UserClassCard extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'studio_id',
         'user_id',
         'class_card_id',
         'purchased_at',
