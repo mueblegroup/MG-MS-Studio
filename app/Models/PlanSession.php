@@ -10,6 +10,7 @@ class PlanSession extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'studio_id',
         'plan_id',
         'session_name',
         'start_time',
