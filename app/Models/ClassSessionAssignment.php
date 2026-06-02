@@ -10,6 +10,7 @@ class ClassSessionAssignment extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'studio_id',
         'user_id',
         'class_session_id',
         'assigned_by',
