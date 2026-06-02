@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsStudio;
 use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
+    use AssignsStudio;
+
     protected $fillable = [
+        'studio_id',
         'user_id',
         'order_id',
         'studio_subscription_id',
