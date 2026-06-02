@@ -75,9 +75,11 @@ class PlanController extends Controller
 
         return DB::transaction(function () use ($validated) {
 
+            $studioId = current_studio_id() ?: auth()->user()?->studio_id ?: 1;
             $isRecurring = $validated['recurrence'] === 'yes';
 
             $plan = Plan::create([
+                'studio_id' => $studioId,
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'teacher_id' => $validated['teacher_id'] ?? null,
@@ -97,6 +99,7 @@ class PlanController extends Controller
             $end   = Carbon::parse($validated['date'].' '.$validated['end_time']);
 
             PlanSession::create([
+                'studio_id' => $studioId,
                 'plan_id' => $plan->id,
                 'session_name' => $validated['session_name'] ?? null,
                 'start_time' => $start,
@@ -146,6 +149,7 @@ class PlanController extends Controller
                     }
 
                     PlanSession::create([
+                        'studio_id' => $studioId,
                         'plan_id' => $plan->id,
                         'session_name' => $validated['session_name'] ?? null,
                         'start_time' => $currentStart->copy(),
@@ -257,6 +261,7 @@ public function update(Request $request, Plan $plan)
         while ($cursorStart->lte($untilDate)) {
 
             $plan->sessions()->create([
+                'studio_id' => $plan->studio_id ?: current_studio_id() ?: auth()->user()?->studio_id ?: 1,
                 'session_name' => $first->session_name,
                 'start_time' => $cursorStart->copy(),
                 'end_time' => $cursorEnd->copy(),
