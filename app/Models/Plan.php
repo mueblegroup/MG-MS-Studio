@@ -10,6 +10,7 @@ class Plan extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'studio_id',
         'name',
         'description',
         'teacher_id',
