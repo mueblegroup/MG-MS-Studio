@@ -18,10 +18,15 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(prepend: [
+            \App\Http\Middleware\ResolveStudioTenant::class,
+        ]);
+
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckUserRole::class,
             'api.ability' => \App\Http\Middleware\EnsureApiTokenCan::class,
             'api.log' => \App\Http\Middleware\LogApiRequest::class,
+            'studio' => \App\Http\Middleware\ResolveStudioTenant::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
