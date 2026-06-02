@@ -149,6 +149,7 @@ class ClassController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated) {
+            $studioId = current_studio_id() ?: auth()->user()?->studio_id ?: 1;
             $isSubscription = $validated['class_type'] === 'subscription';
             $isRecurring = $isSubscription || $validated['class_type'] === 'recurring' || $validated['recurrence'] === 'yes';
             $frequency = $isRecurring ? ($validated['recurrence_frequency'] ?? 'monthly') : null;
@@ -157,6 +158,7 @@ class ClassController extends Controller
             $end   = Carbon::parse($validated['date'].' '.$validated['end_time']);
 
             $class = ClassModel::create([
+                'studio_id' => $studioId,
                 'name' => $validated['class_name'],
                 'description' => $validated['description'] ?? null,
                 'teacher_id' => $validated['teacher_id'],
@@ -172,6 +174,7 @@ class ClassController extends Controller
             ]);
 
             $sessionsToCreate = [[
+                'studio_id' => $studioId,
                 'class_id' => $class->id,
                 'start_time' => $start->copy(),
                 'end_time' => $end->copy(),
@@ -194,6 +197,7 @@ class ClassController extends Controller
                     }
 
                     $sessionsToCreate[] = [
+                        'studio_id' => $studioId,
                         'class_id' => $class->id,
                         'start_time' => $currentStart->copy(),
                         'end_time' => $currentEnd->copy(),
