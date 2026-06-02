@@ -45,6 +45,7 @@ class ClassCardController extends Controller
         ]);
 
         ClassCard::create([
+            'studio_id' => current_studio_id() ?: auth()->user()?->studio_id ?: 1,
             'name' => $validated['name'],
             'total_classes' => $validated['total_classes'],
             'validity_weeks' => $validated['validity_weeks'],
