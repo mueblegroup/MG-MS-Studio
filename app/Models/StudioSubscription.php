@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class StudioSubscription extends Model
 {
     protected $fillable = [
+        'studio_id',
         'user_id',
         'class_id',
         'current_class_session_id',
