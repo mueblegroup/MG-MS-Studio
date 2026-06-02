@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AppNotification extends Model
 {
     protected $fillable = [
+        'studio_id',
         'user_id',
         'created_by',
         'title',
