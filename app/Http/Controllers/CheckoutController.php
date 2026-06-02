@@ -63,10 +63,12 @@ class CheckoutController extends Controller
         $hasSubscriptionClass = $subscriptions->cartHasSubscriptionClass($cartModel);
 
         [$order, $payment] = DB::transaction(function () use ($cartModel, $validated, $settings, $hasSubscriptionClass) {
+            $studioId = current_studio_id() ?: auth()->user()?->studio_id ?: 1;
             $currency = strtoupper($settings->get('currency', 'MYR'));
             $subtotal = (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price);
 
             $order = Order::create([
+                'studio_id'        => $studioId,
                 'user_id'          => auth()->id(),
                 'currency'         => $currency,
                 'subtotal'         => $subtotal,
@@ -78,6 +80,7 @@ class CheckoutController extends Controller
 
             foreach ($cartModel->items as $item) {
                 OrderItem::create([
+                    'studio_id'        => $studioId,
                     'order_id'         => $order->id,
                     'purchasable_type' => $item->purchasable_type,
                     'purchasable_id'   => $item->purchasable_id,
@@ -89,6 +92,7 @@ class CheckoutController extends Controller
             }
 
             $payment = Payment::create([
+                'studio_id' => $studioId,
                 'user_id'   => auth()->id(),
                 'order_id'  => $order->id,
                 'amount'    => $order->total,
@@ -141,6 +145,7 @@ class CheckoutController extends Controller
             'cancel_url'  => route('shop.checkout.cancel', [], true) . '?order=' . $order->id,
             'metadata'    => [
                 'order_id' => (string) $order->id,
+                'studio_id' => (string) ($order->studio_id ?: current_studio_id() ?: 1),
             ],
         ]);
 
