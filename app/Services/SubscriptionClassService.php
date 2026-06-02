@@ -70,8 +70,10 @@ class SubscriptionClassService
 
         $session = $item->purchasable;
         $class = $session->classModel;
+        $studioId = $order->studio_id ?: $class->studio_id ?: current_studio_id() ?: auth()->user()?->studio_id ?: 1;
 
         $subscription = StudioSubscription::create([
+            'studio_id' => $studioId,
             'user_id' => $order->user_id,
             'class_id' => $class->id,
             'current_class_session_id' => $session->id,
@@ -89,11 +91,13 @@ class SubscriptionClassService
         ]);
 
         $order->update([
+            'studio_id' => $studioId,
             'studio_subscription_id' => $subscription->id,
             'billing_reason' => 'subscription_initial',
         ]);
 
         Payment::where('order_id', $order->id)->update([
+            'studio_id' => $studioId,
             'studio_subscription_id' => $subscription->id,
         ]);
 
@@ -106,6 +110,7 @@ class SubscriptionClassService
         $lineItem = $order->items->first();
         $label = $lineItem?->meta['label'] ?? 'Subscription Class';
         $interval = $subscription->billing_interval ?: 'month';
+        $studioId = $order->studio_id ?: $subscription->studio_id ?: current_studio_id() ?: 1;
 
         return \Stripe\Checkout\Session::create([
             'mode' => 'subscription',
@@ -122,12 +127,14 @@ class SubscriptionClassService
             'cancel_url' => route('shop.checkout.cancel', [], true) . '?order=' . $order->id,
             'metadata' => [
                 'order_id' => (string) $order->id,
+                'studio_id' => (string) $studioId,
                 'studio_subscription_id' => (string) $subscription->id,
                 'class_id' => (string) $subscription->class_id,
             ],
             'subscription_data' => [
                 'metadata' => [
                     'order_id' => (string) $order->id,
+                    'studio_id' => (string) $studioId,
                     'studio_subscription_id' => (string) $subscription->id,
                     'class_id' => (string) $subscription->class_id,
                 ],
@@ -300,8 +307,10 @@ class SubscriptionClassService
     ): Order {
         return DB::transaction(function () use ($subscription, $classSession, $provider, $amount, $currency, $providerReference, $payload, $billingPeriodStart, $billingPeriodEnd, $status) {
             $paidAt = $status === 'paid' ? now() : null;
+            $studioId = $subscription->studio_id ?: $classSession->studio_id ?: current_studio_id() ?: 1;
 
             $order = Order::create([
+                'studio_id' => $studioId,
                 'user_id' => $subscription->user_id,
                 'studio_subscription_id' => $subscription->id,
                 'currency' => $currency,
@@ -315,6 +324,7 @@ class SubscriptionClassService
             ]);
 
             OrderItem::create([
+                'studio_id' => $studioId,
                 'order_id' => $order->id,
                 'purchasable_type' => get_class($classSession),
                 'purchasable_id' => $classSession->id,
@@ -331,6 +341,7 @@ class SubscriptionClassService
             ]);
 
             Payment::create([
+                'studio_id' => $studioId,
                 'user_id' => $subscription->user_id,
                 'order_id' => $order->id,
                 'studio_subscription_id' => $subscription->id,
@@ -349,6 +360,7 @@ class SubscriptionClassService
 
             if ($status === 'paid') {
                 $subscription->update([
+                    'studio_id' => $studioId,
                     'status' => 'active',
                     'current_period_start' => $billingPeriodStart,
                     'current_period_end' => $billingPeriodEnd,
