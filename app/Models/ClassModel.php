@@ -11,6 +11,7 @@ class ClassModel extends Model
     protected $table = 'classes';
 
     protected $fillable = [
+        'studio_id',
         'name',
         'description',
         'teacher_id',
