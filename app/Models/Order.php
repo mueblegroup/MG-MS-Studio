@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 class Order extends Model
 {
     protected $fillable = [
+        'studio_id',
         'user_id',
         'studio_subscription_id',
         'currency',
@@ -84,6 +85,7 @@ class Order extends Model
             }
 
             AppNotification::create([
+                'studio_id' => $this->studio_id ?: current_studio_id() ?: 1,
                 'user_id' => $this->user_id,
                 'created_by' => null,
                 'title' => $title,
