@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ClassCard extends Model
 {
     protected $fillable = [
+        'studio_id',
         'name',
         'total_classes',
         'validity_weeks',
