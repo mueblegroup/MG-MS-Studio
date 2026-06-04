@@ -22,6 +22,11 @@
         min-height: 100%;
         max-width: 100%;
         overflow-x: hidden;
+        background: var(--mg-bg);
+    }
+
+    body {
+        color: var(--mg-text);
     }
 
     *,
@@ -110,49 +115,67 @@
         max-width: 100% !important;
     }
 
-    /*
-     * Backend/system theme helpers only.
-     * Keep these as reusable classes instead of overriding raw Tailwind classes
-     * such as .bg-indigo-600, .container, or every table globally. Those global
-     * overrides leaked into shop/auth/frontend pages because they all load app.css.
-     */
-    .mg-bg {
-        background-color: var(--mg-bg);
+    /* System-wide color fallback for older pages that still use raw Tailwind indigo buttons. */
+    .bg-indigo-50 {
+        background-color: #fff3df !important;
     }
 
-    .mg-surface {
-        background-color: var(--mg-surface);
+    .bg-indigo-100 {
+        background-color: #ffedd5 !important;
     }
 
-    .mg-surface-soft {
-        background-color: var(--mg-surface-soft);
+    .bg-indigo-600,
+    .hover\:bg-indigo-600:hover,
+    .focus\:bg-indigo-600:focus {
+        background-color: #d97706 !important;
     }
 
-    .mg-border {
-        border-color: var(--mg-border);
+    .bg-indigo-700,
+    .hover\:bg-indigo-700:hover,
+    .focus\:bg-indigo-700:focus,
+    .active\:bg-indigo-700:active {
+        background-color: #b45309 !important;
     }
 
-    .mg-text {
-        color: var(--mg-text);
+    .text-indigo-400,
+    .text-indigo-500,
+    .text-indigo-600,
+    .text-indigo-700,
+    .hover\:text-indigo-600:hover,
+    .focus\:text-indigo-700:focus {
+        color: #d97706 !important;
     }
 
-    .mg-muted {
-        color: var(--mg-muted);
+    .border-indigo-400,
+    .border-indigo-500,
+    .border-indigo-600,
+    .focus\:border-indigo-500:focus,
+    .focus\:border-indigo-700:focus {
+        border-color: #d97706 !important;
     }
 
-    .mg-primary {
-        color: var(--mg-primary);
+    .ring-indigo-500,
+    .focus\:ring-indigo-500:focus {
+        --tw-ring-color: #f59e0b !important;
     }
 
-    .mg-primary-bg {
-        background-color: var(--mg-primary);
+    .from-indigo-500 {
+        --tw-gradient-from: #d97706 var(--tw-gradient-from-position) !important;
+        --tw-gradient-to: rgb(217 119 6 / 0) var(--tw-gradient-to-position) !important;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
     }
 
-    .mg-primary-soft-bg {
-        background-color: var(--mg-primary-soft);
+    .to-indigo-600 {
+        --tw-gradient-to: #b45309 var(--tw-gradient-to-position) !important;
     }
 
-    .mg-primary-border {
-        border-color: var(--mg-primary);
+    /* Make common raw tables safer on small screens without editing every page immediately. */
+    table {
+        max-width: 100%;
+    }
+
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 }
