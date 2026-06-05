@@ -235,7 +235,7 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('notifications/create', [AdminAppNotificationController::class, 'create'])->name('notifications.create');
         Route::post('notifications/store', [AdminAppNotificationController::class, 'store'])->name('notifications.store');
     });
-     
+      
 /*----- Class Card Routes (Admin)------*/
 Route::middleware(['auth', 'role:admin'])
     ->prefix('admin')
@@ -287,6 +287,7 @@ Route::prefix('shop')->name('shop.')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
         Route::post('/checkout/pay', [CheckoutController::class, 'pay'])->name('checkout.pay');
+        Route::post('/checkout/payments/{payment}/retry', [CheckoutController::class, 'retryPendingPayment'])->name('checkout.payments.retry');
         Route::get('/checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
         Route::get('/checkout/failure', [CheckoutController::class, 'failure'])->name('checkout.failure');
         Route::get('/checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
