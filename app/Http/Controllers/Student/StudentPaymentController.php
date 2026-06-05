@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\Payment;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,13 +16,20 @@ class StudentPaymentController extends Controller
         $studentId = Auth::id();
 
         $payments = DB::table('payments')
-            ->where('user_id', $studentId)
-            ->orderByDesc('created_at')
+            ->leftJoin('orders', 'orders.id', '=', 'payments.order_id')
+            ->where('payments.user_id', $studentId)
+            ->select([
+                'payments.*',
+                'orders.status as order_status',
+                'orders.billing_reason',
+            ])
+            ->orderByDesc('payments.created_at')
             ->paginate(15);
 
         return view('student.payments.index', compact('payments'));
     }
-        public function downloadReceipt(int $id)
+
+    public function downloadReceipt(int $id)
     {
         $payment = Payment::query()
             ->with([
@@ -35,9 +44,9 @@ class StudentPaymentController extends Controller
         $invoiceNumber = $this->makeInvoiceNumber($payment);
         $issuedAt = $payment->paid_at ?? $payment->created_at;
 
-        $subtotal = (float) ($payment->order->items->sum(function ($item) {
+        $subtotal = (float) ($payment->order?->items?->sum(function ($item) {
             $qty = (int) ($item->quantity ?? 1);
-            $price = (float) ($item->price ?? 0);
+            $price = (float) ($item->unit_price ?? $item->price ?? 0);
             return $qty * $price;
         }) ?? 0);
 
