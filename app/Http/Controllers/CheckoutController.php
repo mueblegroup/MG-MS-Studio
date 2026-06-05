@@ -119,6 +119,30 @@ class CheckoutController extends Controller
             : $this->payWithHitpay($order, $payment, $hitpay);
     }
 
+    public function retryPendingPayment(Payment $payment, HitPayService $hitpay)
+    {
+        $payment->loadMissing('order');
+        $order = $payment->order;
+
+        if (!$order || (int) $payment->user_id !== (int) auth()->id() || (int) $order->user_id !== (int) auth()->id()) {
+            abort(404);
+        }
+
+        if ($order->status === 'paid' || $payment->status === 'paid') {
+            return redirect()->route('student.payments.index')->with('success', 'This payment has already been completed.');
+        }
+
+        if (!in_array($order->status, ['pending', 'past_due'], true) || !in_array($payment->status, ['pending', 'past_due'], true)) {
+            return redirect()->route('student.payments.index')->with('error', 'This payment is not payable anymore.');
+        }
+
+        if (($payment->provider ?: $payment->method) !== 'hitpay') {
+            return redirect()->route('student.payments.index')->with('error', 'This payment cannot be retried through HitPay.');
+        }
+
+        return $this->payWithHitpay($order, $payment, $hitpay);
+    }
+
     protected function payWithStripe(Order $order, Payment $payment)
     {
         $items = $order->items()->get();
@@ -176,9 +200,11 @@ class CheckoutController extends Controller
         $amount = number_format((float) $order->total, 2, '.', '');
         $currency = strtoupper($order->currency ?? 'MYR');
 
-        $purpose = $order->billing_reason === 'subscription_initial'
-            ? 'Subscription class Order #' . $order->id
-            : 'Order #' . $order->id;
+        $purpose = match ($order->billing_reason) {
+            'subscription_initial' => 'Subscription class Order #' . $order->id,
+            'subscription_cycle' => 'Subscription renewal Order #' . $order->id,
+            default => 'Order #' . $order->id,
+        };
 
         $resp = $hitpay->createPaymentRequest([
             'amount'            => $amount,
@@ -196,8 +222,19 @@ class CheckoutController extends Controller
             throw new \RuntimeException('HitPay response missing id/url: ' . json_encode($resp));
         }
 
+        $payload = array_merge(is_array($payment->payload) ? $payment->payload : [], $resp, [
+            'checkout_url' => $checkoutUrl,
+            'last_payment_request_created_at' => now()->toDateTimeString(),
+        ]);
+
         $order->update(['provider_reference' => $paymentRequestId]);
-        $payment->update(['provider_reference' => $paymentRequestId]);
+        $payment->update([
+            'provider_reference' => $paymentRequestId,
+            'provider' => 'hitpay',
+            'method' => 'hitpay',
+            'status' => 'pending',
+            'payload' => $payload,
+        ]);
 
         return redirect()->away($checkoutUrl);
     }
@@ -288,7 +325,7 @@ class CheckoutController extends Controller
             return response()->json(['error' => 'Invalid HMAC'], 400);
         }
 
-        $status = (string) ($data['status'] ?? '');
+        $status = strtolower((string) ($data['status'] ?? ''));
         $reference = (string) ($data['reference_number'] ?? '');
 
         $orderId = ctype_digit($reference) ? (int) $reference : null;
@@ -298,7 +335,7 @@ class CheckoutController extends Controller
 
         $providerRef = (string) ($data['payment_request_id'] ?? $data['id'] ?? '');
 
-        if ($status === 'completed') {
+        if (in_array($status, ['completed', 'paid', 'succeeded', 'success'], true)) {
             $didMarkPaid = $this->markOrderPaid(
                 orderId: $orderId,
                 provider: 'hitpay',
@@ -311,7 +348,7 @@ class CheckoutController extends Controller
             if ($didMarkPaid) {
                 FulfillOrderJob::dispatch($orderId);
             }
-        } elseif (in_array($status, ['failed', 'cancelled'], true)) {
+        } elseif (in_array($status, ['failed', 'cancelled', 'canceled'], true)) {
             $this->markOrderCancelled($orderId);
         }
 
@@ -363,6 +400,7 @@ class CheckoutController extends Controller
                 'paid_at' => now(),
                 'payload' => $safePayload,
                 'provider' => $provider,
+                'method' => $provider,
             ];
 
             if ($providerReference) {
@@ -370,7 +408,7 @@ class CheckoutController extends Controller
             }
 
             Payment::where('order_id', $orderId)
-                ->where('status', 'pending')
+                ->whereIn('status', ['pending', 'past_due'])
                 ->orderByDesc('id')
                 ->limit(1)
                 ->update($paymentUpdate);
@@ -394,7 +432,7 @@ class CheckoutController extends Controller
             $order->update(['status' => 'cancelled']);
 
             Payment::where('order_id', $orderId)
-                ->where('status', 'pending')
+                ->whereIn('status', ['pending', 'past_due'])
                 ->update(['status' => 'cancelled']);
         });
     }
