@@ -3,8 +3,20 @@
 
         <div class="mb-6">
             <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Payment History</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Your payment records and downloadable receipts.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Your payment records, pending dues, and downloadable receipts.</p>
         </div>
+
+        @if(session('success'))
+            <div class="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm font-semibold text-green-700 dark:border-green-900/40 dark:bg-green-900/20 dark:text-green-200">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+                {{ session('error') }}
+            </div>
+        @endif
 
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="overflow-x-auto">
@@ -16,7 +28,7 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Amount</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Method</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Status</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">Receipt</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">Action</th>
                         </tr>
                     </thead>
 
@@ -24,6 +36,8 @@
                         @forelse($payments as $p)
                             @php
                                 $st = strtolower((string) ($p->status ?? ''));
+                                $orderStatus = strtolower((string) ($p->order_status ?? ''));
+                                $provider = strtolower((string) ($p->provider ?? $p->method ?? ''));
 
                                 $badge = match (true) {
                                     str_contains($st, 'success'),
@@ -34,12 +48,16 @@
                                     str_contains($st, 'fail'),
                                     str_contains($st, 'cancel') => 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-200',
 
-                                    str_contains($st, 'pending') => 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200',
+                                    str_contains($st, 'pending'),
+                                    str_contains($st, 'past_due') => 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200',
 
                                     default => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
                                 };
 
-                                $canDownload = in_array($st, ['paid', 'success', 'completed', 'complete']);
+                                $canDownload = in_array($st, ['paid', 'success', 'completed', 'complete'], true);
+                                $canPay = in_array($st, ['pending', 'past_due'], true)
+                                    && in_array($orderStatus, ['pending', 'past_due'], true)
+                                    && $provider === 'hitpay';
 
                                 $displayDate = $p->paid_at ?: $p->created_at;
                                 $formattedDate = $displayDate
@@ -56,6 +74,16 @@
                                     <div class="text-sm font-semibold text-gray-900 dark:text-white">
                                         {{ $p->reference ?? ('PAY-' . $p->id) }}
                                     </div>
+
+                                    @if($p->billing_reason === 'subscription_cycle')
+                                        <div class="mt-1 text-xs font-semibold text-amber-600 dark:text-amber-300">
+                                            Subscription renewal
+                                        </div>
+                                    @elseif($p->billing_reason === 'subscription_initial')
+                                        <div class="mt-1 text-xs font-semibold text-amber-600 dark:text-amber-300">
+                                            Subscription start
+                                        </div>
+                                    @endif
 
                                     @if($p->provider_reference)
                                         <div class="text-xs text-gray-500 dark:text-gray-400">
@@ -79,16 +107,28 @@
                                 </td>
 
                                 <td class="px-4 py-4 text-right">
-                                    @if($canDownload)
-                                        <a href="{{ route('payments.receipt.download', $p->id) }}"
-                                           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition">
-                                            <i class="bx bx-download"></i> Receipt
-                                        </a>
-                                    @else
-                                        <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800">
-                                            Unavailable
-                                        </span>
-                                    @endif
+                                    <div class="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
+                                        @if($canPay)
+                                            <form method="POST" action="{{ route('shop.checkout.payments.retry', $p->id) }}">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
+                                                    <i class="bx bx-credit-card"></i> Pay Now
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        @if($canDownload)
+                                            <a href="{{ route('student.payments.receipt.download', $p->id) }}"
+                                               class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition">
+                                                <i class="bx bx-download"></i> Receipt
+                                            </a>
+                                        @elseif(!$canPay)
+                                            <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800">
+                                                Unavailable
+                                            </span>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty
