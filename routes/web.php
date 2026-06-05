@@ -400,12 +400,12 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::get('/schedule', [StudentScheduleController::class, 'index'])->name('schedule.index');
 
     Route::get('/payments', [StudentPaymentController::class, 'index'])->name('payments.index');
-    Route::get('/payments/{id}/receipt', [StudentPaymentController::class, 'downloadReceipt'])->name('student.payments.receipt.download');
+    Route::get('/payments/{id}/receipt', [StudentPaymentController::class, 'downloadReceipt'])->name('payments.receipt.download');
 
 
     // recommended extras:
     // Route::get('/my-products', [StudentProductsController::class, 'index'])->name('products.index');
-    // Route::get('/bookings', [StudentBookingsController::class, 'index'])->name('bookings.index');
+    // Route::get('/bookings', [StudentProductsController::class, 'index'])->name('products.index');
 });
 
 /*---- Notification Routes (Student)------*/
