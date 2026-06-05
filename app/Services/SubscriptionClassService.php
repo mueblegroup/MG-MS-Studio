@@ -250,6 +250,18 @@ class SubscriptionClassService
                         continue;
                     }
 
+                    $existingPendingOrder = $this->existingPendingRenewalOrder($subscription, $nextSession);
+                    if ($existingPendingOrder) {
+                        $subscription->update([
+                            'status' => 'past_due',
+                            'next_billing_at' => now()->addDays((int) ($subscription->classModel?->subscription_grace_days ?? 3)),
+                        ]);
+                        continue;
+                    }
+
+                    $billingPeriodStart = now();
+                    $billingPeriodEnd = $this->nextBillingAt($subscription->billing_interval ?: 'month');
+
                     $order = $this->createSubscriptionRenewalOrder(
                         subscription: $subscription,
                         classSession: $nextSession,
@@ -258,8 +270,8 @@ class SubscriptionClassService
                         currency: strtoupper($subscription->currency ?? 'MYR'),
                         providerReference: null,
                         payload: ['billing_cycle' => 'generated_due_payment_request'],
-                        billingPeriodStart: now(),
-                        billingPeriodEnd: $this->nextBillingAt($subscription->billing_interval ?: 'month'),
+                        billingPeriodStart: $billingPeriodStart,
+                        billingPeriodEnd: $billingPeriodEnd,
                         status: 'pending'
                     );
 
@@ -278,7 +290,10 @@ class SubscriptionClassService
                     $order->update(['provider_reference' => $providerRef]);
                     Payment::where('order_id', $order->id)->update([
                         'provider_reference' => $providerRef,
-                        'payload' => array_merge($resp, ['checkout_url' => $checkoutUrl]),
+                        'payload' => array_merge($resp, [
+                            'checkout_url' => $checkoutUrl,
+                            'billing_cycle' => 'generated_due_payment_request',
+                        ]),
                     ]);
 
                     $subscription->update([
@@ -291,6 +306,20 @@ class SubscriptionClassService
             });
 
         return $created;
+    }
+
+    protected function existingPendingRenewalOrder(StudioSubscription $subscription, ClassSession $classSession): ?Order
+    {
+        return Order::query()
+            ->where('studio_subscription_id', $subscription->id)
+            ->where('billing_reason', 'subscription_cycle')
+            ->whereIn('status', ['pending', 'past_due'])
+            ->whereHas('items', function ($query) use ($classSession) {
+                $query->where('purchasable_type', get_class($classSession))
+                    ->where('purchasable_id', $classSession->id);
+            })
+            ->latest('id')
+            ->first();
     }
 
     public function createSubscriptionRenewalOrder(
