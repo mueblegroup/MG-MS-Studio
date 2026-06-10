@@ -8,23 +8,18 @@ use Illuminate\Support\Facades\Cache;
 
 class StudioSettingsService
 {
-    private const CACHE_TTL_SECONDS = 3600;
+    private const TTL = 3600;
 
     public function all(): array
     {
         $studioId = $this->studioId();
 
-        $cacheKey = $studioId
-            ? "studio_settings_all:{$studioId}"
-            : 'studio_settings_all:global';
-
-        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($studioId) {
+        return Cache::remember($this->cacheKey($studioId), self::TTL, function () use ($studioId) {
             $query = StudioSetting::query();
 
             if ($studioId) {
                 $query->where(function ($q) use ($studioId) {
-                    $q->where('studio_id', $studioId)
-                      ->orWhereNull('studio_id');
+                    $q->where('studio_id', $studioId)->orWhereNull('studio_id');
                 });
             } else {
                 $query->whereNull('studio_id');
@@ -62,7 +57,7 @@ class StudioSettingsService
             );
         }
 
-        Cache::forget($studioId ? "studio_settings_all:{$studioId}" : 'studio_settings_all:global');
+        Cache::forget($this->cacheKey($studioId));
     }
 
     public function currency(string $default = 'MYR'): string
@@ -78,6 +73,13 @@ class StudioSettingsService
     private function studioId(): ?int
     {
         return app(TenantManager::class)->id();
+    }
+
+    private function cacheKey(?int $studioId): string
+    {
+        return $studioId
+            ? 'studio_settings_all:' . $studioId
+            : 'studio_settings_all:global';
     }
 
     private function castValue(?string $value)
