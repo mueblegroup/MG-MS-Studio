@@ -12,12 +12,4 @@ return [
     |
     */
 
-    'root_domain' => env('SAAS_ROOT_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Central Domains
-    |--------------------------------------------------------------------------
-    |
-    | These domains belong to the main SaaS application itself and should not be
-    | resolved as tenant
+    'root_domain' => env('SAAS_ROOT_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost
