@@ -13,7 +13,8 @@ class ResolveStudioTenant
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $studio = $this->resolve($request);
+        $studio = $this->resolveFromAuthenticatedUser($request)
+            ?: $this->resolveFromHost($request);
 
         if ($studio) {
             app(TenantManager::class)->set($studio);
@@ -40,7 +41,21 @@ class ResolveStudioTenant
         abort(404, 'Studio not found.');
     }
 
-    private function resolve(Request $request): ?Studio
+    private function resolveFromAuthenticatedUser(Request $request): ?Studio
+    {
+        $user = $request->user();
+
+        if (! $user || ! $user->studio_id) {
+            return null;
+        }
+
+        return Studio::query()
+            ->where('id', $user->studio_id)
+            ->whereIn('status', ['active', 'trial'])
+            ->first();
+    }
+
+    private function resolveFromHost(Request $request): ?Studio
     {
         $host = strtolower($request->getHost());
 
