@@ -3,13 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StudioSetting extends Model
 {
     protected $table = 'studio_settings';
 
     protected $fillable = [
+        'studio_id',
         'key',
         'value',
     ];
+
+    public function studio(): BelongsTo
+    {
+        return $this->belongsTo(Studio::class);
+    }
 }
