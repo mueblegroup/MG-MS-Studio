@@ -98,7 +98,7 @@ class InstituteRegisterController extends Controller
 
         $scheme = app()->environment('local') ? 'http' : 'https';
 
-        return redirect()->away($scheme . '://' . $studioHost . '/admin/dashboard');
+        return redirect('/admin/dashboard');
     }
 
     public function checkSubdomain(Request $request)
