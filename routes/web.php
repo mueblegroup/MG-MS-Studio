@@ -54,7 +54,7 @@ Route::get('/', function () {
     }
 
     // If not logged in, go to login page
-    return redirect()->route('login');
+    return view('saas.landing');
 });
 
 
