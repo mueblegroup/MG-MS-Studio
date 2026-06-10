@@ -14,6 +14,5 @@ class ResolveStudioTenant
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! Schema::hasTable('studios')) {
-            return $next($request);
-        }
+        $studio = $this->resolve($request);
+        app(TenantManager::class
