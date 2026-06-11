@@ -4,5 +4,5 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Studio Management System') }} | Modern Studio Management Platform</title>
-    <meta name="description" content="A modern studio management platform
+    <title>{{ config('app.name', 'Studio Management System') }} | Studio OS</title>
+    <meta name
