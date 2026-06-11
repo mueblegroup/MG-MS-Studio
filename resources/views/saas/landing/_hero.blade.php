@@ -1,1 +1,1 @@
-<main class="hero wrap"><p>Built for serious institutes</p><h1>Run classes, learners and studio operations in one modern LMS.</h1></main>
+<section class="wrap hero reveal"><div><div class="pill">Built for institutes</div><h1 class="title">A modern LMS for classes, learners and growth.</h1><p class="muted">Manage schedules, content, payments and daily studio work from one reliable platform.</p><p><a class="btn" href="/register">Start now</a></p></div><div class="glass card"><h3>One dashboard</h3><p class="muted">Track admissions, classes and learner progress in a clean
