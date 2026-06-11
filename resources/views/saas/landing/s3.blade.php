@@ -1,0 +1,2 @@
+<style>
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:34px;align-items:center;padding:70px 0}.title{font-size:clamp(42px,7vw,82px);line-height:.95;margin:16px 0}.muted{color:#b8c4df}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{padding:24px;border-radius:24px}.pill{display:inline-block;color:#67e8f9;font-weight:800;margin-bottom:10px}@media(max-width:800px){.hero,.grid{grid-template-columns:1fr}.nav{gap:14px;flex-wrap:wrap}.links
