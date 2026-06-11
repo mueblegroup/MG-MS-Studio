@@ -1,0 +1,1 @@
+<section id="workflow" class="wrap"><h2>Clear daily workflow</h2><p>Enroll students, schedule sessions, track progress and act from dashboards.</p></section>
