@@ -1,1 +1,1 @@
-<section id="features" class="wrap"><h2>Features built for growth</h2><p>Admissions, classes, attendance, payments and reporting stay connected.</p></section>
+<section id="features" class="wrap section"><div class="pill">Platform features</div><h2>Everything connected.</h2><p class="muted">A clear operating layer for serious education teams.</p><div class="grid">@include('saas.landing.f1')@include('saas.landing.f2')@include('saas.landing.f3')</div></section>
