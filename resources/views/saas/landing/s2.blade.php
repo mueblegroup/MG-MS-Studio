@@ -1,0 +1,2 @@
+<style>
+.wrap{max-width:1180px;margin:auto;padding:0 24px}.nav{display:flex;justify-content:space-between;align-items:center;padding:22px 0}.brand{font-weight:900;font-size:22px}.link{color:#c7d2fe;text-decoration:none;margin-left:20px}.btn{display:inline-block;padding:14px 22px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:white;text-decoration:none;font-weight:800}.section{padding:80px 0}.eyebrow{color:#67e8f9;font-weight:800;letter-spacing:.12
