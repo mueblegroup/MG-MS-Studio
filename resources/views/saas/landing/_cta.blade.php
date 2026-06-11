@@ -1,1 +1,1 @@
-<section id="contact" class="wrap"><h2>Ready for a stronger LMS?</h2><p>Launch a reliable platform for bigger institutes.</p><a href="/register">Start now</a></section>
+<section id="contact" class="wrap section reveal"><div class="glass card"><div class="pill">Ready?</div><h2>Build a stronger LMS experience.</h2><p class="muted">Launch a modern platform for learners, classes and operations.</p><a class="btn" href="/register">Start now</a></div></section>
