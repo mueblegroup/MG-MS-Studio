@@ -1,0 +1,1 @@
+<section id="features" class="wrap"><h2>Features built for growth</h2><p>Admissions, classes, attendance, payments and reporting stay connected.</p></section>
