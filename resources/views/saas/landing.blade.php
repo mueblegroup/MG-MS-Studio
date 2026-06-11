@@ -1,1 +1,3 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ config('app.name','Studio Management System') }}</title>@include('saas.landing._styles')@include('saas.landing._styles2')</head><body class="landing-bg">@include('saas.landing._nav')@include('saas.landing._hero')@include('saas.landing._features')@include('saas.landing
+@include('saas.landing.s')
+@include('saas.landing._nav')
+@include('saas.landing._hero')
