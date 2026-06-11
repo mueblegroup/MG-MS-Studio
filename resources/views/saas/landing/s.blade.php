@@ -1,0 +1,1 @@
+<style>body{margin:0;background:#060816;color:#fff;font-family:Arial,sans-serif}section,header{padding:40px 7%}.card{background:#111936;border-radius:22px;padding:28px}</style>
