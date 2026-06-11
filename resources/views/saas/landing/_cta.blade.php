@@ -1,0 +1,1 @@
+<section id="contact" class="wrap"><h2>Ready for a stronger LMS?</h2><p>Launch a reliable platform for bigger institutes.</p><a href="/register">Start now</a></section>
