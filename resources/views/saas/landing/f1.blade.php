@@ -1,0 +1,1 @@
+<div class="glass card reveal"><div class="pill">Learners</div><h3>Smarter student journey</h3><p class="muted">Keep profiles, enrollments, progress and attendance connected.</p></div>
