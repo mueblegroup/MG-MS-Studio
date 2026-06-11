@@ -1,2 +1,3 @@
 <style>
-:root{--bg:#050713;--panel:rgba(255,255,255,.08);--line:rgba(255,255,255,.14);--txt:#f8fbff;--mut:#a9b6d3;--a:#7c3aed;--b:#06b6d4;--c:#22c55e}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at top left,#172554 0,#050713 34%,#020617 100%);color:var(--txt);font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Arial,sans-serif;overflow-x:hidden}.lp
+body{margin:0;background:#050713;color:#fff;font-family:Inter,system-ui,sans-serif}.lp{min-height:100vh;background:radial-gradient(circle at top,#1d4ed8,#050713 42%,#020617)}.glass{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(18px);box-shadow:0 25px 80px #0008}.reveal{animation:rise .8s ease both}@keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+</style>
