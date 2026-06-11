@@ -1,0 +1,1 @@
+<div class="glass card reveal"><div class="pill">Operations</div><h3>Reliable back office</h3><p class="muted">Reduce manual tracking across payments, reports and daily admin.</p></div>
