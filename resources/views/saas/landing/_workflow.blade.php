@@ -1,1 +1,1 @@
-<section id="workflow" class="wrap"><h2>Clear daily workflow</h2><p>Enroll students, schedule sessions, track progress and act from dashboards.</p></section>
+<section id="workflow" class="wrap section glass card reveal"><div class="pill">Daily workflow</div><h2>From enquiry to completion.</h2><p class="muted">Capture leads, enrol learners, assign classes, monitor progress and review reports without jumping between tools.</p></section>
