@@ -1,0 +1,1 @@
+<style>section{padding:72px 20px}.wrap{max-width:1100px;margin:auto}.hero{text-align:center;padding:96px 20px}</style>
