@@ -1,0 +1,1 @@
+<main class="hero wrap"><p>Built for serious institutes</p><h1>Run classes, learners and studio operations in one modern LMS.</h1></main>
