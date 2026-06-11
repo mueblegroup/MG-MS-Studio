@@ -1,2 +1,1 @@
-<style>
-body{margin:0;background:#060816;color:#eef4ff;font-family:Inter,Arial,sans-serif}a{text-decoration:none;color:inherit}.wrap{width:min(1100px,92%);margin:auto}.section{padding:76px 0}.nav{position:sticky;top:0;background:#080b1dcc;border-bottom:1px solid #26304a}.row{display:flex;gap:18px;align-items:center;justify-content:space-between}.grid{display:grid;grid-template-columns
+<style>.landing-bg{background:#060816;color:#eef4ff}.glass{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}</style>
