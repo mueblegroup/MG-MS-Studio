@@ -1,0 +1,2 @@
+<style>
+body{margin:0;font-family:Inter,Arial,sans-serif;background:#060816;color:#eef4ff}.mg-wrap{width:min(1120px,92%);margin:auto}.mg-section{padding:84px 0}.mg-nav{position:sticky;top:0;z-index:10;background:rgba(6,8,22,.82);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.1)}.mg-nav-inner{height:72px;display:flex;align-items:center;justify-content:space-between}.mg-brand{font-weight:800}.mg-links{display:flex;gap:18px;color:#b7c1dc
