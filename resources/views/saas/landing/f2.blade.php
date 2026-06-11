@@ -1,0 +1,1 @@
+<div class="glass card reveal"><div class="pill">Classes</div><h3>Organised schedules</h3><p class="muted">Plan batches, sessions, instructors and capacity with less admin work.</p></div>
