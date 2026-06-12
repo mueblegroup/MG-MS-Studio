@@ -33,7 +33,7 @@ class AdminController extends Controller
             ->where('role', $role);
     }
 
-    private function uniqueEmailRule(?int $ignoreUserId = null): Rule
+    private function uniqueEmailRule(?int $ignoreUserId = null): mixed
     {
         $rule = Rule::unique('users', 'email')
             ->where(fn ($query) => $query->where('studio_id', $this->tenantId()));
