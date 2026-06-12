@@ -49,7 +49,7 @@ class InstituteRegisterController extends Controller
             'currency' => ['nullable', 'string', 'size:3'],
         ]);
 
-        $rootDomain = config('saas.root_domain');
+        $rootDomain = strtolower((string) config('saas.root_domain'));
         $subdomain = Str::lower($validated['subdomain']);
         $studioHost = $subdomain . '.' . $rootDomain;
 
@@ -98,7 +98,7 @@ class InstituteRegisterController extends Controller
 
         $scheme = app()->environment('local') ? 'http' : 'https';
 
-        return redirect('/admin/dashboard');
+        return redirect()->away($scheme . '://' . $studioHost . '/admin/dashboard');
     }
 
     public function checkSubdomain(Request $request)
