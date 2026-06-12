@@ -1,6 +1,10 @@
 <?php
 
-$rootDomain = env('SAAS_ROOT_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost');
+$defaultRootDomain = env('APP_ENV') === 'local'
+    ? (parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost')
+    : 'studio.mueble-playground.cc';
+
+$rootDomain = env('SAAS_ROOT_DOMAIN', $defaultRootDomain);
 $rootDomain = strtolower(trim((string) $rootDomain));
 $rootDomain = preg_replace('#^https?://#', '', $rootDomain);
 $rootDomain = trim($rootDomain, '/');
@@ -14,7 +18,7 @@ if ($appHost) {
 
 return [
     // Studio tenant URLs are generated as: {studio-subdomain}.{root_domain}
-    // For staging, set SAAS_ROOT_DOMAIN=studio.mueble-playground.cc
+    // For staging, use SAAS_ROOT_DOMAIN=studio.mueble-playground.cc
     // Example tenant URL: demo.studio.mueble-playground.cc
     'root_domain' => $rootDomain,
 
