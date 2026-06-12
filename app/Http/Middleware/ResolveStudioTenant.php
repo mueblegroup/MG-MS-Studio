@@ -13,22 +13,33 @@ class ResolveStudioTenant
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $studio = $this->resolveFromAuthenticatedUser($request)
-            ?: $this->resolveFromHost($request);
+        app(TenantManager::class)->clear();
 
-        if ($studio) {
-            app(TenantManager::class)->set($studio);
-            $request->attributes->set('studio', $studio);
+        $hostStudio = $this->resolveFromHost($request);
+        $userStudio = $this->resolveFromAuthenticatedUser($request);
+
+        if ($hostStudio) {
+            if ($request->user() && $request->user()->studio_id && (int) $request->user()->studio_id !== (int) $hostStudio->id) {
+                abort(403, 'This account is not assigned to this studio portal.');
+            }
+
+            app(TenantManager::class)->set($hostStudio);
+            $request->attributes->set('studio', $hostStudio);
 
             return $next($request);
         }
 
         if ($this->isCentralDomain($request)) {
+            if ($userStudio) {
+                app(TenantManager::class)->set($userStudio);
+                $request->attributes->set('studio', $userStudio);
+            }
+
             return $next($request);
         }
 
         if (app()->environment(['local', 'testing'])) {
-            $fallback = Studio::query()->where('id', 1)->first();
+            $fallback = $userStudio ?: Studio::query()->where('id', 1)->first();
 
             if ($fallback) {
                 app(TenantManager::class)->set($fallback);
@@ -58,6 +69,10 @@ class ResolveStudioTenant
     private function resolveFromHost(Request $request): ?Studio
     {
         $host = strtolower($request->getHost());
+
+        if ($this->isCentralDomain($request)) {
+            return null;
+        }
 
         $domain = StudioDomain::query()
             ->where('domain', $host)
