@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Laravel') }} - Login</title>
+    <title>{{ $studio?->name ?? 'Mueble Studio' }} - Login</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
@@ -21,7 +21,6 @@
         <div class="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center justify-center">
             <div class="grid w-full overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200 dark:bg-gray-900 dark:ring-gray-800 lg:grid-cols-5">
 
-                <!-- Brand / Information Panel -->
                 <section class="relative hidden bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 p-10 text-white lg:col-span-2 lg:flex lg:flex-col lg:justify-between">
                     <div class="absolute inset-0 opacity-20">
                         <div class="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white blur-3xl"></div>
@@ -30,35 +29,53 @@
 
                     <div class="relative">
                         <div class="mb-8 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-xl font-black shadow-lg ring-1 ring-white/20">
-                            {{ strtoupper(substr(config('app.name', 'M'), 0, 1)) }}
+                            {{ strtoupper(substr($studio?->name ?? 'Mueble Studio', 0, 1)) }}
                         </div>
+
+                        <p class="mb-3 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] ring-1 ring-white/20">
+                            {{ $studio ? 'Studio Portal' : 'Client Portal' }}
+                        </p>
+
                         <h1 class="text-4xl font-extrabold leading-tight tracking-tight">
-                            Welcome back to your studio dashboard.
+                            {{ $loginTitle ?? ($studio ? $studio->name.' Studio Login' : 'Mueble Studio Client Portal') }}
                         </h1>
                         <p class="mt-4 text-sm leading-6 text-blue-50/90">
-                            Continue managing your classes, bookings, attendance, class cards, plans, and student progress from one secure place.
+                            {{ $loginSubtitle ?? ($studio ? 'Login to manage this studio.' : 'Login to register and manage your studio portals.') }}
                         </p>
                     </div>
 
                     <div class="relative space-y-4 text-sm text-blue-50/90">
-                        <div class="flex items-center gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 font-bold">1</div>
-                            <span>Access your dashboard instantly</span>
-                        </div>
-                        <div class="flex items-center gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 font-bold">2</div>
-                            <span>Manage schedules and bookings</span>
-                        </div>
-                        <div class="flex items-center gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 font-bold">3</div>
-                            <span>Track attendance and learning progress</span>
-                        </div>
+                        @if ($studio)
+                            <div class="flex items-center gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+                                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 font-bold">1</div>
+                                <span>Manage teachers, classes and students</span>
+                            </div>
+                            <div class="flex items-center gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+                                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 font-bold">2</div>
+                                <span>Track attendance and schedules</span>
+                            </div>
+                            <div class="flex items-center gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+                                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 font-bold">3</div>
+                                <span>Review studio payments and records</span>
+                            </div>
+                        @else
+                            <div class="flex items-center gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+                                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 font-bold">1</div>
+                                <span>Register and manage multiple studios</span>
+                            </div>
+                            <div class="flex items-center gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+                                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 font-bold">2</div>
+                                <span>Control studio subdomains and setup</span>
+                            </div>
+                            <div class="flex items-center gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+                                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 font-bold">3</div>
+                                <span>Enter each studio only through its portal</span>
+                            </div>
+                        @endif
                     </div>
                 </section>
 
-                <!-- Login Form Panel -->
                 <section class="relative p-6 sm:p-8 lg:col-span-3 lg:p-10">
-                    <!-- Dark Mode Toggle -->
                     <div class="absolute right-5 top-5 sm:right-6 sm:top-6">
                         <button type="button"
                             @click="darkMode = !darkMode; document.documentElement.classList.toggle('dark', darkMode)"
@@ -77,15 +94,20 @@
 
                     <div class="mx-auto flex min-h-full w-full max-w-md flex-col justify-center py-8 lg:py-12">
                         <div class="mb-8 pr-12">
-                            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">Secure Login</p>
-                            <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Welcome back</h2>
-                            <p class="mt-2 text-sm text-slate-500 dark:text-gray-400">Login to continue to your account.</p>
+                            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
+                                {{ $studio ? 'Studio Login' : 'Client Login' }}
+                            </p>
+                            <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                                {{ $studio ? 'Login to '.$studio->name : 'Login to your client admin' }}
+                            </h2>
+                            <p class="mt-2 text-sm text-slate-500 dark:text-gray-400">
+                                {{ $studio ? 'This login is only for this studio portal.' : 'This login is only for managing your studios. Studio users must login from their own studio subdomain.' }}
+                            </p>
                         </div>
 
-                        <form action="{{ route('login') }}" method="POST" class="space-y-5">
+                        <form action="{{ url('/login') }}" method="POST" class="space-y-5">
                             @csrf
 
-                            <!-- Email Input Field -->
                             <div>
                                 <label for="email" class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-gray-300">Email</label>
                                 <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="username"
@@ -94,7 +116,6 @@
                                 @error('email') <p class="mt-1.5 text-sm text-red-500">{{ $message }}</p> @enderror
                             </div>
 
-                            <!-- Password Input Field -->
                             <div>
                                 <label for="password" class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-gray-300">Password</label>
                                 <div class="relative">
@@ -113,32 +134,34 @@
                                 @error('password') <p class="mt-1.5 text-sm text-red-500">{{ $message }}</p> @enderror
                             </div>
 
-                            <!-- Forgot Password Link -->
-                            <div class="flex items-center justify-end">
-                                <a href="{{ route('password.request') }}" class="text-sm font-semibold text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                            <div class="flex items-center justify-between gap-4">
+                                <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-gray-300">
+                                    <input type="checkbox" name="remember" value="1" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                    Remember me
+                                </label>
+                                <a href="{{ url('/forgot-password') }}" class="text-sm font-semibold text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
                                     Forgot password?
                                 </a>
                             </div>
 
-                            <!-- Submit Button -->
                             <button type="submit"
                                 class="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900/50">
                                 Login
                             </button>
                         </form>
 
-                        <div class="mt-6 flex items-center gap-4">
-                            <hr class="flex-grow border-slate-200 dark:border-gray-800">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-500">or</span>
-                            <hr class="flex-grow border-slate-200 dark:border-gray-800">
-                        </div>
-
-                        <p class="mt-5 text-center text-sm text-slate-600 dark:text-gray-300">
-                            Sign up as a student?
-                            <a href="{{ route('register') }}" class="font-bold text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
-                                Create account
-                            </a>
-                        </p>
+                        @if (! $studio)
+                            <p class="mt-5 text-center text-sm text-slate-600 dark:text-gray-300">
+                                New customer?
+                                <a href="{{ url('/register') }}" class="font-bold text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                                    Create client admin account
+                                </a>
+                            </p>
+                        @else
+                            <p class="mt-5 rounded-2xl bg-slate-50 p-4 text-center text-sm text-slate-600 ring-1 ring-slate-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">
+                                Need to manage all your studios? Go to the main Mueble Studio client portal instead.
+                            </p>
+                        @endif
                     </div>
                 </section>
             </div>
