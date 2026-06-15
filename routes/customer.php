@@ -3,6 +3,18 @@
 use App\Http\Controllers\Customer\CustomerPortalController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/', function () {
+    if (! auth()->check()) {
+        return view('saas.landing');
+    }
+
+    if (auth()->user()->role === 'superadmin') {
+        return redirect()->route('superadmin.dashboard');
+    }
+
+    return redirect()->route('customer.dashboard');
+});
+
 Route::middleware(['auth'])
     ->prefix('customer')
     ->name('customer.')
