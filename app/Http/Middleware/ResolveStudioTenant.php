@@ -44,7 +44,7 @@ class ResolveStudioTenant
             return $next($request);
         }
 
-        if (app()->environment(['local', 'testing'])) {
+        if (app()->environment(['local', 'testing']) && $this->isLocalDevelopmentHost($request)) {
             return $next($request);
         }
 
@@ -153,5 +153,13 @@ class ResolveStudioTenant
     private function isStudioAreaPath(Request $request): bool
     {
         return $request->is('admin*') || $request->is('teacher*') || $request->is('student*');
+    }
+
+    private function isLocalDevelopmentHost(Request $request): bool
+    {
+        $host = strtolower($request->getHost());
+
+        return in_array($host, ['localhost', '127.0.0.1'], true)
+            || str_ends_with($host, '.test');
     }
 }
