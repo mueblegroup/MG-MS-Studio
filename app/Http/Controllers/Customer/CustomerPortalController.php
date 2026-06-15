@@ -25,9 +25,14 @@ class CustomerPortalController extends Controller
 
         $studios = Studio::query()
             ->where('owner_user_id', $user->id)
+            ->when($user->studio_id, function ($query) use ($user): void {
+                $query->orWhere('id', $user->studio_id);
+            })
             ->with('platformSubscriptionPlan')
             ->latest()
-            ->get();
+            ->get()
+            ->unique('id')
+            ->values();
 
         return view('customer.dashboard', [
             'studios' => $studios,
@@ -36,8 +41,15 @@ class CustomerPortalController extends Controller
         ]);
     }
 
-    public function createStudio(): View
+    public function createStudio(Request $request): View|RedirectResponse
     {
+        $user = $request->user();
+
+        if ($user->studio_id || Studio::query()->where('owner_user_id', $user->id)->exists()) {
+            return redirect()->route('customer.dashboard')
+                ->with('info', 'Your account already has a studio. Open your studio portal to manage it.');
+        }
+
         return view('customer.studios.create', [
             'plans' => PlatformSubscriptionPlan::query()->where('is_active', true)->orderBy('sort_order')->orderBy('price')->get(),
             'rootDomain' => config('saas.root_domain'),
@@ -46,6 +58,13 @@ class CustomerPortalController extends Controller
 
     public function storeStudio(Request $request): RedirectResponse
     {
+        $user = $request->user();
+
+        if ($user->studio_id || Studio::query()->where('owner_user_id', $user->id)->exists()) {
+            return redirect()->route('customer.dashboard')
+                ->with('info', 'Your account already has a studio. Open your studio portal to manage it.');
+        }
+
         $reserved = config('saas.reserved_subdomains', []);
 
         $validated = $request->validate([
@@ -72,11 +91,17 @@ class CustomerPortalController extends Controller
             : null;
 
         DB::transaction(function () use ($request, $validated, $subdomain, $studioHost, $plan): void {
+            $user = $request->user();
+
+            if ($user->fresh()->studio_id || Studio::query()->where('owner_user_id', $user->id)->exists()) {
+                return;
+            }
+
             $studio = Studio::create([
                 'name' => $validated['studio_name'],
                 'slug' => Str::slug($validated['studio_name']) . '-' . Str::lower(Str::random(5)),
                 'subdomain' => $subdomain,
-                'owner_user_id' => $request->user()->id,
+                'owner_user_id' => $user->id,
                 'status' => 'trial',
                 'plan_name' => $plan?->name ?? 'trial',
                 'platform_subscription_plan_id' => $plan?->id,
@@ -95,14 +120,19 @@ class CustomerPortalController extends Controller
                 'is_verified' => true,
                 'verified_at' => now(),
             ]);
+
+            $user->forceFill([
+                'studio_id' => $studio->id,
+                'role' => 'admin',
+            ])->save();
         });
 
-        return redirect()->route('customer.dashboard')->with('success', 'Studio created successfully. Open the studio portal and login from its own subdomain.');
+        return redirect()->route('customer.dashboard')->with('success', 'Studio created successfully. Your account is now the admin for this studio. Open the studio portal and login from its own subdomain.');
     }
 
     public function launchStudio(Request $request, Studio $studio): RedirectResponse
     {
-        abort_unless((int) $studio->owner_user_id === (int) $request->user()->id || $request->user()->role === 'superadmin', 403);
+        abort_unless((int) $studio->owner_user_id === (int) $request->user()->id || (int) $request->user()->studio_id === (int) $studio->id || $request->user()->role === 'superadmin', 403);
 
         $host = $studio->custom_domain ?: ($studio->subdomain . '.' . config('saas.root_domain'));
         $isLocalHost = in_array($host, ['localhost', '127.0.0.1'], true) || str_ends_with($host, '.test');
