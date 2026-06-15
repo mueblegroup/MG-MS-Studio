@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('platform_subscription_payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('studio_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('platform_subscription_plan_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('studio_id');
+            $table->unsignedBigInteger('platform_subscription_plan_id')->nullable();
             $table->decimal('amount', 10, 2)->default(0);
             $table->string('currency', 3)->default('MYR');
             $table->string('billing_interval')->nullable();
@@ -23,6 +23,16 @@ return new class extends Migration
             $table->string('status')->default('pending')->index();
             $table->json('metadata')->nullable();
             $table->timestamps();
+
+            $table->foreign('studio_id', 'psp_studio_fk')
+                ->references('id')
+                ->on('studios')
+                ->cascadeOnDelete();
+
+            $table->foreign('platform_subscription_plan_id', 'psp_plan_fk')
+                ->references('id')
+                ->on('platform_subscription_plans')
+                ->nullOnDelete();
         });
     }
 
