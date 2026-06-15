@@ -2,12 +2,10 @@
 
 namespace App\Http\Requests\Auth;
 
-use App\Models\User;
 use App\Support\TenantManager;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -39,9 +37,9 @@ class LoginRequest extends FormRequest
     /**
      * Attempt to authenticate the request's credentials.
      *
-     * Central platform login must only authenticate platform-level accounts.
-     * Studio subdomain login must only authenticate users belonging to that studio,
-     * plus the client owner account that created the studio from the customer portal.
+     * Central login is for platform users only: superadmin and client/studio admins.
+     * Studio login is scoped to the current studio tenant.
+     * Teachers and students must login through their studio subdomain.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -55,8 +53,7 @@ class LoginRequest extends FormRequest
         $password = (string) $this->input('password');
 
         if ($studio) {
-            if ($this->attemptStudioUser($studio->id, $email, $password, $remember)
-                || $this->attemptStudioOwner($studio->owner_user_id, $email, $password, $remember)) {
+            if ($this->attemptStudioUser($studio->id, $email, $password, $remember)) {
                 RateLimiter::clear($this->throttleKey());
 
                 return;
@@ -64,11 +61,16 @@ class LoginRequest extends FormRequest
         } elseif (Auth::attempt([
             'email' => $email,
             'password' => $password,
-            'studio_id' => null,
         ], $remember)) {
-            RateLimiter::clear($this->throttleKey());
+            $user = Auth::user();
 
-            return;
+            if (in_array($user->role, ['superadmin', 'admin'], true)) {
+                RateLimiter::clear($this->throttleKey());
+
+                return;
+            }
+
+            Auth::logout();
         }
 
         RateLimiter::hit($this->throttleKey());
@@ -85,28 +87,6 @@ class LoginRequest extends FormRequest
             'password' => $password,
             'studio_id' => $studioId,
         ], $remember);
-    }
-
-    private function attemptStudioOwner(?int $ownerUserId, string $email, string $password, bool $remember): bool
-    {
-        if (! $ownerUserId) {
-            return false;
-        }
-
-        $owner = User::query()
-            ->whereKey($ownerUserId)
-            ->whereNull('studio_id')
-            ->where('email', $email)
-            ->where('role', 'admin')
-            ->first();
-
-        if (! $owner || ! Hash::check($password, $owner->password)) {
-            return false;
-        }
-
-        Auth::login($owner, $remember);
-
-        return true;
     }
 
     /**
