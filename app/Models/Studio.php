@@ -17,6 +17,7 @@ class Studio extends Model
         'owner_user_id',
         'status',
         'plan_name',
+        'platform_subscription_plan_id',
         'trial_ends_at',
         'subscription_ends_at',
         'settings',
@@ -31,6 +32,16 @@ class Studio extends Model
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    public function platformSubscriptionPlan()
+    {
+        return $this->belongsTo(PlatformSubscriptionPlan::class);
+    }
+
+    public function platformSubscriptionPayments()
+    {
+        return $this->hasMany(PlatformSubscriptionPayment::class);
     }
 
     public function domains()
