@@ -14,8 +14,15 @@ class AuthenticatedSessionController extends Controller
 {
     public function create(): View
     {
+        $studio = app(TenantManager::class)->current();
+
         return view('auth.login', [
-            'studio' => app(TenantManager::class)->current(),
+            'studio' => $studio,
+            'portalType' => $studio ? 'studio' : 'central',
+            'loginTitle' => $studio ? $studio->name.' Studio Login' : 'Mueble Studio Client Portal',
+            'loginSubtitle' => $studio
+                ? 'Login to manage this studio, its teachers, students, classes, attendance and payments.'
+                : 'Login to register studios, manage your studio portals, subdomains and platform setup.',
         ]);
     }
 
@@ -27,15 +34,15 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
         $studio = app(TenantManager::class)->current();
 
-        if ($user->role === 'superadmin') {
-            return redirect()->intended(route('superadmin.dashboard', absolute: false));
-        }
-
         if (! $studio) {
+            if ($user->role === 'superadmin') {
+                return redirect()->intended(route('superadmin.dashboard', absolute: false));
+            }
+
             return redirect()->intended(route('customer.dashboard', absolute: false));
         }
 
-        if ($user->role === 'admin') {
+        if ($user->role === 'superadmin' || $user->role === 'admin') {
             return redirect()->intended(route('admin.dashboard', absolute: false));
         }
 
@@ -47,7 +54,7 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('student.dashboard', absolute: false));
         }
 
-        return redirect()->intended(route('customer.dashboard', absolute: false));
+        return redirect()->intended(route('admin.dashboard', absolute: false));
     }
 
     public function destroy(Request $request): RedirectResponse
