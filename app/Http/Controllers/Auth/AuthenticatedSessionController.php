@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Support\TenantManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,49 +12,48 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    /**
-     * Display the login view.
-     */
     public function create(): View
     {
-        return view('auth.login');
+        return view('auth.login', [
+            'studio' => app(TenantManager::class)->current(),
+        ]);
     }
 
-    /**
-     * Handle an incoming authentication request.
-     */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
 
-        // Get the authenticated user
         $user = Auth::user();
+        $studio = app(TenantManager::class)->current();
 
-        // Check the user's role and redirect accordingly
-        switch ($user->role) {
-            case 'superadmin':
-                return redirect()->intended(route('superadmin.dashboard', absolute: false));
-            case 'admin':
-                return redirect()->intended(route('admin.dashboard', absolute: false));
-            case 'teacher':
-                return redirect()->intended(route('teacher.dashboard', absolute: false));
-            case 'student':
-            default:
-                return redirect()->intended(route('student.dashboard', absolute: false));
+        if ($user->role === 'superadmin') {
+            return redirect()->intended(route('superadmin.dashboard', absolute: false));
         }
+
+        if (! $studio) {
+            return redirect()->intended(route('customer.dashboard', absolute: false));
+        }
+
+        if ($user->role === 'admin') {
+            return redirect()->intended(route('admin.dashboard', absolute: false));
+        }
+
+        if ($user->role === 'teacher') {
+            return redirect()->intended(route('teacher.dashboard', absolute: false));
+        }
+
+        if ($user->role === 'student') {
+            return redirect()->intended(route('student.dashboard', absolute: false));
+        }
+
+        return redirect()->intended(route('customer.dashboard', absolute: false));
     }
 
-    /**
-     * Destroy an authenticated session.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
-
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
         return redirect('/');
