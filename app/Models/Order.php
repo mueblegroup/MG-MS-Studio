@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsStudio;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 
 class Order extends Model
 {
+    use AssignsStudio;
+
     protected $fillable = [
         'studio_id',
         'user_id',
@@ -40,7 +43,7 @@ class Order extends Model
         });
 
         static::updated(function (Order $order) {
-            if (!$order->wasChanged('status')) {
+            if (! $order->wasChanged('status')) {
                 return;
             }
 
@@ -80,12 +83,12 @@ class Order extends Model
     protected function createUserNotification(string $title, string $message, string $type): void
     {
         try {
-            if (!$this->user_id || !Schema::hasTable('app_notifications')) {
+            if (! $this->user_id || ! Schema::hasTable('app_notifications')) {
                 return;
             }
 
             AppNotification::create([
-                'studio_id' => $this->studio_id ?: current_studio_id() ?: 1,
+                'studio_id' => $this->studio_id ?: current_studio_id(),
                 'user_id' => $this->user_id,
                 'created_by' => null,
                 'title' => $title,
