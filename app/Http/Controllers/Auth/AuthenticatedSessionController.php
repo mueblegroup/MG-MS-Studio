@@ -33,6 +33,8 @@ class AuthenticatedSessionController extends Controller
 
         // Check the user's role and redirect accordingly
         switch ($user->role) {
+            case 'superadmin':
+                return redirect()->intended(route('superadmin.dashboard', absolute: false));
             case 'admin':
                 return redirect()->intended(route('admin.dashboard', absolute: false));
             case 'teacher':
