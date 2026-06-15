@@ -54,7 +54,6 @@ Route::get('/', function () {
             return redirect()->route('login');
         }
 
-        // Redirect based on role inside the current studio tenant.
         switch ($user->role) {
             case 'admin':
                 return redirect()->route('admin.dashboard');
@@ -67,7 +66,6 @@ Route::get('/', function () {
         }
     }
 
-    // If not logged in, go to landing page.
     return view('saas.landing');
 });
 
@@ -242,7 +240,7 @@ Route::middleware(['auth', 'role:admin'])
     ->name('admin.')
     ->group(function () {
         Route::get('notifications', [AdminAppNotificationController::class, 'index'])->name('notifications.index');
-        Route::get('notifications/{notification}/show', [AdminAppNotificationController::class, 'show')->name('notifications.show');
+        Route::get('notifications/{notification}/show', [AdminAppNotificationController::class, 'show'])->name('notifications.show');
         Route::get('notifications/{notification}/edit', [AdminAppNotificationController::class, 'edit'])->name('notifications.edit');
         Route::put('notifications/{notification}/update', [AdminAppNotificationController::class, 'update'])->name('notifications.update');
         Route::delete('notifications/{notification}/destroy', [AdminAppNotificationController::class, 'destroy'])->name('notifications.destroy');
