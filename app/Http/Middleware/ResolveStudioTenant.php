@@ -15,7 +15,7 @@ class ResolveStudioTenant
     {
         app(TenantManager::class)->clear();
 
-        if ($this->isCentralDomain($request) || $this->isCentralPlatformPath($request)) {
+        if ($this->isCentralDomain($request)) {
             return $next($request);
         }
 
@@ -30,6 +30,10 @@ class ResolveStudioTenant
             app(TenantManager::class)->set($hostStudio);
             $request->attributes->set('studio', $hostStudio);
 
+            return $next($request);
+        }
+
+        if ($this->isCentralPlatformPath($request)) {
             return $next($request);
         }
 
@@ -84,7 +88,7 @@ class ResolveStudioTenant
     {
         $host = strtolower($request->getHost());
 
-        if ($this->isCentralDomain($request)) {
+        if ($this->isCentralDomain($request) || $this->isRootDomain($request)) {
             return null;
         }
 
@@ -123,12 +127,16 @@ class ResolveStudioTenant
         return in_array($host, $centralDomains, true);
     }
 
-    private function isCentralPlatformPath(Request $request): bool
+    private function isRootDomain(Request $request): bool
     {
-        $host = strtolower($request->getHost());
         $rootDomain = strtolower((string) config('saas.root_domain'));
 
-        if ($rootDomain && str_ends_with($host, '.' . $rootDomain)) {
+        return $rootDomain !== '' && strtolower($request->getHost()) === $rootDomain;
+    }
+
+    private function isCentralPlatformPath(Request $request): bool
+    {
+        if (! $this->isRootDomain($request) && ! $this->isCentralDomain($request)) {
             return false;
         }
 
