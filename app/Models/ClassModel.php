@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsStudio;
 use App\Models\User;
 use App\Models\ClassSession;
 use Illuminate\Database\Eloquent\Model;
 
 class ClassModel extends Model
 {
+    use AssignsStudio;
+
     protected $table = 'classes';
 
     protected $fillable = [
