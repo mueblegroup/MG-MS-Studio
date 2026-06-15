@@ -32,15 +32,7 @@ class InstituteRegisterController extends Controller
 
         $validated = $request->validate([
             'studio_name' => ['required', 'string', 'max:255'],
-            'subdomain' => [
-                'required',
-                'string',
-                'min:3',
-                'max:40',
-                'alpha_dash:ascii',
-                Rule::notIn($reserved),
-                Rule::unique('studios', 'subdomain'),
-            ],
+            'subdomain' => ['required', 'string', 'min:3', 'max:40', 'alpha_dash:ascii', Rule::notIn($reserved), Rule::unique('studios', 'subdomain')],
             'owner_name' => ['required', 'string', 'max:255'],
             'owner_email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
             'owner_phone' => ['nullable', 'string', 'max:30'],
@@ -54,21 +46,8 @@ class InstituteRegisterController extends Controller
         $studioHost = $subdomain . '.' . $rootDomain;
 
         [$studio, $owner] = DB::transaction(function () use ($validated, $subdomain, $studioHost) {
-            $studio = Studio::create([
-                'name' => $validated['studio_name'],
-                'slug' => Str::slug($validated['studio_name']) . '-' . Str::lower(Str::random(5)),
-                'subdomain' => $subdomain,
-                'status' => 'trial',
-                'plan_name' => 'trial',
-                'trial_ends_at' => now()->addDays((int) config('saas.trial_days', 14)),
-                'settings' => [
-                    'timezone' => $validated['timezone'] ?: config('app.timezone'),
-                    'currency' => strtoupper($validated['currency'] ?: 'MYR'),
-                ],
-            ]);
-
             $owner = User::create([
-                'studio_id' => $studio->id,
+                'studio_id' => null,
                 'name' => $validated['owner_name'],
                 'email' => $validated['owner_email'],
                 'phone_number' => $validated['owner_phone'] ?? null,
@@ -76,8 +55,18 @@ class InstituteRegisterController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
-            $studio->update([
+            $studio = Studio::create([
+                'name' => $validated['studio_name'],
+                'slug' => Str::slug($validated['studio_name']) . '-' . Str::lower(Str::random(5)),
+                'subdomain' => $subdomain,
                 'owner_user_id' => $owner->id,
+                'status' => 'trial',
+                'plan_name' => 'trial',
+                'trial_ends_at' => now()->addDays((int) config('saas.trial_days', 14)),
+                'settings' => [
+                    'timezone' => $validated['timezone'] ?: config('app.timezone'),
+                    'currency' => strtoupper($validated['currency'] ?: 'MYR'),
+                ],
             ]);
 
             StudioDomain::create([
@@ -93,12 +82,9 @@ class InstituteRegisterController extends Controller
         });
 
         event(new Registered($owner));
-
         Auth::login($owner);
 
-        $scheme = app()->environment('local') ? 'http' : 'https';
-
-        return redirect()->away($scheme . '://' . $studioHost . '/admin/dashboard');
+        return redirect()->route('customer.dashboard')->with('success', 'Studio registered successfully. Open the studio portal from your dashboard.');
     }
 
     public function checkSubdomain(Request $request)
