@@ -1,35 +1,63 @@
 # Superadmin Panel
 
-The superadmin panel is available at:
+The superadmin panel is the owner-level control area for the full Mueble LMS platform.
+
+It is available at:
 
 ```text
 /superadmin/dashboard
 ```
 
-A user must have this role value in the `users.role` column:
+A superadmin user must have this role value in the `users.role` column:
 
 ```text
 superadmin
 ```
 
-Example production-safe SQL after choosing the correct account:
+A superadmin is intentionally not tied to one studio. For the owner account, keep `studio_id` as `NULL` when possible:
 
 ```sql
-UPDATE users SET role = 'superadmin' WHERE email = 'owner@example.com';
+UPDATE users
+SET role = 'superadmin', studio_id = NULL
+WHERE email = 'owner@example.com';
 ```
 
-What the panel currently shows:
+## What superadmin manages
 
-- Total studios
-- Active, trial and inactive studio counts
-- Total users
-- Role distribution for superadmins, admins, teachers and students
-- Paid revenue summary
-- Pending order count
-- Recent studios table
+- All studios across the platform
+- Each studio's platform subscription plan
+- Studio subscription status: active, trial, inactive or suspended
+- Trial and subscription expiry dates
+- Platform subscription pricing plans
+- Owner-level SaaS subscription revenue from studios
 
-Notes:
+## What superadmin does not manage here
 
-- No large binary assets were added.
-- The panel uses the existing Laravel Blade backend layout and Tailwind utility styling.
-- The route is protected by `auth` and `role:superadmin` middleware.
+- Student/class payments inside a studio
+- Normal studio admin tasks such as classes, teachers, students and studio settings
+
+Those remain inside the existing `admin` dashboard and continue to be scoped by `studio_id`.
+
+## Platform subscription data
+
+This update adds dedicated owner-level tables:
+
+```text
+platform_subscription_plans
+platform_subscription_payments
+```
+
+`platform_subscription_payments` is intentionally separate from the existing `payments` table. The superadmin revenue cards should only count studio SaaS subscription payments, not student/class payments from each studio.
+
+## After deployment
+
+Run:
+
+```bash
+php artisan migrate
+php artisan optimize:clear
+php artisan route:clear
+php artisan config:clear
+```
+
+No large binary assets were added. The panel uses the existing Laravel Blade backend layout and Tailwind utility styling.
