@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use App\Support\TenantManager;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -30,11 +32,16 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
+            'remember' => ['sometimes', 'boolean'],
         ];
     }
 
     /**
      * Attempt to authenticate the request's credentials.
+     *
+     * Central platform login must only authenticate platform-level accounts.
+     * Studio subdomain login must only authenticate users belonging to that studio,
+     * plus the client owner account that created the studio from the customer portal.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -42,22 +49,64 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $credentials = $this->only('email', 'password');
         $studio = app(TenantManager::class)->current();
+        $remember = $this->boolean('remember');
+        $email = Str::lower((string) $this->input('email'));
+        $password = (string) $this->input('password');
 
         if ($studio) {
-            $credentials['studio_id'] = $studio->id;
+            if ($this->attemptStudioUser($studio->id, $email, $password, $remember)
+                || $this->attemptStudioOwner($studio->owner_user_id, $email, $password, $remember)) {
+                RateLimiter::clear($this->throttleKey());
+
+                return;
+            }
+        } elseif (Auth::attempt([
+            'email' => $email,
+            'password' => $password,
+            'studio_id' => null,
+        ], $remember)) {
+            RateLimiter::clear($this->throttleKey());
+
+            return;
         }
 
-        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+        RateLimiter::hit($this->throttleKey());
 
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
-            ]);
+        throw ValidationException::withMessages([
+            'email' => trans('auth.failed'),
+        ]);
+    }
+
+    private function attemptStudioUser(int $studioId, string $email, string $password, bool $remember): bool
+    {
+        return Auth::attempt([
+            'email' => $email,
+            'password' => $password,
+            'studio_id' => $studioId,
+        ], $remember);
+    }
+
+    private function attemptStudioOwner(?int $ownerUserId, string $email, string $password, bool $remember): bool
+    {
+        if (! $ownerUserId) {
+            return false;
         }
 
-        RateLimiter::clear($this->throttleKey());
+        $owner = User::query()
+            ->whereKey($ownerUserId)
+            ->whereNull('studio_id')
+            ->where('email', $email)
+            ->where('role', 'admin')
+            ->first();
+
+        if (! $owner || ! Hash::check($password, $owner->password)) {
+            return false;
+        }
+
+        Auth::login($owner, $remember);
+
+        return true;
     }
 
     /**
