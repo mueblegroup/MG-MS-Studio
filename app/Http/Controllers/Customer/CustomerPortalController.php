@@ -104,8 +104,9 @@ class CustomerPortalController extends Controller
     {
         abort_unless((int) $studio->owner_user_id === (int) $request->user()->id || $request->user()->role === 'superadmin', 403);
 
-        $scheme = app()->environment('local') ? 'http' : 'https';
         $host = $studio->custom_domain ?: ($studio->subdomain . '.' . config('saas.root_domain'));
+        $isLocalHost = in_array($host, ['localhost', '127.0.0.1'], true) || str_ends_with($host, '.test');
+        $scheme = $isLocalHost ? 'http' : 'https';
 
         return redirect()->away($scheme . '://' . $host . '/login');
     }
