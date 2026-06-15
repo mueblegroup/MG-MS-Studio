@@ -16,13 +16,9 @@ use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
-    public function create(): View|RedirectResponse
+    public function create(): View
     {
         $studio = app(TenantManager::class)->current();
-
-        if (! $studio) {
-            return redirect()->route('institutes.register');
-        }
 
         return view('auth.register', [
             'studio' => $studio,
@@ -34,7 +30,24 @@ class RegisteredUserController extends Controller
         $studio = app(TenantManager::class)->current();
 
         if (! $studio) {
-            abort(404, 'Studio portal not found.');
+            $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
+                'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            ]);
+
+            $user = User::create([
+                'studio_id' => null,
+                'name' => $request->name,
+                'email' => $request->email,
+                'role' => 'admin',
+                'password' => Hash::make($request->password),
+            ]);
+
+            event(new Registered($user));
+            Auth::login($user);
+
+            return redirect()->route('customer.dashboard');
         }
 
         $request->validate([
@@ -59,7 +72,6 @@ class RegisteredUserController extends Controller
         ]);
 
         event(new Registered($user));
-
         Auth::login($user);
 
         return redirect(route('student.dashboard', absolute: false));
