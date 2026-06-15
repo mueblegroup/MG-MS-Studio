@@ -97,7 +97,7 @@ class CustomerPortalController extends Controller
             ]);
         });
 
-        return redirect()->route('customer.dashboard')->with('success', 'Studio created successfully. You can now open the studio portal.');
+        return redirect()->route('customer.dashboard')->with('success', 'Studio created successfully. Open the studio portal and login from its own subdomain.');
     }
 
     public function launchStudio(Request $request, Studio $studio): RedirectResponse
@@ -107,6 +107,6 @@ class CustomerPortalController extends Controller
         $scheme = app()->environment('local') ? 'http' : 'https';
         $host = $studio->custom_domain ?: ($studio->subdomain . '.' . config('saas.root_domain'));
 
-        return redirect()->away($scheme . '://' . $host . '/admin/dashboard');
+        return redirect()->away($scheme . '://' . $host . '/login');
     }
 }
