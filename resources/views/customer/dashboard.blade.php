@@ -3,9 +3,11 @@
         <div class="mx-auto max-w-7xl space-y-6">
             <div class="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">Mueble LMS Portal</p>
-                    <h1 class="mt-2 text-3xl font-black text-gray-900 dark:text-white">Your Studios</h1>
-                    <p class="mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">Manage your studio subscriptions here. Enter each studio portal from its own subdomain.</p>
+                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">Client Admin Portal</p>
+                    <h1 class="mt-2 text-3xl font-black text-gray-900 dark:text-white">Manage Your Studios</h1>
+                    <p class="mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+                        This is the basic admin area for new customers. Register studios here, manage their setup, then login to each studio from its own subdomain.
+                    </p>
                 </div>
                 <a href="{{ route('customer.studios.create') }}" class="inline-flex items-center justify-center rounded-2xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600">+ Register Studio</a>
             </div>
@@ -20,10 +22,20 @@
                 <div class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10"><p class="text-sm font-semibold text-gray-500 dark:text-gray-400">Available Plans</p><p class="mt-3 text-4xl font-black text-gray-900 dark:text-white">{{ $plans->count() }}</p></div>
             </div>
 
+            <div class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10">
+                <h2 class="text-lg font-black text-gray-900 dark:text-white">Correct SaaS Flow</h2>
+                <div class="mt-4 grid gap-3 md:grid-cols-4">
+                    <div class="rounded-2xl bg-orange-50 p-4 text-sm font-bold text-orange-800 dark:bg-orange-950/40 dark:text-orange-200">1. Landing Page</div>
+                    <div class="rounded-2xl bg-orange-50 p-4 text-sm font-bold text-orange-800 dark:bg-orange-950/40 dark:text-orange-200">2. Sign Up / Login</div>
+                    <div class="rounded-2xl bg-orange-50 p-4 text-sm font-bold text-orange-800 dark:bg-orange-950/40 dark:text-orange-200">3. Client Admin</div>
+                    <div class="rounded-2xl bg-orange-50 p-4 text-sm font-bold text-orange-800 dark:bg-orange-950/40 dark:text-orange-200">4. Studio Subdomain Login</div>
+                </div>
+            </div>
+
             <div class="rounded-3xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10">
                 <div class="border-b border-gray-100 p-6 dark:border-gray-800">
                     <h2 class="text-lg font-black text-gray-900 dark:text-white">Studio Portals</h2>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Use the portal button to enter the correct studio app.</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Use the login button to enter the correct studio app. The central client portal does not open studio admin directly.</p>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
@@ -35,7 +47,7 @@
                                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $studio->subdomain }}.{{ $rootDomain }}</td>
                                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $studio->platformSubscriptionPlan?->name ?? ucfirst($studio->plan_name ?? 'Trial') }}</td>
                                     <td class="px-6 py-4"><span class="rounded-full bg-orange-100 px-3 py-1 text-xs font-bold uppercase text-orange-700 dark:bg-orange-950 dark:text-orange-300">{{ $studio->status }}</span></td>
-                                    <td class="px-6 py-4 text-right"><a href="{{ route('customer.studios.launch', $studio) }}" class="inline-flex rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-gray-700 dark:bg-white dark:text-gray-900">Enter Portal</a></td>
+                                    <td class="px-6 py-4 text-right"><a href="{{ route('customer.studios.launch', $studio) }}" class="inline-flex rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-gray-700 dark:bg-white dark:text-gray-900">Open Studio Login</a></td>
                                 </tr>
                             @empty
                                 <tr><td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">No studios yet. Register your first studio to start using the LMS.</td></tr>
