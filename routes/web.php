@@ -34,13 +34,27 @@ use App\Http\Controllers\Student\StudentScheduleController;
 use App\Http\Controllers\Student\StudentPaymentController;
 use App\Http\Controllers\Admin\AppNotificationController as AdminAppNotificationController;
 use App\Http\Controllers\AppNotificationController;
+use App\Support\TenantManager;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     if (Auth::check()) {
         $user = Auth::user();
+        $studio = app(TenantManager::class)->current();
 
-        // Redirect based on role
+        if (! $studio) {
+            if ($user->role === 'superadmin') {
+                return redirect()->route('superadmin.dashboard');
+            }
+
+            if ($user->role === 'admin') {
+                return redirect()->route('customer.dashboard');
+            }
+
+            return redirect()->route('login');
+        }
+
+        // Redirect based on role inside the current studio tenant.
         switch ($user->role) {
             case 'admin':
                 return redirect()->route('admin.dashboard');
@@ -53,7 +67,7 @@ Route::get('/', function () {
         }
     }
 
-    // If not logged in, go to login page
+    // If not logged in, go to landing page.
     return view('saas.landing');
 });
 
@@ -228,7 +242,7 @@ Route::middleware(['auth', 'role:admin'])
     ->name('admin.')
     ->group(function () {
         Route::get('notifications', [AdminAppNotificationController::class, 'index'])->name('notifications.index');
-        Route::get('notifications/{notification}/show', [AdminAppNotificationController::class, 'show'])->name('notifications.show');
+        Route::get('notifications/{notification}/show', [AdminAppNotificationController::class, 'show')->name('notifications.show');
         Route::get('notifications/{notification}/edit', [AdminAppNotificationController::class, 'edit'])->name('notifications.edit');
         Route::put('notifications/{notification}/update', [AdminAppNotificationController::class, 'update'])->name('notifications.update');
         Route::delete('notifications/{notification}/destroy', [AdminAppNotificationController::class, 'destroy'])->name('notifications.destroy');
