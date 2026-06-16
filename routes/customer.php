@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Customer\CustomerAccountController;
 use App\Http\Controllers\Customer\CustomerPortalController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,7 +24,7 @@ Route::middleware(['auth', 'central'])
         Route::get('studio', [CustomerPortalController::class, 'studio'])->name('studio');
         Route::get('billing', [CustomerPortalController::class, 'billing'])->name('billing');
         Route::get('invoices', [CustomerPortalController::class, 'invoices'])->name('invoices');
-        Route::get('account', [CustomerPortalController::class, 'account'])->name('account');
+        Route::get('account', [CustomerAccountController::class, 'edit'])->name('account');
 
         Route::get('studios/create', [CustomerPortalController::class, 'createStudio'])->name('studios.create');
         Route::post('studios', [CustomerPortalController::class, 'storeStudio'])->name('studios.store');
