@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ClassSession;
 use App\Models\Plan;
 use App\Models\ClassCard;
+use App\Support\TenantManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
@@ -14,6 +15,7 @@ class ShopController extends Controller
 {
     public function index(Request $request)
     {
+        $studioId = $this->requireStudioContext();
         $tab = $request->query('tab', 'classes'); // classes | plans | classcards
         $q = trim((string) $request->query('q', ''));
 
@@ -30,6 +32,8 @@ class ShopController extends Controller
         $subscriptionFirstSessionIds = ClassSession::query()
             ->selectRaw('MIN(class_sessions.id)')
             ->join('classes', 'classes.id', '=', 'class_sessions.class_id')
+            ->where('class_sessions.studio_id', $studioId)
+            ->where('classes.studio_id', $studioId)
             ->where('classes.type', 'subscription')
             ->whereNotNull('class_sessions.start_time')
             ->where('class_sessions.start_time', '>=', $classMinStart)
@@ -37,6 +41,7 @@ class ShopController extends Controller
 
         $classes = ClassSession::query()
             ->with(['classModel.teacher:id,name,email'])
+            ->where('studio_id', $studioId)
             ->whereNotNull('start_time')
             // ✅ hide past + apply early cutoff
             ->where('start_time', '>=', $classMinStart)
@@ -65,6 +70,7 @@ class ShopController extends Controller
             ->withQueryString();
 
         $plans = Plan::query()
+            ->where('studio_id', $studioId)
             ->with(['sessions' => function ($s) use ($now) {
                 $s->whereNotNull('start_time')
                 ->where('start_time', '>=', $now)
@@ -86,6 +92,7 @@ class ShopController extends Controller
             ->withQueryString();
 
         $classcards = ClassCard::query()
+            ->where('studio_id', $studioId)
             ->when($q !== '', fn($query) => $query->where('name', 'like', "%{$q}%"))
             // If you have is_active column, keep this:
             ->when(\Schema::hasColumn('class_cards', 'is_active'), fn($qq) => $qq->where('is_active', 1))
@@ -98,6 +105,7 @@ class ShopController extends Controller
 
     public function cart()
     {
+        $this->requireStudioContext();
         $cart = session('cart', []);
         $summary = $this->cartSummary($cart);
 
@@ -117,7 +125,7 @@ class ShopController extends Controller
 
         $qty = (int)($validated['qty'] ?? 1);
 
-        // Load product (and price/name) safely
+        // Load product (and price/name) safely from current studio only.
         $product = $this->resolveProduct($validated['type'], (int)$validated['id']);
 
         if (!$product) {
@@ -150,6 +158,7 @@ class ShopController extends Controller
 
     public function updateCart(Request $request, string $key)
     {
+        $this->requireStudioContext();
         $validated = $request->validate([
             'qty' => 'required|integer|min:1|max:20',
         ]);
@@ -167,6 +176,7 @@ class ShopController extends Controller
 
     public function removeFromCart(string $key)
     {
+        $this->requireStudioContext();
         $cart = session('cart', []);
         unset($cart[$key]);
         session(['cart' => $cart]);
@@ -176,12 +186,14 @@ class ShopController extends Controller
 
     public function clearCart()
     {
+        $this->requireStudioContext();
         session()->forget('cart');
         return back()->with('success', 'Cart cleared.');
     }
 
     public function checkout()
     {
+        $this->requireStudioContext();
         $cart = session('cart', []);
         if (empty($cart)) {
             return redirect()->route('shop.index')->with('error', 'Your cart is empty.');
@@ -214,8 +226,12 @@ class ShopController extends Controller
 
     private function resolveProduct(string $type, int $id): ?array
     {
+        $studioId = $this->requireStudioContext();
+
         if ($type === 'class_session') {
-            $session = ClassSession::with(['classModel.teacher:id,name,email'])->find($id);
+            $session = ClassSession::with(['classModel.teacher:id,name,email'])
+                ->where('studio_id', $studioId)
+                ->find($id);
             if (!$session || !$session->classModel) return null;
 
             $start = optional($session->start_time)->format('Y-m-d H:i');
@@ -240,7 +256,7 @@ class ShopController extends Controller
         }
 
         if ($type === 'plan') {
-            $plan = Plan::find($id);
+            $plan = Plan::where('studio_id', $studioId)->find($id);
             if (!$plan) return null;
 
             return [
@@ -255,7 +271,7 @@ class ShopController extends Controller
         }
 
         if ($type === 'class_card') {
-            $card = ClassCard::find($id);
+            $card = ClassCard::where('studio_id', $studioId)->find($id);
             if (!$card) return null;
 
             return [
@@ -270,5 +286,14 @@ class ShopController extends Controller
         }
 
         return null;
+    }
+
+    private function requireStudioContext(): int
+    {
+        $studio = app(TenantManager::class)->current();
+
+        abort_unless($studio, 404, 'Studio shop not found.');
+
+        return (int) $studio->id;
     }
 }
