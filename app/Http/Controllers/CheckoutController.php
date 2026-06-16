@@ -10,6 +10,7 @@ use App\Services\CartService;
 use App\Services\StudioSettingsService;
 use App\Services\HitPayService;
 use App\Services\SubscriptionClassService;
+use App\Support\TenantManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -18,6 +19,8 @@ class CheckoutController extends Controller
 {
     public function index(CartService $cart, StudioSettingsService $settings, SubscriptionClassService $subscriptions)
     {
+        $this->requireStudioContext();
+
         $cartModel = $cart->currentCart()->load('items.purchasable');
 
         if ($cartModel->items->isEmpty()) {
@@ -45,6 +48,8 @@ class CheckoutController extends Controller
 
     public function pay(Request $request, CartService $cart, StudioSettingsService $settings, HitPayService $hitpay, SubscriptionClassService $subscriptions)
     {
+        $studioId = $this->requireStudioContext();
+
         $enabledProviders = (array) $settings->get('default_payment_provider', ['stripe']);
         $validated = $request->validate([
             'provider' => 'required|string|in:' . implode(',', $enabledProviders),
@@ -62,8 +67,7 @@ class CheckoutController extends Controller
 
         $hasSubscriptionClass = $subscriptions->cartHasSubscriptionClass($cartModel);
 
-        [$order, $payment] = DB::transaction(function () use ($cartModel, $validated, $settings, $hasSubscriptionClass) {
-            $studioId = current_studio_id() ?: auth()->user()?->studio_id ?: 1;
+        [$order, $payment] = DB::transaction(function () use ($cartModel, $validated, $settings, $hasSubscriptionClass, $studioId) {
             $currency = strtoupper($settings->get('currency', 'MYR'));
             $subtotal = (float) $cartModel->items->sum(fn ($i) => $i->quantity * $i->unit_price);
 
@@ -169,7 +173,7 @@ class CheckoutController extends Controller
             'cancel_url'  => route('shop.checkout.cancel', [], true) . '?order=' . $order->id,
             'metadata'    => [
                 'order_id' => (string) $order->id,
-                'studio_id' => (string) ($order->studio_id ?: current_studio_id() ?: 1),
+                'studio_id' => (string) $order->studio_id,
             ],
         ]);
 
@@ -186,7 +190,6 @@ class CheckoutController extends Controller
         }
 
         \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
-
         $session = $subscriptions->createStripeCheckoutSession($order, $payment, $subscription);
 
         $order->update(['provider_reference' => $session->id]);
@@ -241,10 +244,12 @@ class CheckoutController extends Controller
 
     public function success(Request $request, CartService $cart)
     {
+        $studioId = $this->requireStudioContext();
         $orderId = (int) $request->query('order');
 
         $order = Order::with('items')
             ->where('id', $orderId)
+            ->where('studio_id', $studioId)
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
@@ -257,10 +262,12 @@ class CheckoutController extends Controller
 
     public function cancel(Request $request)
     {
+        $studioId = $this->requireStudioContext();
         $orderId = (int) $request->query('order');
 
         if ($orderId) {
             $order = Order::where('id', $orderId)
+                ->where('studio_id', $studioId)
                 ->where('user_id', auth()->id())
                 ->first();
 
@@ -455,5 +462,14 @@ class CheckoutController extends Controller
             'current_period_end' => $nextBillingAt,
             'next_billing_at' => $nextBillingAt,
         ]);
+    }
+
+    private function requireStudioContext(): int
+    {
+        $studio = app(TenantManager::class)->current();
+
+        abort_unless($studio, 404, 'Studio shop not found.');
+
+        return (int) $studio->id;
     }
 }
