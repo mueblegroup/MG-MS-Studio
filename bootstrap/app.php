@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckUserRole::class,
+            'central' => \App\Http\Middleware\EnsureCentralDomain::class,
             'api.ability' => \App\Http\Middleware\EnsureApiTokenCan::class,
             'api.log' => \App\Http\Middleware\LogApiRequest::class,
             'studio' => \App\Http\Middleware\ResolveStudioTenant::class,
