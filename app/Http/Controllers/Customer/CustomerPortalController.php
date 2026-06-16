@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Models\PlatformSubscriptionPayment;
 use App\Models\PlatformSubscriptionPlan;
 use App\Models\Studio;
 use App\Models\StudioDomain;
@@ -23,21 +24,63 @@ class CustomerPortalController extends Controller
             return redirect()->route('superadmin.dashboard');
         }
 
-        $studios = Studio::query()
-            ->where('owner_user_id', $user->id)
-            ->when($user->studio_id, function ($query) use ($user): void {
-                $query->orWhere('id', $user->studio_id);
-            })
-            ->with('platformSubscriptionPlan')
-            ->latest()
-            ->get()
-            ->unique('id')
-            ->values();
+        $studio = $this->ownedStudio($request);
+        $plans = $this->activePlans();
+        $payments = $this->studioPayments($studio, 5);
 
         return view('customer.dashboard', [
-            'studios' => $studios,
-            'plans' => PlatformSubscriptionPlan::query()->where('is_active', true)->orderBy('sort_order')->orderBy('price')->get(),
+            'studio' => $studio,
+            'payments' => $payments,
+            'plans' => $plans,
             'rootDomain' => config('saas.root_domain'),
+            'setupSteps' => $this->setupSteps($studio),
+        ]);
+    }
+
+    public function studio(Request $request): View|RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user->role === 'superadmin') {
+            return redirect()->route('superadmin.dashboard');
+        }
+
+        return view('customer.studio', [
+            'studio' => $this->ownedStudio($request),
+            'rootDomain' => config('saas.root_domain'),
+        ]);
+    }
+
+    public function billing(Request $request): View|RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user->role === 'superadmin') {
+            return redirect()->route('superadmin.dashboard');
+        }
+
+        $studio = $this->ownedStudio($request);
+
+        return view('customer.billing', [
+            'studio' => $studio,
+            'plans' => $this->activePlans(),
+            'payments' => $this->studioPayments($studio, 10),
+        ]);
+    }
+
+    public function invoices(Request $request): View|RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user->role === 'superadmin') {
+            return redirect()->route('superadmin.dashboard');
+        }
+
+        $studio = $this->ownedStudio($request);
+
+        return view('customer.invoices', [
+            'studio' => $studio,
+            'payments' => $this->studioPayments($studio, 20),
         ]);
     }
 
@@ -51,7 +94,7 @@ class CustomerPortalController extends Controller
         }
 
         return view('customer.studios.create', [
-            'plans' => PlatformSubscriptionPlan::query()->where('is_active', true)->orderBy('sort_order')->orderBy('price')->get(),
+            'plans' => $this->activePlans(),
             'rootDomain' => config('saas.root_domain'),
         ]);
     }
@@ -127,7 +170,7 @@ class CustomerPortalController extends Controller
             ])->save();
         });
 
-        return redirect()->route('customer.dashboard')->with('success', 'Studio created successfully. Your account is now the admin for this studio. Open the studio portal and login from its own subdomain.');
+        return redirect()->route('customer.dashboard')->with('success', 'Studio created successfully. Your account is now connected to your studio. Use this client portal for billing and setup, and open the studio portal for day-to-day LMS operations.');
     }
 
     public function launchStudio(Request $request, Studio $studio): RedirectResponse
@@ -139,5 +182,72 @@ class CustomerPortalController extends Controller
         $scheme = $isLocalHost ? 'http' : 'https';
 
         return redirect()->away($scheme . '://' . $host . '/login');
+    }
+
+    private function ownedStudio(Request $request): ?Studio
+    {
+        $user = $request->user();
+
+        return Studio::query()
+            ->where(function ($query) use ($user): void {
+                $query->where('owner_user_id', $user->id);
+
+                if ($user->studio_id) {
+                    $query->orWhere('id', $user->studio_id);
+                }
+            })
+            ->with(['platformSubscriptionPlan', 'domains'])
+            ->latest()
+            ->first();
+    }
+
+    private function activePlans()
+    {
+        return PlatformSubscriptionPlan::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('price')
+            ->get();
+    }
+
+    private function studioPayments(?Studio $studio, int $limit)
+    {
+        if (! $studio) {
+            return collect();
+        }
+
+        return PlatformSubscriptionPayment::query()
+            ->where('studio_id', $studio->id)
+            ->with('plan')
+            ->latest('paid_at')
+            ->latest()
+            ->limit($limit)
+            ->get();
+    }
+
+    private function setupSteps(?Studio $studio): array
+    {
+        return [
+            [
+                'title' => 'Create studio workspace',
+                'description' => 'Reserve the studio name, subdomain, timezone, and currency.',
+                'complete' => (bool) $studio,
+            ],
+            [
+                'title' => 'Choose platform plan',
+                'description' => 'Select the SaaS subscription package for this studio.',
+                'complete' => (bool) ($studio?->platform_subscription_plan_id),
+            ],
+            [
+                'title' => 'Open studio portal',
+                'description' => 'Login from the studio subdomain to manage classes, teachers, students, and schedules.',
+                'complete' => (bool) ($studio?->isActive()),
+            ],
+            [
+                'title' => 'Complete billing setup',
+                'description' => 'Add payment method and keep subscription invoices in the client portal.',
+                'complete' => (bool) ($studio?->subscription_ends_at || $studio?->platformSubscriptionPayments()->where('status', 'paid')->exists()),
+            ],
+        ];
     }
 }
