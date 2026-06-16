@@ -13,7 +13,7 @@
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('customer.dashboard') }}" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Back to Overview</a>
                 @if ($studio)
-                    <a href="{{ route('customer.studios.launch', $studio) }}" class="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950">Open Studio Login</a>
+                    <a href="{{ route('customer.studios.launch', $studio) }}" class="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950">Open Studio Admin</a>
                 @else
                     <a href="{{ route('customer.studios.create') }}" class="rounded-2xl bg-orange-500 px-4 py-2 text-sm font-black text-white transition hover:bg-orange-600">Create Studio</a>
                 @endif
@@ -34,8 +34,8 @@
                             <dd class="mt-2 font-black text-slate-950 dark:text-white">{{ ucfirst($studio->status) }}</dd>
                         </div>
                         <div class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950 sm:col-span-2">
-                            <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">Studio Login URL</dt>
-                            <dd class="mt-2 break-all font-black text-slate-950 dark:text-white">https://{{ $studioUrl }}/login</dd>
+                            <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">Studio Admin URL</dt>
+                            <dd class="mt-2 break-all font-black text-slate-950 dark:text-white">https://{{ $studioUrl }}/admin/dashboard</dd>
                         </div>
                         <div class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
                             <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">Timezone</dt>
@@ -53,11 +53,11 @@
                     <div class="mt-5 space-y-4 text-sm leading-6 text-slate-300">
                         <div class="rounded-2xl bg-white/10 p-4">
                             <p class="font-black text-white">Client Portal</p>
-                            <p class="mt-1">Studio subscription, platform invoices, billing, domain status, and ownership.</p>
+                            <p class="mt-1">Studio subscription, platform invoices, billing, domain status, and ownership. Only available on the main SaaS domain.</p>
                         </div>
                         <div class="rounded-2xl bg-white/10 p-4">
                             <p class="font-black text-white">Studio Admin</p>
-                            <p class="mt-1">Teachers, classes, students, attendance, schedules, products, and student payments.</p>
+                            <p class="mt-1">Teachers, classes, students, attendance, schedules, products, and student payments. Only available on the studio subdomain.</p>
                         </div>
                     </div>
                 </section>
@@ -65,7 +65,7 @@
         @else
             <section class="rounded-[2rem] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <p class="text-2xl font-black text-slate-950 dark:text-white">No studio yet</p>
-                <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">Create your studio from the client portal. Once created, your account will be assigned as the owner/admin and the studio will get its own subdomain login.</p>
+                <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">Create your studio from the client portal. Once created, your account will be assigned as the owner/admin and the studio will get its own subdomain admin portal.</p>
                 <a href="{{ route('customer.studios.create') }}" class="mt-6 inline-flex rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-600">Create Studio</a>
             </section>
         @endif
