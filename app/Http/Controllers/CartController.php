@@ -7,12 +7,15 @@ use App\Models\ClassSession;
 use App\Models\Plan;
 use App\Services\CartService;
 use App\Services\StudioSettingsService;
+use App\Support\TenantManager;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
     public function index(CartService $cartService, StudioSettingsService $settings)
     {
+        $this->requireStudioContext();
+
         $cartModel = $cartService->currentCart()->load(['items.purchasable']);
 
         $currency = $settings->currency('MYR');
@@ -28,6 +31,8 @@ class CartController extends Controller
 
     public function add(Request $request, CartService $cart, StudioSettingsService $settings)
     {
+        $studioId = $this->requireStudioContext();
+
         $validated = $request->validate([
             'type' => 'required|in:class_session,plan,class_card',
             'id'   => 'required|integer',
@@ -39,7 +44,9 @@ class CartController extends Controller
         $currency = $settings->currency('MYR');
 
         if ($validated['type'] === 'class_session') {
-            $session = ClassSession::with('classModel')->findOrFail($validated['id']);
+            $session = ClassSession::with('classModel')
+                ->where('studio_id', $studioId)
+                ->findOrFail($validated['id']);
             $price = (float) ($session->classModel->price ?? 0);
             $classType = $session->classModel->type ?? 'single';
             $billingInterval = $session->classModel->billing_interval ?? null;
@@ -59,7 +66,7 @@ class CartController extends Controller
         }
 
         if ($validated['type'] === 'plan') {
-            $plan = Plan::findOrFail($validated['id']);
+            $plan = Plan::where('studio_id', $studioId)->findOrFail($validated['id']);
             $planCurrency = $plan->currency ?: $currency;
 
             $cart->addItem($plan, 1, (float) $plan->price, $planCurrency, [
@@ -68,7 +75,7 @@ class CartController extends Controller
         }
 
         if ($validated['type'] === 'class_card') {
-            $card = ClassCard::findOrFail($validated['id']);
+            $card = ClassCard::where('studio_id', $studioId)->findOrFail($validated['id']);
             $cardCurrency = $card->currency ?: $currency;
 
             $cart->addItem($card, $qty, (float) $card->price, $cardCurrency, [
@@ -83,6 +90,8 @@ class CartController extends Controller
 
     public function update(Request $request, CartService $cart, int $itemId)
     {
+        $this->requireStudioContext();
+
         $validated = $request->validate([
             'qty' => 'required|integer|min:0|max:99',
         ]);
@@ -94,13 +103,26 @@ class CartController extends Controller
 
     public function remove(CartService $cart, int $itemId)
     {
+        $this->requireStudioContext();
+
         $cart->removeItem($itemId);
         return back()->with('success', 'Removed.');
     }
 
     public function clear(CartService $cart)
     {
+        $this->requireStudioContext();
+
         $cart->clear();
         return back()->with('success', 'Cart cleared.');
+    }
+
+    private function requireStudioContext(): int
+    {
+        $studio = app(TenantManager::class)->current();
+
+        abort_unless($studio, 404, 'Studio shop not found.');
+
+        return (int) $studio->id;
     }
 }
