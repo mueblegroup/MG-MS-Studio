@@ -13,9 +13,9 @@ Route::get('/', function () {
     }
 
     return redirect()->route('customer.dashboard');
-});
+})->middleware('central');
 
-Route::middleware(['auth'])
+Route::middleware(['auth', 'central'])
     ->prefix('customer')
     ->name('customer.')
     ->group(function (): void {
@@ -23,6 +23,7 @@ Route::middleware(['auth'])
         Route::get('studio', [CustomerPortalController::class, 'studio'])->name('studio');
         Route::get('billing', [CustomerPortalController::class, 'billing'])->name('billing');
         Route::get('invoices', [CustomerPortalController::class, 'invoices'])->name('invoices');
+        Route::get('account', [CustomerPortalController::class, 'account'])->name('account');
 
         Route::get('studios/create', [CustomerPortalController::class, 'createStudio'])->name('studios.create');
         Route::post('studios', [CustomerPortalController::class, 'storeStudio'])->name('studios.store');
