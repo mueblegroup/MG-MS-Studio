@@ -25,7 +25,7 @@
                     <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Manage SaaS onboarding, subscription, invoices, and studio launch access from here. Teachers, classes, students, attendance, and student payments stay inside the studio subdomain.</p>
                     <div class="mt-6 flex flex-wrap gap-3">
                         @if ($studio)
-                            <a href="{{ route('customer.studios.launch', $studio) }}" class="inline-flex items-center justify-center rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600">Open Studio Login</a>
+                            <a href="{{ route('customer.studios.launch', $studio) }}" class="inline-flex items-center justify-center rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600">Open Studio Admin</a>
                             <a href="{{ route('customer.billing') }}" class="inline-flex items-center justify-center rounded-2xl bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20">Manage Plan</a>
                         @else
                             <a href="{{ route('customer.studios.create') }}" class="inline-flex items-center justify-center rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600">Create Studio</a>
@@ -98,16 +98,16 @@
                 <div class="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-black/5 dark:bg-slate-900 dark:ring-white/10">
                     <h2 class="text-xl font-black text-slate-950 dark:text-white">Studio access</h2>
                     @if ($studio && $studioUrl)
-                        <p class="mt-2 break-all text-sm font-bold text-slate-500 dark:text-slate-400">https://{{ $studioUrl }}/login</p>
-                        <a href="{{ route('customer.studios.launch', $studio) }}" class="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950">Open Studio Login</a>
+                        <p class="mt-2 break-all text-sm font-bold text-slate-500 dark:text-slate-400">https://{{ $studioUrl }}/admin/dashboard</p>
+                        <a href="{{ route('customer.studios.launch', $studio) }}" class="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950">Open Studio Admin</a>
                     @else
-                        <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Create your studio to reserve a subdomain and activate the studio login.</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Create your studio to reserve a subdomain and activate the studio admin portal.</p>
                     @endif
                 </div>
 
                 <div class="rounded-[2rem] bg-orange-50 p-6 text-orange-900 ring-1 ring-orange-100 dark:bg-orange-950/30 dark:text-orange-200 dark:ring-orange-900/40">
                     <h2 class="text-lg font-black">Permission separation</h2>
-                    <p class="mt-2 text-sm font-semibold leading-6">Client portal pages do not use the studio sidebar and do not show LMS student/class payment history. Studio operations are only available from the tenant subdomain.</p>
+                    <p class="mt-2 text-sm font-semibold leading-6">Client portal pages are only available from the main SaaS domain. The studio subdomain is only for studio login and LMS operations.</p>
                 </div>
             </div>
         </section>
