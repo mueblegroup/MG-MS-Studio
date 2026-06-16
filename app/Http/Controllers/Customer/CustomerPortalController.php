@@ -7,6 +7,7 @@ use App\Models\PlatformSubscriptionPayment;
 use App\Models\PlatformSubscriptionPlan;
 use App\Models\Studio;
 use App\Models\StudioDomain;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,15 +19,15 @@ class CustomerPortalController extends Controller
 {
     public function dashboard(Request $request): View|RedirectResponse
     {
-        $user = $request->user();
+        $guard = $this->guardClientPortal($request);
 
-        if ($user->role === 'superadmin') {
-            return redirect()->route('superadmin.dashboard');
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
         }
 
         $studio = $this->ownedStudio($request);
         $plans = $this->activePlans();
-        $payments = $this->studioPayments($studio, 5);
+        $payments = $this->platformSubscriptionPayments($studio, 3);
 
         return view('customer.dashboard', [
             'studio' => $studio,
@@ -39,10 +40,10 @@ class CustomerPortalController extends Controller
 
     public function studio(Request $request): View|RedirectResponse
     {
-        $user = $request->user();
+        $guard = $this->guardClientPortal($request);
 
-        if ($user->role === 'superadmin') {
-            return redirect()->route('superadmin.dashboard');
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
         }
 
         return view('customer.studio', [
@@ -53,10 +54,10 @@ class CustomerPortalController extends Controller
 
     public function billing(Request $request): View|RedirectResponse
     {
-        $user = $request->user();
+        $guard = $this->guardClientPortal($request);
 
-        if ($user->role === 'superadmin') {
-            return redirect()->route('superadmin.dashboard');
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
         }
 
         $studio = $this->ownedStudio($request);
@@ -64,28 +65,34 @@ class CustomerPortalController extends Controller
         return view('customer.billing', [
             'studio' => $studio,
             'plans' => $this->activePlans(),
-            'payments' => $this->studioPayments($studio, 10),
+            'payments' => $this->platformSubscriptionPayments($studio, 10),
         ]);
     }
 
     public function invoices(Request $request): View|RedirectResponse
     {
-        $user = $request->user();
+        $guard = $this->guardClientPortal($request);
 
-        if ($user->role === 'superadmin') {
-            return redirect()->route('superadmin.dashboard');
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
         }
 
         $studio = $this->ownedStudio($request);
 
         return view('customer.invoices', [
             'studio' => $studio,
-            'payments' => $this->studioPayments($studio, 20),
+            'payments' => $this->platformSubscriptionPayments($studio, 20),
         ]);
     }
 
     public function createStudio(Request $request): View|RedirectResponse
     {
+        $guard = $this->guardClientPortal($request, allowNoStudio: true);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
         $user = $request->user();
 
         if ($user->studio_id || Studio::query()->where('owner_user_id', $user->id)->exists()) {
@@ -101,6 +108,12 @@ class CustomerPortalController extends Controller
 
     public function storeStudio(Request $request): RedirectResponse
     {
+        $guard = $this->guardClientPortal($request, allowNoStudio: true);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
         $user = $request->user();
 
         if ($user->studio_id || Studio::query()->where('owner_user_id', $user->id)->exists()) {
@@ -175,7 +188,7 @@ class CustomerPortalController extends Controller
 
     public function launchStudio(Request $request, Studio $studio): RedirectResponse
     {
-        abort_unless((int) $studio->owner_user_id === (int) $request->user()->id || (int) $request->user()->studio_id === (int) $studio->id || $request->user()->role === 'superadmin', 403);
+        abort_unless((int) $studio->owner_user_id === (int) $request->user()->id, 403);
 
         $host = $studio->custom_domain ?: ($studio->subdomain . '.' . config('saas.root_domain'));
         $isLocalHost = in_array($host, ['localhost', '127.0.0.1'], true) || str_ends_with($host, '.test');
@@ -184,18 +197,35 @@ class CustomerPortalController extends Controller
         return redirect()->away($scheme . '://' . $host . '/login');
     }
 
+    private function guardClientPortal(Request $request, bool $allowNoStudio = false): ?RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user->role === 'superadmin') {
+            return redirect()->route('superadmin.dashboard');
+        }
+
+        abort_unless($user->role === 'admin', 403, 'Client portal access is only available to client owner accounts.');
+
+        $studio = $this->ownedStudio($request);
+
+        if (! $studio) {
+            abort_unless($allowNoStudio || ! $user->studio_id, 403, 'Only the studio owner can access the client portal.');
+
+            return null;
+        }
+
+        abort_unless((int) $studio->owner_user_id === (int) $user->id, 403, 'Only the studio owner can access the client portal.');
+
+        return null;
+    }
+
     private function ownedStudio(Request $request): ?Studio
     {
         $user = $request->user();
 
         return Studio::query()
-            ->where(function ($query) use ($user): void {
-                $query->where('owner_user_id', $user->id);
-
-                if ($user->studio_id) {
-                    $query->orWhere('id', $user->studio_id);
-                }
-            })
+            ->where('owner_user_id', $user->id)
             ->with(['platformSubscriptionPlan', 'domains'])
             ->latest()
             ->first();
@@ -210,7 +240,7 @@ class CustomerPortalController extends Controller
             ->get();
     }
 
-    private function studioPayments(?Studio $studio, int $limit)
+    private function platformSubscriptionPayments(?Studio $studio, int $limit)
     {
         if (! $studio) {
             return collect();
