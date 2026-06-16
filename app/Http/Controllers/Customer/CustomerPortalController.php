@@ -7,7 +7,7 @@ use App\Models\PlatformSubscriptionPayment;
 use App\Models\PlatformSubscriptionPlan;
 use App\Models\Studio;
 use App\Models\StudioDomain;
-use App\Models\User;
+use App\Support\TenantManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -188,18 +188,29 @@ class CustomerPortalController extends Controller
 
     public function launchStudio(Request $request, Studio $studio): RedirectResponse
     {
+        $guard = $this->guardClientPortal($request);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
         abort_unless((int) $studio->owner_user_id === (int) $request->user()->id, 403);
 
         $host = $studio->custom_domain ?: ($studio->subdomain . '.' . config('saas.root_domain'));
         $isLocalHost = in_array($host, ['localhost', '127.0.0.1'], true) || str_ends_with($host, '.test');
         $scheme = $isLocalHost ? 'http' : 'https';
 
-        return redirect()->away($scheme . '://' . $host . '/login');
+        return redirect()->away($scheme . '://' . $host . '/admin/dashboard');
     }
 
     private function guardClientPortal(Request $request, bool $allowNoStudio = false): ?RedirectResponse
     {
         $user = $request->user();
+        $tenantStudio = app(TenantManager::class)->current();
+
+        if ($tenantStudio) {
+            return $this->redirectAwayFromClientPortalOnStudioDomain($request, $tenantStudio);
+        }
 
         if ($user->role === 'superadmin') {
             return redirect()->route('superadmin.dashboard');
@@ -218,6 +229,29 @@ class CustomerPortalController extends Controller
         abort_unless((int) $studio->owner_user_id === (int) $user->id, 403, 'Only the studio owner can access the client portal.');
 
         return null;
+    }
+
+    private function redirectAwayFromClientPortalOnStudioDomain(Request $request, Studio $tenantStudio): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user->role === 'admin' && (int) $user->studio_id === (int) $tenantStudio->id) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($user->role === 'teacher' && (int) $user->studio_id === (int) $tenantStudio->id) {
+            return redirect()->route('teacher.dashboard');
+        }
+
+        if ($user->role === 'student' && (int) $user->studio_id === (int) $tenantStudio->id) {
+            return redirect()->route('student.dashboard');
+        }
+
+        if ($user->role === 'superadmin') {
+            return redirect()->away($this->centralUrl('/superadmin/dashboard'));
+        }
+
+        return redirect()->route('login');
     }
 
     private function ownedStudio(Request $request): ?Studio
@@ -270,7 +304,7 @@ class CustomerPortalController extends Controller
             ],
             [
                 'title' => 'Open studio portal',
-                'description' => 'Login from the studio subdomain to manage classes, teachers, students, and schedules.',
+                'description' => 'Open the studio subdomain to manage classes, teachers, students, and schedules.',
                 'complete' => (bool) ($studio?->isActive()),
             ],
             [
@@ -279,5 +313,17 @@ class CustomerPortalController extends Controller
                 'complete' => (bool) ($studio?->subscription_ends_at || $studio?->platformSubscriptionPayments()->where('status', 'paid')->exists()),
             ],
         ];
+    }
+
+    private function centralUrl(string $path = '/'): string
+    {
+        $base = rtrim((string) config('app.url'), '/');
+
+        if ($base === '') {
+            $centralDomain = collect(config('saas.central_domains', []))->first();
+            $base = $centralDomain ? 'https://' . $centralDomain : url('/');
+        }
+
+        return $base . '/' . ltrim($path, '/');
     }
 }
