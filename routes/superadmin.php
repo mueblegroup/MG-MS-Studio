@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Superadmin\DomainController;
 use App\Http\Controllers\Superadmin\SuperadminController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,7 +15,7 @@ Route::middleware(['auth', 'central', 'role:superadmin'])
         Route::patch('/studios/{studio}', [SuperadminController::class, 'updateStudio'])->name('studios.update');
 
         Route::get('/users', [SuperadminController::class, 'users'])->name('users.index');
-        Route::get('/domains', [SuperadminController::class, 'domains'])->name('domains.index');
+        Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
 
         Route::get('/subscription-plans', [SuperadminController::class, 'plans'])->name('subscription-plans.index');
         Route::post('/subscription-plans', [SuperadminController::class, 'storePlan'])->name('subscription-plans.store');
