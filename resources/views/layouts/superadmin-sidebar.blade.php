@@ -25,6 +25,13 @@
             'description' => 'Superadmins, studio admins, teachers and students',
         ],
         [
+            'label' => 'Domains & Routing',
+            'route' => 'superadmin.domains.index',
+            'active' => 'superadmin.domains.*',
+            'icon' => 'bx-git-branch',
+            'description' => 'Subdomains, custom domains and verification',
+        ],
+        [
             'label' => 'SaaS Plans',
             'route' => 'superadmin.subscription-plans.index',
             'active' => 'superadmin.subscription-plans.*',
@@ -41,9 +48,9 @@
     ];
 
     $systemLinks = [
-        ['label' => 'Tenant Routing', 'icon' => 'bx-git-branch', 'note' => 'Studios, subdomains and domains'],
+        ['label' => 'Tenant Isolation', 'icon' => 'bx-shield-quarter', 'note' => 'Owner routes stay on the central domain only'],
         ['label' => 'Billing Control', 'icon' => 'bx-credit-card', 'note' => 'Plans, subscriptions and payment status'],
-        ['label' => 'Access Control', 'icon' => 'bx-shield-quarter', 'note' => 'Owner role separated from studio roles'],
+        ['label' => 'Access Control', 'icon' => 'bx-lock-alt', 'note' => 'Superadmin role separated from studio roles'],
     ];
 @endphp
 
