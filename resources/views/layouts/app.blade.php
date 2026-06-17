@@ -26,9 +26,13 @@
         $cartItemCount = 0;
         $unreadNotificationCount = 0;
         $latestNotifications = collect();
+        $isSuperadmin = auth()->check() && auth()->user()->role === 'superadmin';
+        $sidebarView = $isSuperadmin ? 'layouts.superadmin-sidebar' : 'layouts.sidebar';
 
         try {
-            $cartItemCount = app(\App\Services\CartService::class)->currentCartItemCount();
+            if (! $isSuperadmin) {
+                $cartItemCount = app(\App\Services\CartService::class)->currentCartItemCount();
+            }
         } catch (\Throwable $e) {
             $cartItemCount = 0;
         }
@@ -54,9 +58,9 @@
     @endphp
 
     <div class="min-h-screen w-full overflow-x-hidden md:flex">
-        <aside class="hidden shrink-0 border-r border-[#eadfce] bg-white text-gray-600 transition-all duration-300 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 md:sticky md:top-0 md:flex md:h-screen md:flex-col"
+        <aside class="hidden shrink-0 border-r {{ $isSuperadmin ? 'border-gray-800 bg-[#111827] text-white' : 'border-[#eadfce] bg-white text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100' }} transition-all duration-300 md:sticky md:top-0 md:flex md:h-screen md:flex-col"
                :class="collapsed ? 'md:w-20' : 'md:w-64'">
-            @include('layouts.sidebar')
+            @include($sidebarView)
         </aside>
 
         <div class="fixed inset-0 z-50 flex md:hidden"
@@ -68,8 +72,8 @@
              x-transition:leave="transition ease-in duration-200"
              x-transition:leave-start="translate-x-0"
              x-transition:leave-end="-translate-x-full">
-            <aside class="flex h-full w-72 max-w-[85vw] shrink-0 flex-col bg-white text-gray-700 shadow-xl dark:bg-gray-900 dark:text-gray-100">
-                @include('layouts.sidebar')
+            <aside class="flex h-full w-72 max-w-[85vw] shrink-0 flex-col {{ $isSuperadmin ? 'bg-[#111827] text-white' : 'bg-white text-gray-700 dark:bg-gray-900 dark:text-gray-100' }} shadow-xl">
+                @include($sidebarView)
             </aside>
             <button type="button" class="min-w-0 flex-1 bg-black/50" aria-label="Close sidebar" @click="sidebarOpen = false"></button>
         </div>
@@ -84,7 +88,7 @@
                     </svg>
                 </button>
 
-                <span class="truncate px-3 text-sm font-extrabold text-[#171717] dark:text-white">Studio System</span>
+                <span class="truncate px-3 text-sm font-extrabold text-[#171717] dark:text-white">{{ $isSuperadmin ? 'Superadmin Console' : 'Studio System' }}</span>
 
                 <div class="flex items-center gap-1.5">
                     @include('layouts.partials.notification-bell', [
@@ -94,18 +98,20 @@
                         'panelClass' => 'fixed right-3 top-16 w-[calc(100vw-1.5rem)] max-w-sm sm:absolute sm:right-0 sm:top-12 sm:w-96',
                     ])
 
-                    <a href="{{ url('/shop') }}" class="rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Shop">
-                        <i class="bx bx-store text-xl"></i>
-                    </a>
+                    @unless($isSuperadmin)
+                        <a href="{{ url('/shop') }}" class="rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Shop">
+                            <i class="bx bx-store text-xl"></i>
+                        </a>
 
-                    <a href="{{ url('/shop/cart') }}" class="relative rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Cart">
-                        <i class="bx bx-cart text-xl"></i>
-                        @if($cartItemCount > 0)
-                            <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d97706] px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
-                                {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
-                            </span>
-                        @endif
-                    </a>
+                        <a href="{{ url('/shop/cart') }}" class="relative rounded-xl p-2 text-[#6b5f52] transition hover:bg-[#fff3df] hover:text-[#d97706] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-amber-300" aria-label="Cart">
+                            <i class="bx bx-cart text-xl"></i>
+                            @if($cartItemCount > 0)
+                                <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d97706] px-1.5 text-[10px] font-extrabold leading-none text-white ring-2 ring-white dark:ring-gray-900">
+                                    {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
+                                </span>
+                            @endif
+                        </a>
+                    @endunless
 
                     <button @click="toggleDarkMode()" aria-label="Toggle dark mode" class="rounded-xl p-2 text-[#d97706] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#d97706] dark:hover:bg-gray-800">
                         <template x-if="!darkMode">
@@ -134,7 +140,7 @@
                     </button>
 
                     <div class="hidden truncate font-semibold text-[#31261d] dark:text-gray-100 lg:block">
-                        Welcome, {{ Auth::user()->name }}
+                        {{ $isSuperadmin ? 'Platform owner console' : 'Welcome, '.Auth::user()->name }}
                     </div>
                 </div>
 
@@ -146,20 +152,22 @@
                         'panelClass' => 'absolute right-0 top-12 w-96 max-w-[calc(100vw-2rem)]',
                     ])
 
-                    <a href="{{ url('/shop') }}" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-3 py-2 text-xs font-bold text-[#31261d] shadow-sm transition hover:bg-[#fff3df] hover:text-[#d97706] dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800" aria-label="Shop">
-                        <i class="bx bx-store text-lg"></i>
-                        <span class="hidden lg:inline">Shop</span>
-                    </a>
+                    @unless($isSuperadmin)
+                        <a href="{{ url('/shop') }}" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-3 py-2 text-xs font-bold text-[#31261d] shadow-sm transition hover:bg-[#fff3df] hover:text-[#d97706] dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800" aria-label="Shop">
+                            <i class="bx bx-store text-lg"></i>
+                            <span class="hidden lg:inline">Shop</span>
+                        </a>
 
-                    <a href="{{ url('/shop/cart') }}" class="relative inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-3 py-2 text-xs font-bold text-[#31261d] shadow-sm transition hover:bg-[#fff3df] hover:text-[#d97706] dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800" aria-label="Cart">
-                        <i class="bx bx-cart text-lg"></i>
-                        <span class="hidden lg:inline">Cart</span>
-                        @if($cartItemCount > 0)
-                            <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d97706] px-1.5 text-[10px] font-extrabold leading-none text-white">
-                                {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
-                            </span>
-                        @endif
-                    </a>
+                        <a href="{{ url('/shop/cart') }}" class="relative inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-3 py-2 text-xs font-bold text-[#31261d] shadow-sm transition hover:bg-[#fff3df] hover:text-[#d97706] dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800" aria-label="Cart">
+                            <i class="bx bx-cart text-lg"></i>
+                            <span class="hidden lg:inline">Cart</span>
+                            @if($cartItemCount > 0)
+                                <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d97706] px-1.5 text-[10px] font-extrabold leading-none text-white">
+                                    {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
+                                </span>
+                            @endif
+                        </a>
+                    @endunless
 
                     <button @click="toggleDarkMode()" class="rounded-full p-2 text-[#d97706] transition hover:bg-[#fff3df] dark:hover:bg-gray-800">
                         <template x-if="!darkMode">
