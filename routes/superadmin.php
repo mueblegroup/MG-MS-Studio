@@ -13,7 +13,11 @@ Route::middleware(['auth', 'role:superadmin'])
         Route::get('/studios/{studio}/edit', [SuperadminController::class, 'editStudio'])->name('studios.edit');
         Route::patch('/studios/{studio}', [SuperadminController::class, 'updateStudio'])->name('studios.update');
 
+        Route::get('/users', [SuperadminController::class, 'users'])->name('users.index');
+
         Route::get('/subscription-plans', [SuperadminController::class, 'plans'])->name('subscription-plans.index');
         Route::post('/subscription-plans', [SuperadminController::class, 'storePlan'])->name('subscription-plans.store');
         Route::patch('/subscription-plans/{plan}', [SuperadminController::class, 'updatePlan'])->name('subscription-plans.update');
+
+        Route::get('/platform-payments', [SuperadminController::class, 'platformPayments'])->name('platform-payments.index');
     });
