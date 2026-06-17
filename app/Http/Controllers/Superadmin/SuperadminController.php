@@ -121,6 +121,38 @@ class SuperadminController extends Controller
             ->with('success', 'Studio subscription updated successfully.');
     }
 
+    public function users(Request $request): View
+    {
+        $role = $request->string('role')->toString();
+        $search = trim($request->string('search')->toString());
+
+        $users = User::query()
+            ->with('studio:id,name,slug')
+            ->when(in_array($role, ['superadmin', 'admin', 'teacher', 'student'], true), function ($query) use ($role) {
+                $query->where('role', $role);
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone_number', 'like', "%{$search}%");
+                });
+            })
+            ->latest()
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('superadmin.users.index', [
+            'users' => $users,
+            'role' => $role,
+            'search' => $search,
+            'roleCounts' => User::query()
+                ->selectRaw('role, COUNT(*) as total')
+                ->groupBy('role')
+                ->pluck('total', 'role'),
+        ]);
+    }
+
     public function plans(): View
     {
         return view('superadmin.subscription-plans.index', [
@@ -152,6 +184,37 @@ class SuperadminController extends Controller
         return redirect()
             ->route('superadmin.subscription-plans.index')
             ->with('success', 'Platform subscription plan updated successfully.');
+    }
+
+    public function platformPayments(Request $request): View
+    {
+        $status = $request->string('status')->toString();
+        $search = trim($request->string('search')->toString());
+
+        $payments = PlatformSubscriptionPayment::query()
+            ->with(['studio:id,name,slug', 'plan:id,name'])
+            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('reference', 'like', "%{$search}%")
+                        ->orWhere('provider', 'like', "%{$search}%")
+                        ->orWhereHas('studio', fn ($studioQuery) => $studioQuery->where('name', 'like', "%{$search}%"));
+                });
+            })
+            ->latest()
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('superadmin.platform-payments.index', [
+            'payments' => $payments,
+            'status' => $status,
+            'search' => $search,
+            'statusCounts' => PlatformSubscriptionPayment::query()
+                ->selectRaw('status, COUNT(*) as total')
+                ->groupBy('status')
+                ->pluck('total', 'status'),
+            'paidRevenue' => PlatformSubscriptionPayment::where('status', 'paid')->sum('amount'),
+        ]);
     }
 
     private function validatePlan(Request $request): array
