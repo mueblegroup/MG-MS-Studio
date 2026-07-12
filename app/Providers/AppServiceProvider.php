@@ -6,13 +6,11 @@ use App\Support\TenantManager;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         $this->app->singleton(TenantManager::class, function () {
@@ -20,9 +18,6 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         RateLimiter::for('api', function (Request $request) {
@@ -30,5 +25,7 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(120)->by($userKey ?: $request->ip());
         });
+
+        Route::middleware('web')->group(base_path('routes/seat-limits.php'));
     }
 }
