@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsStudio;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class UserPlan extends Model
 {
+    use AssignsStudio;
 
     protected $fillable = [
         'studio_id',
