@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Services\StudioSeatLimitService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -15,12 +16,6 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
     use SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     * @property $table->softDeletes();
-     */
     protected $fillable = [
         'studio_id',
         'name',
@@ -30,21 +25,23 @@ class User extends Authenticatable
         'phone_number',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if (! $user->studio_id || ! in_array($user->role, ['student', 'teacher', 'admin'], true)) {
+                return;
+            }
+
+            $studio = Studio::query()->findOrFail($user->studio_id);
+            app(StudioSeatLimitService::class)->assertCanAdd($studio, $user->role);
+        });
+    }
+
     protected function casts(): array
     {
         return [
