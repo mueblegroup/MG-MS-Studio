@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsStudio;
 use Illuminate\Database\Eloquent\Model;
 
 class StudioSubscription extends Model
 {
+    use AssignsStudio;
+
     protected $fillable = [
         'studio_id',
         'user_id',
