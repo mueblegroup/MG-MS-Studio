@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsStudio;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ClassSessionAssignment extends Model
 {
-    use SoftDeletes;
+    use AssignsStudio, SoftDeletes;
 
     protected $fillable = [
         'studio_id',
