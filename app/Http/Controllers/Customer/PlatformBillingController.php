@@ -10,6 +10,7 @@ use App\Services\StudioOnboardingPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PlatformBillingController extends Controller
@@ -116,11 +117,20 @@ class PlatformBillingController extends Controller
                 $request->header('Stripe-Signature'),
             );
 
-            $onboarding->handleEvent($event);
-            $billing->handleWebhook($event);
+            $handledByOnboarding = $onboarding->handleEvent($event);
+
+            if (! $handledByOnboarding) {
+                $billing->handleWebhook($event);
+            }
 
             return response()->json(['received' => true]);
         } catch (Throwable $exception) {
+            Log::error('Stripe platform webhook failed.', [
+                'event_id' => $event->id ?? null,
+                'event_type' => $event->type ?? null,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
             report($exception);
 
             return response()->json(['received' => false], 400);
