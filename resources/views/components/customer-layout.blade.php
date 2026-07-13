@@ -14,12 +14,18 @@
 </head>
 <body class="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
     @php
+        $platformUnreadCount = \App\Models\PlatformMessage::query()
+            ->where('recipient_id', auth()->id())
+            ->whereNull('read_at')
+            ->count();
+
         $customerLinks = [
-            ['label' => 'Overview', 'route' => 'customer.dashboard', 'icon' => 'bx-grid-alt'],
-            ['label' => 'My Studio', 'route' => 'customer.studio', 'icon' => 'bx-building-house'],
-            ['label' => 'Billing & Plan', 'route' => 'customer.billing', 'icon' => 'bx-credit-card'],
-            ['label' => 'Invoices', 'route' => 'customer.invoices', 'icon' => 'bx-receipt'],
-            ['label' => 'Account', 'route' => 'customer.account', 'icon' => 'bx-user-circle'],
+            ['label' => 'Overview', 'route' => 'customer.dashboard', 'active' => 'customer.dashboard', 'icon' => 'bx-grid-alt'],
+            ['label' => 'My Studio', 'route' => 'customer.studio', 'active' => 'customer.studio', 'icon' => 'bx-building-house'],
+            ['label' => 'Messages', 'route' => 'customer.messages.index', 'active' => 'customer.messages.*', 'icon' => 'bx-message-square-dots', 'badge' => $platformUnreadCount],
+            ['label' => 'Billing & Plan', 'route' => 'customer.billing', 'active' => 'customer.billing*', 'icon' => 'bx-credit-card'],
+            ['label' => 'Invoices', 'route' => 'customer.invoices', 'active' => 'customer.invoices', 'icon' => 'bx-receipt'],
+            ['label' => 'Account', 'route' => 'customer.account', 'active' => 'customer.account', 'icon' => 'bx-user-circle'],
         ];
     @endphp
 
@@ -35,10 +41,13 @@
 
             <nav class="mt-9 space-y-2">
                 @foreach ($customerLinks as $link)
-                    @php $active = request()->routeIs($link['route']); @endphp
+                    @php $active = request()->routeIs($link['active']); @endphp
                     <a href="{{ route($link['route']) }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-black transition {{ $active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/10 dark:bg-white dark:text-slate-950' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
                         <i class="bx {{ $link['icon'] }} text-xl"></i>
-                        <span>{{ $link['label'] }}</span>
+                        <span class="min-w-0 flex-1">{{ $link['label'] }}</span>
+                        @if(($link['badge'] ?? 0) > 0)
+                            <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-black text-white">{{ $link['badge'] > 99 ? '99+' : $link['badge'] }}</span>
+                        @endif
                     </a>
                 @endforeach
             </nav>
@@ -46,7 +55,7 @@
             <div class="mt-auto space-y-4">
                 <div class="rounded-3xl bg-orange-50 p-4 text-sm leading-6 text-orange-900 ring-1 ring-orange-100 dark:bg-orange-950/30 dark:text-orange-200 dark:ring-orange-900/40">
                     <p class="font-black">Client portal only</p>
-                    <p class="mt-1 text-xs font-semibold leading-5">Use this area for studio setup, SaaS subscription, billing, and invoices. LMS operations stay in the studio subdomain.</p>
+                    <p class="mt-1 text-xs font-semibold leading-5">Use this area for studio setup, SaaS subscription, billing, invoices, and platform communication.</p>
                 </div>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -71,6 +80,12 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        <a href="{{ route('customer.messages.index') }}" class="relative rounded-2xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800" aria-label="Platform messages">
+                            <i class="bx bx-message-square-dots text-xl"></i>
+                            @if($platformUnreadCount > 0)
+                                <span class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-black text-white">{{ $platformUnreadCount > 99 ? '99+' : $platformUnreadCount }}</span>
+                            @endif
+                        </a>
                         <a href="{{ route('customer.account') }}" class="hidden rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white sm:inline-flex">Account</a>
                         <button type="button" @click="toggleDarkMode()" class="rounded-2xl border border-slate-200 p-2 text-orange-500 transition hover:bg-orange-50 dark:border-slate-800 dark:hover:bg-slate-800" aria-label="Toggle dark mode">
                             <i class="bx text-xl" :class="darkMode ? 'bx-moon' : 'bx-sun'"></i>
@@ -94,10 +109,13 @@
                     </div>
                     <nav class="mt-8 space-y-2">
                         @foreach ($customerLinks as $link)
-                            @php $active = request()->routeIs($link['route']); @endphp
+                            @php $active = request()->routeIs($link['active']); @endphp
                             <a href="{{ route($link['route']) }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-black transition {{ $active ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}">
                                 <i class="bx {{ $link['icon'] }} text-xl"></i>
-                                <span>{{ $link['label'] }}</span>
+                                <span class="min-w-0 flex-1">{{ $link['label'] }}</span>
+                                @if(($link['badge'] ?? 0) > 0)
+                                    <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-black text-white">{{ $link['badge'] > 99 ? '99+' : $link['badge'] }}</span>
+                                @endif
                             </a>
                         @endforeach
                     </nav>
