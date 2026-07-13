@@ -10,25 +10,11 @@ class Studio extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name',
-        'slug',
-        'subdomain',
-        'custom_domain',
-        'owner_user_id',
-        'status',
-        'plan_name',
-        'platform_subscription_plan_id',
-        'stripe_customer_id',
-        'stripe_subscription_id',
-        'stripe_subscription_item_id',
-        'subscription_status',
-        'trial_ends_at',
-        'subscription_ends_at',
-        'cancel_at_period_end',
-        'canceled_at',
-        'manually_suspended_at',
-        'suspension_reason',
-        'settings',
+        'name', 'slug', 'subdomain', 'custom_domain', 'owner_user_id', 'status',
+        'plan_name', 'platform_subscription_plan_id', 'stripe_customer_id',
+        'stripe_subscription_id', 'stripe_subscription_item_id', 'subscription_status',
+        'trial_ends_at', 'subscription_ends_at', 'cancel_at_period_end', 'canceled_at',
+        'manually_suspended_at', 'suspension_reason', 'settings',
     ];
 
     protected $casts = [
@@ -89,16 +75,12 @@ class Studio extends Model
 
     public function isTrialExpired(): bool
     {
-        return $this->status === 'trial'
-            && $this->trial_ends_at
-            && $this->trial_ends_at->isPast();
+        return $this->status === 'trial' && $this->trial_ends_at && $this->trial_ends_at->isPast();
     }
 
     public function isSubscriptionExpired(): bool
     {
-        return $this->status === 'active'
-            && $this->subscription_ends_at
-            && $this->subscription_ends_at->isPast();
+        return $this->status === 'active' && $this->subscription_ends_at && $this->subscription_ends_at->isPast();
     }
 
     public function isManuallySuspended(): bool
@@ -106,12 +88,21 @@ class Studio extends Model
         return (bool) $this->manually_suspended_at;
     }
 
-    public function isActive(): bool
+    public function effectiveStatus(): string
     {
-        if ($this->isManuallySuspended() || $this->isTrialExpired() || $this->isSubscriptionExpired()) {
-            return false;
+        if ($this->isManuallySuspended()) {
+            return 'suspended';
         }
 
-        return in_array($this->status, ['active', 'trial'], true);
+        if ($this->isTrialExpired() || $this->isSubscriptionExpired()) {
+            return 'expired';
+        }
+
+        return $this->status;
+    }
+
+    public function isActive(): bool
+    {
+        return in_array($this->effectiveStatus(), ['active', 'trial'], true);
     }
 }
