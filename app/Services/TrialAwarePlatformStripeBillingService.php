@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\PlatformSubscriptionPlan;
 use App\Models\Studio;
+use Carbon\Carbon;
 use RuntimeException;
 use Stripe\Checkout\Session;
+use Stripe\Event;
 use Stripe\StripeClient;
 
 class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingService
@@ -60,6 +62,37 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
             ],
             'subscription_data' => $subscriptionData,
         ]);
+    }
+
+    public function handleWebhook(Event $event): void
+    {
+        parent::handleWebhook($event);
+
+        if (! in_array($event->type, [
+            'customer.subscription.created',
+            'customer.subscription.updated',
+            'customer.subscription.deleted',
+        ], true)) {
+            return;
+        }
+
+        $subscription = $event->data->object;
+        $studioId = (int) ($subscription->metadata->studio_id ?? 0);
+        $studio = $studioId
+            ? Studio::query()->find($studioId)
+            : Studio::query()->where('stripe_subscription_id', $subscription->id ?? null)->first();
+
+        if (! $studio) {
+            return;
+        }
+
+        $trialEnd = ! empty($subscription->trial_end)
+            ? Carbon::createFromTimestamp((int) $subscription->trial_end)
+            : null;
+
+        $studio->forceFill([
+            'trial_ends_at' => $trialEnd,
+        ])->save();
     }
 
     private function ensureTrialCustomer(Studio $studio): string
