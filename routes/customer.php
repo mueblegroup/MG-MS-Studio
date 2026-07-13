@@ -3,6 +3,7 @@
 use App\Http\Controllers\Customer\CustomerAccountController;
 use App\Http\Controllers\Customer\CustomerPortalController;
 use App\Http\Controllers\Customer\PlatformBillingController;
+use App\Http\Controllers\Customer\StudioOnboardingController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('webhooks/platform-stripe', [PlatformBillingController::class, 'webhook'])
@@ -37,7 +38,8 @@ Route::middleware(['auth', 'central'])
         Route::post('billing/resume', [PlatformBillingController::class, 'resume'])->name('billing.resume');
         Route::post('billing/portal', [PlatformBillingController::class, 'portal'])->name('billing.portal');
 
-        Route::get('studios/create', [CustomerPortalController::class, 'createStudio'])->name('studios.create');
-        Route::post('studios', [CustomerPortalController::class, 'storeStudio'])->name('studios.store');
+        Route::get('studios/create', [StudioOnboardingController::class, 'create'])->name('studios.create');
+        Route::post('studios', [StudioOnboardingController::class, 'store'])->name('studios.store');
+        Route::get('studios/payment-success', [StudioOnboardingController::class, 'paymentSuccess'])->name('studios.payment-success');
         Route::get('studios/{studio}/open', [CustomerPortalController::class, 'launchStudio'])->name('studios.launch');
     });
