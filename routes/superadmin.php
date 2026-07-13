@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PlatformMessageController;
 use App\Http\Controllers\Superadmin\DomainController;
 use App\Http\Controllers\Superadmin\PlanTrialController;
 use App\Http\Controllers\Superadmin\SuperadminController;
@@ -24,4 +25,9 @@ Route::middleware(['auth', 'central', 'role:superadmin'])
         Route::patch('/subscription-plans/{plan}/trial', [PlanTrialController::class, 'update'])->name('subscription-plans.trial.update');
 
         Route::get('/platform-payments', [SuperadminController::class, 'platformPayments'])->name('platform-payments.index');
+
+        Route::get('/messages', [PlatformMessageController::class, 'index'])->name('messages.index');
+        Route::post('/messages', [PlatformMessageController::class, 'store'])->name('messages.store');
+        Route::get('/messages/{message}', [PlatformMessageController::class, 'show'])->name('messages.show');
+        Route::post('/messages/read-all', [PlatformMessageController::class, 'markAllRead'])->name('messages.read-all');
     });
