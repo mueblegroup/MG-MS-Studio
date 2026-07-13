@@ -157,7 +157,7 @@ class SuperadminController extends Controller
     {
         return view('superadmin.subscription-plans.index', [
             'plans' => PlatformSubscriptionPlan::query()
-                ->withCount('studios')
+                ->withCount(['studios', 'payments'])
                 ->orderBy('sort_order')
                 ->orderBy('price')
                 ->get(),
@@ -178,12 +178,37 @@ class SuperadminController extends Controller
 
     public function updatePlan(Request $request, PlatformSubscriptionPlan $plan): RedirectResponse
     {
+        if ($request->boolean('delete_plan')) {
+            return $this->destroyPlan($plan);
+        }
+
         $validated = $this->validatePlan($request);
         $plan->update($validated);
 
         return redirect()
             ->route('superadmin.subscription-plans.index')
             ->with('success', 'Platform subscription plan updated successfully.');
+    }
+
+    private function destroyPlan(PlatformSubscriptionPlan $plan): RedirectResponse
+    {
+        if ($plan->studios()->exists()) {
+            return redirect()
+                ->route('superadmin.subscription-plans.index')
+                ->with('error', 'This plan cannot be deleted because one or more studios are currently assigned to it. Reassign those studios or deactivate the plan instead.');
+        }
+
+        if ($plan->payments()->exists()) {
+            return redirect()
+                ->route('superadmin.subscription-plans.index')
+                ->with('error', 'This plan cannot be deleted because it has payment history. Deactivate it to preserve financial records.');
+        }
+
+        $plan->delete();
+
+        return redirect()
+            ->route('superadmin.subscription-plans.index')
+            ->with('success', 'Platform subscription plan deleted successfully.');
     }
 
     public function platformPayments(Request $request): View
