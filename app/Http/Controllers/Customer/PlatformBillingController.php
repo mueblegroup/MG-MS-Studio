@@ -50,14 +50,23 @@ class PlatformBillingController extends Controller
         try {
             $result = $billing->upgrade($studio, $plan);
 
-            return redirect()->route('customer.billing')->with(
-                'success',
-                sprintf(
-                    'Upgrade submitted. Stripe calculated an immediate prorated amount of %s %s. The plan changes after Stripe confirms payment.',
+            if (! empty($result['payment_url'])) {
+                return redirect()->away((string) $result['payment_url']);
+            }
+
+            $message = ! empty($result['paid_immediately'])
+                ? sprintf(
+                    'Upgrade payment completed. Stripe charged a prorated difference of %s %s and the plan will sync from the paid subscription update.',
                     $result['currency'],
                     number_format((float) $result['amount_due'], 2),
                 )
-            );
+                : sprintf(
+                    'Upgrade submitted. The prorated difference is %s %s. Your current plan remains active until Stripe confirms payment.',
+                    $result['currency'],
+                    number_format((float) $result['amount_due'], 2),
+                );
+
+            return redirect()->route('customer.billing')->with('success', $message);
         } catch (Throwable $exception) {
             report($exception);
 
