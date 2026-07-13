@@ -6,7 +6,6 @@ use App\Models\PlatformSubscriptionPayment;
 use App\Models\PlatformSubscriptionPlan;
 use App\Models\Studio;
 use Carbon\Carbon;
-use Illuminate\Support\Arr;
 use RuntimeException;
 use Stripe\Checkout\Session;
 use Stripe\Event;
@@ -107,15 +106,33 @@ class PlatformStripeBillingService
                 'studio_id' => (string) $studio->id,
                 'plan_id' => (string) $targetPlan->id,
             ],
-            'expand' => ['latest_invoice'],
+            'expand' => ['items.data.price', 'latest_invoice.payment_intent'],
         ]);
 
+        // Pending updates retain the old item price until the invoice is paid.
+        // Resolving the plan from the actual item price prevents a premature local upgrade.
         $this->syncSubscription($updated);
 
+        $latestInvoice = $updated->latest_invoice ?? null;
+
+        if (is_string($latestInvoice)) {
+            $latestInvoice = $this->stripe->invoices->retrieve($latestInvoice, [
+                'expand' => ['payment_intent'],
+            ]);
+        }
+
+        $invoiceStatus = (string) ($latestInvoice->status ?? '');
+        $paymentUrl = $invoiceStatus === 'open'
+            ? ($latestInvoice->hosted_invoice_url ?? null)
+            : null;
+
         return [
-            'amount_due' => ((int) $preview->amount_due) / 100,
+            'amount_due' => $this->prorationAmount($preview) / 100,
             'currency' => strtoupper((string) $preview->currency),
             'subscription_status' => (string) $updated->status,
+            'invoice_status' => $invoiceStatus,
+            'payment_url' => $paymentUrl,
+            'paid_immediately' => $invoiceStatus === 'paid',
         ];
     }
 
@@ -248,9 +265,24 @@ class PlatformStripeBillingService
         };
     }
 
+    private function prorationAmount(object $invoice): int
+    {
+        return collect($invoice->lines->data ?? [])->sum(function ($line): int {
+            $isProration = (bool) ($line->proration ?? false)
+                || (bool) ($line->parent->subscription_item_details->proration ?? false);
+
+            return $isProration ? (int) ($line->amount ?? 0) : 0;
+        });
+    }
+
     private function handleCheckoutCompleted(object $session): void
     {
         if (($session->mode ?? null) !== 'subscription' || empty($session->subscription)) {
+            return;
+        }
+
+        // Studio onboarding checkout sessions use onboarding_id instead of studio_id.
+        if (! empty($session->metadata->onboarding_id) && empty($session->metadata->studio_id)) {
             return;
         }
 
@@ -258,6 +290,15 @@ class PlatformStripeBillingService
         $studio = Studio::query()->find($studioId);
 
         if (! $studio) {
+            return;
+        }
+
+        $existingOwner = Studio::query()
+            ->where('stripe_subscription_id', (string) $session->subscription)
+            ->whereKeyNot($studio->id)
+            ->first();
+
+        if ($existingOwner) {
             return;
         }
 
@@ -284,10 +325,24 @@ class PlatformStripeBillingService
             return;
         }
 
-        $planId = (int) ($subscription->metadata->plan_id ?? 0);
-        $plan = $planId ? PlatformSubscriptionPlan::query()->find($planId) : null;
         $item = $subscription->items->data[0] ?? null;
-        $periodStart = $item?->current_period_start ?? $subscription->current_period_start ?? null;
+        $priceId = is_string($item?->price ?? null)
+            ? $item->price
+            : ($item?->price?->id ?? null);
+
+        // The current Stripe item price is authoritative. During a pending update,
+        // Stripe keeps the previous price here until the upgrade invoice is paid.
+        $plan = $priceId
+            ? PlatformSubscriptionPlan::query()->where('stripe_price_id', $priceId)->first()
+            : null;
+
+        if (! $plan) {
+            $metadataPlanId = (int) ($subscription->metadata->plan_id ?? 0);
+            $plan = $metadataPlanId
+                ? PlatformSubscriptionPlan::query()->find($metadataPlanId)
+                : null;
+        }
+
         $periodEnd = $item?->current_period_end ?? $subscription->current_period_end ?? null;
         $status = (string) ($subscription->status ?? 'incomplete');
         $serviceActive = in_array($status, ['active', 'trialing', 'past_due'], true);
