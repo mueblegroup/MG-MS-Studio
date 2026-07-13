@@ -1,9 +1,16 @@
 <x-customer-layout>
     @php
         $studioUrl = $studio ? (($studio->custom_domain ?: ($studio->subdomain . '.' . $rootDomain))) : null;
+        $studentSelfRegistrationEnabled = $studio
+            ? (bool) data_get($studio->settings, 'allow_student_self_registration', true)
+            : false;
     @endphp
 
     <div class="space-y-6">
+        @if(session('success'))
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">{{ session('success') }}</div>
+        @endif
+
         <div class="flex flex-col gap-4 rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-black/5 dark:bg-slate-900 dark:ring-white/10 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-500">Client Portal</p>
@@ -62,10 +69,43 @@
                     </div>
                 </section>
             </div>
+
+            <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="text-xl font-black text-slate-950 dark:text-white">Student Self-Registration</h2>
+                        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                            Allow students to create their own account from this studio's subdomain. When disabled, only studio admins can create student accounts.
+                        </p>
+                    </div>
+
+                    <form method="POST" action="{{ route('customer.studio.registration-settings.update', $studio) }}" class="shrink-0">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="allow_student_self_registration" value="0">
+                        <label class="inline-flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-950">
+                            <input type="checkbox" name="allow_student_self_registration" value="1" onchange="this.form.submit()"
+                                   @checked($studentSelfRegistrationEnabled)
+                                   class="rounded border-slate-300 text-orange-500 focus:ring-orange-500">
+                            <span class="text-sm font-black text-slate-700 dark:text-slate-200">
+                                {{ $studentSelfRegistrationEnabled ? 'Registration enabled' : 'Registration disabled' }}
+                            </span>
+                        </label>
+                    </form>
+                </div>
+
+                <div class="mt-5 rounded-2xl {{ $studentSelfRegistrationEnabled ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200' : 'bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200' }} p-4 text-sm font-semibold">
+                    @if($studentSelfRegistrationEnabled)
+                        Students can register at <span class="font-black">https://{{ $studioUrl }}/register</span>.
+                    @else
+                        The public student registration page is blocked. Existing students can still log in normally.
+                    @endif
+                </div>
+            </section>
         @else
             <section class="rounded-[2rem] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <p class="text-2xl font-black text-slate-950 dark:text-white">No studio yet</p>
-                <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">Create your studio from the client portal. Once created, your account will be assigned as the owner/admin and the studio will get its own subdomain admin portal.</p>
+                <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">Create your studio from the client portal. Once created, your account is assigned as the owner/admin and the studio gets its own subdomain admin portal.</p>
                 <a href="{{ route('customer.studios.create') }}" class="mt-6 inline-flex rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-600">Create Studio</a>
             </section>
         @endif
