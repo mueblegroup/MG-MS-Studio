@@ -64,6 +64,9 @@ Route::middleware('auth')->group(function () {
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 
+    // Keep the legacy GET /logout route named "logout" for current layouts,
+    // while giving the standard POST logout endpoint its own unique name so
+    // route caching can serialize the route collection.
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
-        ->name('logout');
+        ->name('logout.post');
 });
