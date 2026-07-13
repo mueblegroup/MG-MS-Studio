@@ -157,9 +157,16 @@
                                     Create client admin account
                                 </a>
                             </p>
+                        @elseif ($studentSelfRegistrationEnabled ?? false)
+                            <div class="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-center dark:border-blue-900/60 dark:bg-blue-950/30">
+                                <p class="text-sm font-semibold text-slate-700 dark:text-gray-200">New student at {{ $studio->name }}?</p>
+                                <a href="{{ url('/register') }}" class="mt-2 inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700">
+                                    Create Student Account
+                                </a>
+                            </div>
                         @else
                             <p class="mt-5 rounded-2xl bg-slate-50 p-4 text-center text-sm text-slate-600 ring-1 ring-slate-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">
-                                Need to manage all your studios? Go to the main Mueble Studio client portal instead.
+                                Student registration is managed by this studio. Contact the studio administrator if you need an account.
                             </p>
                         @endif
                     </div>
