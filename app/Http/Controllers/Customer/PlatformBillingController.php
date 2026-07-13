@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Models\PlatformSubscriptionPayment;
 use App\Models\PlatformSubscriptionPlan;
 use App\Models\Studio;
 use App\Services\PlatformStripeBillingService;
@@ -11,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Stripe\Event;
 use Throwable;
 
 class PlatformBillingController extends Controller
@@ -111,6 +113,8 @@ class PlatformBillingController extends Controller
         PlatformStripeBillingService $billing,
         StudioOnboardingPaymentService $onboarding,
     ): JsonResponse {
+        $event = null;
+
         try {
             $event = $billing->constructWebhookEvent(
                 $request->getContent(),
@@ -119,15 +123,17 @@ class PlatformBillingController extends Controller
 
             $handledByOnboarding = $onboarding->handleEvent($event);
 
-            if (! $handledByOnboarding) {
+            if ($handledByOnboarding) {
+                $this->reconcilePaidOnboardingCheckout($event);
+            } else {
                 $billing->handleWebhook($event);
             }
 
             return response()->json(['received' => true]);
         } catch (Throwable $exception) {
             Log::error('Stripe platform webhook failed.', [
-                'event_id' => $event->id ?? null,
-                'event_type' => $event->type ?? null,
+                'event_id' => $event?->id,
+                'event_type' => $event?->type,
                 'exception' => $exception::class,
                 'message' => $exception->getMessage(),
             ]);
@@ -135,6 +141,26 @@ class PlatformBillingController extends Controller
 
             return response()->json(['received' => false], 400);
         }
+    }
+
+    private function reconcilePaidOnboardingCheckout(Event $event): void
+    {
+        $session = $event->data->object;
+        $invoiceId = is_string($session->invoice ?? null)
+            ? $session->invoice
+            : ($session->invoice->id ?? null);
+
+        if (($session->payment_status ?? null) !== 'paid' || ! $invoiceId) {
+            return;
+        }
+
+        PlatformSubscriptionPayment::query()
+            ->where('provider', 'stripe')
+            ->where('reference', $invoiceId)
+            ->update([
+                'status' => 'paid',
+                'paid_at' => now(),
+            ]);
     }
 
     private function ownedStudio(Request $request): Studio
