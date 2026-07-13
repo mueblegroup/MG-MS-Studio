@@ -7,7 +7,7 @@
             <div class="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">{{ session('error') }}</div>
         @endif
         @if (request('checkout') === 'success')
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">Payment received. Stripe is confirming your subscription; this page will reflect the active plan after the webhook is processed.</div>
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">Checkout completed. Stripe is confirming your subscription or free trial; this page will update after the webhook is processed.</div>
         @elseif (request('checkout') === 'cancelled')
             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-bold text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">Checkout was cancelled. No subscription change was made.</div>
         @endif
@@ -16,7 +16,7 @@
             <div>
                 <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-500">Client Portal</p>
                 <h1 class="mt-2 text-3xl font-black text-slate-950 dark:text-white">Billing & Plan</h1>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Subscribe securely through Stripe, manage auto-renewal, and upgrade with Stripe-calculated proration.</p>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Subscribe securely through Stripe, start an available free trial, manage auto-renewal, and upgrade with Stripe-calculated proration.</p>
             </div>
             <a href="{{ route('customer.dashboard') }}" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Back to Overview</a>
         </div>
@@ -29,7 +29,7 @@
                     <div class="flex justify-between gap-4 rounded-2xl bg-white/10 p-4"><span>Studio</span><strong class="text-right text-white">{{ $studio?->name ?? '-' }}</strong></div>
                     <div class="flex justify-between gap-4 rounded-2xl bg-white/10 p-4"><span>Status</span><strong class="text-white">{{ ucfirst($studio?->subscription_status ?? $studio?->status ?? '-') }}</strong></div>
                     <div class="flex justify-between gap-4 rounded-2xl bg-white/10 p-4"><span>Auto-renewal</span><strong class="text-white">{{ $studio?->cancel_at_period_end ? 'Stops at period end' : ($studio?->stripe_subscription_id ? 'Enabled' : '-') }}</strong></div>
-                    <div class="flex justify-between gap-4 rounded-2xl bg-white/10 p-4"><span>Trial Ends</span><strong class="text-white">{{ optional($studio?->trial_ends_at)->format('d M Y') ?? '-' }}</strong></div>
+                    <div class="flex justify-between gap-4 rounded-2xl bg-white/10 p-4"><span>Trial Ends</span><strong class="text-white">{{ optional($studio?->trial_ends_at)->format('d M Y H:i') ?? '-' }}</strong></div>
                     <div class="flex justify-between gap-4 rounded-2xl bg-white/10 p-4"><span>Current Period Ends</span><strong class="text-white">{{ optional($studio?->subscription_ends_at)->format('d M Y H:i') ?? '-' }}</strong></div>
                 </div>
 
@@ -43,27 +43,36 @@
                         @endif
                     </div>
                 @endif
-                <p class="mt-5 text-xs leading-5 text-slate-400">Cancellation does not remove access immediately. Stripe keeps the subscription active until the paid period ends.</p>
+                <p class="mt-5 text-xs leading-5 text-slate-400">Free trials are controlled by the selected plan and apply only when starting a new Stripe subscription. Cancellation does not remove access immediately.</p>
             </section>
 
             <section class="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-black/5 dark:bg-slate-900 dark:ring-white/10">
                 <h2 class="text-xl font-black text-slate-950 dark:text-white">Available Platform Plans</h2>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Upgrades are charged immediately using Stripe's exact time-based proration.</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Plans marked with a free trial defer the first Stripe charge until the trial period ends.</p>
                 <div class="mt-5 grid gap-4 md:grid-cols-2">
                     @forelse ($plans as $plan)
                         @php
                             $isCurrent = (int) $studio?->platform_subscription_plan_id === (int) $plan->id;
                             $isUpgrade = $studio?->platformSubscriptionPlan && (float) $plan->price > (float) $studio->platformSubscriptionPlan->price;
+                            $hasTrial = (int) $plan->trial_days > 0;
                         @endphp
                         <div class="rounded-3xl border {{ $isCurrent ? 'border-emerald-400' : 'border-slate-200 dark:border-slate-800' }} p-5">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <p class="text-lg font-black text-slate-950 dark:text-white">{{ $plan->name }}</p>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="text-lg font-black text-slate-950 dark:text-white">{{ $plan->name }}</p>
+                                        @if ($hasTrial && ! $studio?->stripe_subscription_id)
+                                            <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">{{ $plan->trial_days }} days free</span>
+                                        @endif
+                                    </div>
                                     <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{{ $plan->description ?: 'Platform subscription package for one studio.' }}</p>
                                 </div>
                                 @if ($isCurrent)<span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">Current</span>@endif
                             </div>
                             <p class="mt-4 text-2xl font-black text-slate-950 dark:text-white">{{ $plan->currency }} {{ number_format((float) $plan->price, 2) }} <span class="text-sm font-bold text-slate-500">/{{ $plan->billing_interval }}</span></p>
+                            @if ($hasTrial && ! $studio?->stripe_subscription_id)
+                                <p class="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">First charge begins after the {{ $plan->trial_days }}-day trial.</p>
+                            @endif
                             <div class="mt-4 grid gap-2 text-xs font-bold text-slate-500">
                                 <span>Students: {{ $plan->max_students ?? 'Unlimited' }}</span>
                                 <span>Teachers: {{ $plan->max_teachers ?? 'Unlimited' }}</span>
@@ -71,7 +80,7 @@
                             </div>
                             <div class="mt-5">
                                 @if (! $studio?->stripe_subscription_id)
-                                    <form method="POST" action="{{ route('customer.billing.checkout', $plan) }}">@csrf<button class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white hover:bg-orange-600">Subscribe with Stripe</button></form>
+                                    <form method="POST" action="{{ route('customer.billing.checkout', $plan) }}">@csrf<button class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white hover:bg-orange-600">{{ $hasTrial ? 'Start Free Trial with Stripe' : 'Subscribe with Stripe' }}</button></form>
                                 @elseif ($isUpgrade)
                                     <form method="POST" action="{{ route('customer.billing.upgrade', $plan) }}" onsubmit="return confirm('Upgrade now? Stripe will immediately invoice the prorated difference for the remaining period.');">@csrf<button class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white hover:bg-orange-600">Upgrade with proration</button></form>
                                 @elseif ($isCurrent)
