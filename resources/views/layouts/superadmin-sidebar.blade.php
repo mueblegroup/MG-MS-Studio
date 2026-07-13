@@ -1,11 +1,16 @@
 @php
     $brandName = config('app.name', 'Mueble LMS');
     $brandInitials = 'MG';
+    $platformUnreadCount = \App\Models\PlatformMessage::query()
+        ->where('recipient_id', auth()->id())
+        ->whereNull('read_at')
+        ->count();
 
     $superadminLinks = [
         ['label' => 'Dashboard', 'route' => 'superadmin.dashboard', 'active' => 'superadmin.dashboard', 'icon' => 'bx-grid-alt'],
         ['label' => 'Studios', 'route' => 'superadmin.studios.index', 'active' => 'superadmin.studios.*', 'icon' => 'bx-buildings'],
         ['label' => 'Platform Users', 'route' => 'superadmin.users.index', 'active' => 'superadmin.users.*', 'icon' => 'bx-user-circle'],
+        ['label' => 'Messages', 'route' => 'superadmin.messages.index', 'active' => 'superadmin.messages.*', 'icon' => 'bx-message-square-dots', 'badge' => $platformUnreadCount],
         ['label' => 'Domains & Routing', 'route' => 'superadmin.domains.index', 'active' => 'superadmin.domains.*', 'icon' => 'bx-git-branch'],
         ['label' => 'SaaS Plans', 'route' => 'superadmin.subscription-plans.index', 'active' => 'superadmin.subscription-plans.*', 'icon' => 'bx-purchase-tag-alt'],
         ['label' => 'SaaS Payments', 'route' => 'superadmin.platform-payments.index', 'active' => 'superadmin.platform-payments.*', 'icon' => 'bx-wallet'],
@@ -34,7 +39,10 @@
                 <span class="flex h-9 w-9 shrink-0 items-center justify-center">
                     <i class="bx {{ $link['icon'] }} text-xl"></i>
                 </span>
-                <span x-show="!collapsed" class="truncate">{{ $link['label'] }}</span>
+                <span x-show="!collapsed" class="min-w-0 flex-1 truncate">{{ $link['label'] }}</span>
+                @if(($link['badge'] ?? 0) > 0)
+                    <span x-show="!collapsed" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-black text-white">{{ $link['badge'] > 99 ? '99+' : $link['badge'] }}</span>
+                @endif
             </a>
         @endforeach
     </nav>
