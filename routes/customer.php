@@ -4,6 +4,7 @@ use App\Http\Controllers\Customer\CustomerAccountController;
 use App\Http\Controllers\Customer\CustomerPortalController;
 use App\Http\Controllers\Customer\PlatformBillingController;
 use App\Http\Controllers\Customer\StudioOnboardingController;
+use App\Http\Controllers\Customer\StudioRegistrationSettingsController;
 use App\Http\Controllers\PlatformMessageController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +29,7 @@ Route::middleware(['auth', 'central'])
     ->group(function (): void {
         Route::get('dashboard', [CustomerPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('studio', [CustomerPortalController::class, 'studio'])->name('studio');
+        Route::patch('studio/{studio}/registration-settings', [StudioRegistrationSettingsController::class, 'update'])->name('studio.registration-settings.update');
         Route::get('billing', [CustomerPortalController::class, 'billing'])->name('billing');
         Route::get('invoices', [CustomerPortalController::class, 'invoices'])->name('invoices');
         Route::get('account', [CustomerAccountController::class, 'edit'])->name('account');
