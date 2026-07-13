@@ -13,6 +13,7 @@ class PlatformSubscriptionPlan extends Model
         'price',
         'currency',
         'billing_interval',
+        'trial_days',
         'stripe_product_id',
         'stripe_price_id',
         'max_students',
@@ -24,6 +25,7 @@ class PlatformSubscriptionPlan extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'trial_days' => 'integer',
         'is_active' => 'boolean',
     ];
 
