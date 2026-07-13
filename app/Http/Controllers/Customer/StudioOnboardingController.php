@@ -38,6 +38,22 @@ class StudioOnboardingController extends Controller
             return $redirect;
         }
 
+        $activeCheckout = StudioOnboardingCheckout::query()
+            ->where('user_id', $request->user()->id)
+            ->whereIn('status', ['pending', 'checkout_created'])
+            ->where(function ($query): void {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->latest()
+            ->first();
+
+        if ($activeCheckout) {
+            return redirect()->route('customer.studios.create')->with(
+                'error',
+                'A studio payment checkout is already active for this account. Complete it or wait for the 30-minute reservation to expire before starting another checkout.'
+            );
+        }
+
         $reserved = config('saas.reserved_subdomains', []);
 
         $validated = $request->validate([
