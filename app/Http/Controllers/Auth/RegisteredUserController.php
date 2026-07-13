@@ -19,9 +19,12 @@ class RegisteredUserController extends Controller
     public function create(): View
     {
         $studio = app(TenantManager::class)->current();
+        $studentSelfRegistrationEnabled = ! $studio
+            || (bool) data_get($studio->settings, 'allow_student_self_registration', true);
 
         return view('auth.register', [
             'studio' => $studio,
+            'studentSelfRegistrationEnabled' => $studentSelfRegistrationEnabled,
         ]);
     }
 
@@ -49,6 +52,12 @@ class RegisteredUserController extends Controller
 
             return redirect()->route('customer.dashboard');
         }
+
+        abort_unless(
+            (bool) data_get($studio->settings, 'allow_student_self_registration', true),
+            403,
+            'Student self-registration is disabled for this studio. Please contact the studio administrator.'
+        );
 
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
