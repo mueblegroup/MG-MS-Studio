@@ -18,8 +18,14 @@ class Studio extends Model
         'status',
         'plan_name',
         'platform_subscription_plan_id',
+        'stripe_customer_id',
+        'stripe_subscription_id',
+        'stripe_subscription_item_id',
+        'subscription_status',
         'trial_ends_at',
         'subscription_ends_at',
+        'cancel_at_period_end',
+        'canceled_at',
         'settings',
     ];
 
@@ -27,6 +33,8 @@ class Studio extends Model
         'settings' => 'array',
         'trial_ends_at' => 'datetime',
         'subscription_ends_at' => 'datetime',
+        'cancel_at_period_end' => 'boolean',
+        'canceled_at' => 'datetime',
     ];
 
     public function owner()

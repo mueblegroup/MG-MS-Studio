@@ -13,6 +13,8 @@ class PlatformSubscriptionPlan extends Model
         'price',
         'currency',
         'billing_interval',
+        'stripe_product_id',
+        'stripe_price_id',
         'max_students',
         'max_teachers',
         'max_admins',
