@@ -54,7 +54,8 @@
     ];
 @endphp
 
-<div class="flex h-full min-h-0 flex-col bg-[#111827] text-white transition-all duration-300">
+<div class="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#111827] text-white transition-[width] duration-300 md:fixed md:inset-y-0 md:left-0 md:z-40 md:h-screen"
+     :class="collapsed ? 'md:w-20' : 'md:w-64'">
     <div class="flex h-16 shrink-0 items-center border-b border-white/10 px-4">
         <div class="flex min-w-0 items-center gap-3">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#d97706] text-sm font-extrabold text-white shadow-sm shadow-amber-900/30">{{ $brandInitials }}</div>
@@ -65,14 +66,14 @@
         </div>
     </div>
 
-    <div x-show="!collapsed" x-transition.opacity class="px-4 py-4">
+    <div x-show="!collapsed" x-transition.opacity class="shrink-0 px-4 py-4">
         <div class="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm">
             <div class="text-xs font-extrabold uppercase tracking-[0.25em] text-amber-300">Owner Level</div>
             <p class="mt-2 text-xs font-medium leading-5 text-gray-300">This menu controls the whole SaaS platform. It is intentionally separated from the studio admin sidebar.</p>
         </div>
     </div>
 
-    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 pb-4 [scrollbar-color:rgba(255,255,255,0.18)_transparent] [scrollbar-width:thin]">
         @foreach($superadminLinks as $link)
             @php
                 $isActive = request()->routeIs($link['active']);
@@ -104,7 +105,7 @@
         </div>
     </nav>
 
-    <div class="shrink-0 border-t border-white/10 p-3">
+    <div class="shrink-0 border-t border-white/10 bg-[#111827] p-3">
         <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 rounded-2xl p-3 text-gray-300 transition hover:bg-white/10 hover:text-white">
             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-amber-300"><i class="bx bx-user text-xl"></i></span>
             <span x-show="!collapsed" x-transition.opacity class="min-w-0">
