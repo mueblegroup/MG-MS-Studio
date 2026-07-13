@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\PlatformStripeBillingService;
+use App\Services\TrialAwarePlatformStripeBillingService;
 use App\Support\TenantManager;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -15,6 +17,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(TenantManager::class, function () {
             return new TenantManager();
         });
+
+        $this->app->bind(PlatformStripeBillingService::class, TrialAwarePlatformStripeBillingService::class);
     }
 
     public function boot(): void
