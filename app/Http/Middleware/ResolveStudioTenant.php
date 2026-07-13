@@ -48,7 +48,7 @@ class ResolveStudioTenant
             return $next($request);
         }
 
-        abort(404, 'Studio not found.');
+        abort(404, 'Studio not found or subscription access has ended.');
     }
 
     private function authorizeUserForStudio(Request $request, Studio $studio): void
@@ -78,10 +78,9 @@ class ResolveStudioTenant
             return null;
         }
 
-        return Studio::query()
-            ->where('id', $user->studio_id)
-            ->whereIn('status', ['active', 'trial'])
-            ->first();
+        $studio = Studio::query()->find($user->studio_id);
+
+        return $studio?->isActive() ? $studio : null;
     }
 
     private function resolveFromHost(Request $request): ?Studio
@@ -106,17 +105,14 @@ class ResolveStudioTenant
 
         if ($rootDomain && str_ends_with($host, '.' . $rootDomain)) {
             $subdomain = str_replace('.' . $rootDomain, '', $host);
+            $studio = Studio::query()->where('subdomain', $subdomain)->first();
 
-            return Studio::query()
-                ->where('subdomain', $subdomain)
-                ->whereIn('status', ['active', 'trial'])
-                ->first();
+            return $studio?->isActive() ? $studio : null;
         }
 
-        return Studio::query()
-            ->where('custom_domain', $host)
-            ->whereIn('status', ['active', 'trial'])
-            ->first();
+        $studio = Studio::query()->where('custom_domain', $host)->first();
+
+        return $studio?->isActive() ? $studio : null;
     }
 
     private function isCentralDomain(Request $request): bool
