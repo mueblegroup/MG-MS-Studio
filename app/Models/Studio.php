@@ -26,6 +26,8 @@ class Studio extends Model
         'subscription_ends_at',
         'cancel_at_period_end',
         'canceled_at',
+        'manually_suspended_at',
+        'suspension_reason',
         'settings',
     ];
 
@@ -35,7 +37,17 @@ class Studio extends Model
         'subscription_ends_at' => 'datetime',
         'cancel_at_period_end' => 'boolean',
         'canceled_at' => 'datetime',
+        'manually_suspended_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Studio $studio): void {
+            if ($studio->manually_suspended_at) {
+                $studio->status = 'suspended';
+            }
+        });
+    }
 
     public function owner()
     {
@@ -62,8 +74,31 @@ class Studio extends Model
         return $this->hasMany(User::class);
     }
 
+    public function isTrialExpired(): bool
+    {
+        return $this->status === 'trial'
+            && $this->trial_ends_at
+            && $this->trial_ends_at->isPast();
+    }
+
+    public function isSubscriptionExpired(): bool
+    {
+        return $this->status === 'active'
+            && $this->subscription_ends_at
+            && $this->subscription_ends_at->isPast();
+    }
+
+    public function isManuallySuspended(): bool
+    {
+        return (bool) $this->manually_suspended_at;
+    }
+
     public function isActive(): bool
     {
-        return $this->status === 'active' || $this->status === 'trial';
+        if ($this->isManuallySuspended() || $this->isTrialExpired() || $this->isSubscriptionExpired()) {
+            return false;
+        }
+
+        return in_array($this->status, ['active', 'trial'], true);
     }
 }
