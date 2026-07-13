@@ -7,7 +7,6 @@ use App\Http\Controllers\Customer\StudioOnboardingController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('webhooks/platform-stripe', [PlatformBillingController::class, 'webhook'])
-    ->middleware('central')
     ->name('webhooks.platform-stripe');
 
 Route::get('/', function () {
