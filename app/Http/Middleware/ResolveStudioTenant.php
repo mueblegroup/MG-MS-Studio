@@ -15,6 +15,10 @@ class ResolveStudioTenant
     {
         app(TenantManager::class)->clear();
 
+        if ($this->isPlatformWebhookPath($request)) {
+            return $next($request);
+        }
+
         if ($this->isCentralDomain($request)) {
             return $next($request);
         }
@@ -128,6 +132,13 @@ class ResolveStudioTenant
         $rootDomain = strtolower((string) config('saas.root_domain'));
 
         return $rootDomain !== '' && strtolower($request->getHost()) === $rootDomain;
+    }
+
+    private function isPlatformWebhookPath(Request $request): bool
+    {
+        return $request->is('webhooks/platform-stripe')
+            || $request->is('webhooks/stripe')
+            || $request->is('webhooks/hitpay');
     }
 
     private function isCentralPlatformPath(Request $request): bool
