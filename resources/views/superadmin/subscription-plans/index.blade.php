@@ -5,7 +5,7 @@
                 <div>
                     <p class="text-xs font-extrabold uppercase tracking-[0.3em] text-[#d97706]">Platform Pricing</p>
                     <h1 class="mt-2 text-2xl font-extrabold text-[#171717] dark:text-white">Subscription Plans</h1>
-                    <p class="mt-1 max-w-3xl text-sm font-medium text-[#6b5f52] dark:text-gray-400">Create, edit, deactivate, or remove the SaaS subscription prices used by studios. This is owner-level pricing, not class/student pricing inside a studio.</p>
+                    <p class="mt-1 max-w-3xl text-sm font-medium text-[#6b5f52] dark:text-gray-400">Create, edit, deactivate, remove, and optionally attach a free trial to each SaaS subscription plan.</p>
                 </div>
                 <a href="{{ route('superadmin.dashboard') }}" class="rounded-2xl bg-[#171717] px-4 py-3 text-sm font-extrabold text-white shadow-sm dark:bg-white dark:text-gray-950">Back to Dashboard</a>
             </div>
@@ -30,6 +30,7 @@
                     @csrf
                     @include('superadmin.subscription-plans.partials.form', ['plan' => null, 'button' => 'Create Plan'])
                 </form>
+                <p class="mt-4 text-xs font-medium leading-5 text-[#9a8c7d] dark:text-gray-500">After creating the plan, configure its optional free-trial period from the plan card.</p>
             </div>
 
             <div class="space-y-5 xl:col-span-8">
@@ -40,6 +41,11 @@
                                 <div class="flex flex-wrap items-center gap-2">
                                     <h2 class="text-lg font-extrabold text-[#171717] dark:text-white">{{ $plan->name }}</h2>
                                     <span class="rounded-full bg-[#fff3df] px-3 py-1 text-xs font-extrabold uppercase text-[#9a4f00] dark:bg-amber-950/30 dark:text-amber-200">{{ $plan->is_active ? 'Active' : 'Inactive' }}</span>
+                                    @if((int) $plan->trial_days > 0)
+                                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-extrabold uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">{{ $plan->trial_days }}-day trial</span>
+                                    @else
+                                        <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-extrabold uppercase text-gray-600 dark:bg-gray-800 dark:text-gray-300">No trial</span>
+                                    @endif
                                 </div>
                                 <p class="mt-1 text-sm font-medium text-[#9a8c7d] dark:text-gray-500">
                                     {{ $plan->studios_count }} {{ Str::plural('studio', $plan->studios_count) }} using this plan
@@ -56,6 +62,17 @@
                         @if($plan->description)
                             <p class="mt-4 text-sm font-medium leading-6 text-[#6b5f52] dark:text-gray-400">{{ $plan->description }}</p>
                         @endif
+
+                        <form method="POST" action="{{ route('superadmin.subscription-plans.trial.update', $plan) }}" class="mt-5 flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20 sm:flex-row sm:items-end">
+                            @csrf
+                            @method('PATCH')
+                            <label class="flex-1 space-y-2">
+                                <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Free trial period</span>
+                                <input type="number" name="trial_days" min="0" max="365" value="{{ old('trial_days', $plan->trial_days ?? 0) }}" class="w-full rounded-2xl border-emerald-200 bg-white text-sm font-bold text-[#171717] shadow-sm focus:border-emerald-500 focus:ring-emerald-500 dark:border-emerald-900 dark:bg-gray-950 dark:text-white">
+                                <span class="block text-xs font-medium text-emerald-700 dark:text-emerald-400">Enter 0 to disable. Applied only when a studio starts a new Stripe subscription.</span>
+                            </label>
+                            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-emerald-700">Save Trial</button>
+                        </form>
 
                         <div class="mt-5 flex flex-wrap items-center gap-3 border-t border-[#f0e6d8] pt-5 dark:border-gray-800">
                             <details class="group min-w-0 flex-1">
