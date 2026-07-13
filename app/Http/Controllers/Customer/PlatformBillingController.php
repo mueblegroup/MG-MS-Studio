@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\PlatformSubscriptionPlan;
 use App\Models\Studio;
 use App\Services\PlatformStripeBillingService;
+use App\Services\StudioOnboardingPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use RuntimeException;
 use Throwable;
 
 class PlatformBillingController extends Controller
@@ -105,13 +105,18 @@ class PlatformBillingController extends Controller
         }
     }
 
-    public function webhook(Request $request, PlatformStripeBillingService $billing): JsonResponse
-    {
+    public function webhook(
+        Request $request,
+        PlatformStripeBillingService $billing,
+        StudioOnboardingPaymentService $onboarding,
+    ): JsonResponse {
         try {
             $event = $billing->constructWebhookEvent(
                 $request->getContent(),
                 $request->header('Stripe-Signature'),
             );
+
+            $onboarding->handleEvent($event);
             $billing->handleWebhook($event);
 
             return response()->json(['received' => true]);
