@@ -4,6 +4,7 @@ use App\Http\Controllers\Customer\CustomerAccountController;
 use App\Http\Controllers\Customer\CustomerPortalController;
 use App\Http\Controllers\Customer\PlatformBillingController;
 use App\Http\Controllers\Customer\StudioOnboardingController;
+use App\Http\Controllers\PlatformMessageController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('webhooks/platform-stripe', [PlatformBillingController::class, 'webhook'])
@@ -30,6 +31,11 @@ Route::middleware(['auth', 'central'])
         Route::get('billing', [CustomerPortalController::class, 'billing'])->name('billing');
         Route::get('invoices', [CustomerPortalController::class, 'invoices'])->name('invoices');
         Route::get('account', [CustomerAccountController::class, 'edit'])->name('account');
+
+        Route::get('messages', [PlatformMessageController::class, 'index'])->name('messages.index');
+        Route::post('messages', [PlatformMessageController::class, 'store'])->name('messages.store');
+        Route::get('messages/{message}', [PlatformMessageController::class, 'show'])->name('messages.show');
+        Route::post('messages/read-all', [PlatformMessageController::class, 'markAllRead'])->name('messages.read-all');
 
         Route::post('billing/checkout/{plan}', [PlatformBillingController::class, 'checkout'])->name('billing.checkout');
         Route::post('billing/upgrade/{plan}', [PlatformBillingController::class, 'upgrade'])->name('billing.upgrade');
