@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Superadmin\DomainController;
+use App\Http\Controllers\Superadmin\PlanTrialController;
 use App\Http\Controllers\Superadmin\SuperadminController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,7 @@ Route::middleware(['auth', 'central', 'role:superadmin'])
         Route::get('/subscription-plans', [SuperadminController::class, 'plans'])->name('subscription-plans.index');
         Route::post('/subscription-plans', [SuperadminController::class, 'storePlan'])->name('subscription-plans.store');
         Route::patch('/subscription-plans/{plan}', [SuperadminController::class, 'updatePlan'])->name('subscription-plans.update');
+        Route::patch('/subscription-plans/{plan}/trial', [PlanTrialController::class, 'update'])->name('subscription-plans.trial.update');
 
         Route::get('/platform-payments', [SuperadminController::class, 'platformPayments'])->name('platform-payments.index');
     });
