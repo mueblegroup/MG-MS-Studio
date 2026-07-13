@@ -103,7 +103,6 @@ class PlatformStripeBillingService
             'proration_behavior' => 'always_invoice',
             'proration_date' => $prorationDate,
             'payment_behavior' => 'pending_if_incomplete',
-            'cancel_at_period_end' => false,
             'metadata' => [
                 'studio_id' => (string) $studio->id,
                 'plan_id' => (string) $targetPlan->id,
