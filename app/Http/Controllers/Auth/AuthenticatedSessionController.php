@@ -19,6 +19,8 @@ class AuthenticatedSessionController extends Controller
         return view('auth.login', [
             'studio' => $studio,
             'portalType' => $studio ? 'studio' : 'central',
+            'studentSelfRegistrationEnabled' => ! $studio
+                || (bool) data_get($studio->settings, 'allow_student_self_registration', true),
             'loginTitle' => $studio ? $studio->name.' Studio Login' : 'Mueble Studio Client Portal',
             'loginSubtitle' => $studio
                 ? 'Login to manage this studio, its teachers, students, classes, attendance and payments.'
