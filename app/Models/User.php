@@ -54,6 +54,11 @@ class User extends Authenticatable
         return $this->belongsTo(Studio::class);
     }
 
+    public function ownedStudios()
+    {
+        return $this->hasMany(Studio::class, 'owner_user_id');
+    }
+
     public function classSessionBookings()
     {
         return $this->hasMany(\App\Models\ClassSessionBooking::class, 'student_id');
@@ -77,5 +82,15 @@ class User extends Authenticatable
     public function unreadAppNotifications()
     {
         return $this->hasMany(\App\Models\AppNotification::class, 'user_id')->whereNull('read_at');
+    }
+
+    public function sentPlatformMessages()
+    {
+        return $this->hasMany(PlatformMessage::class, 'sender_id');
+    }
+
+    public function receivedPlatformMessages()
+    {
+        return $this->hasMany(PlatformMessage::class, 'recipient_id');
     }
 }
