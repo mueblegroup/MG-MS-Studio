@@ -43,6 +43,19 @@ class Studio extends Model
     protected static function booted(): void
     {
         static::saving(function (Studio $studio): void {
+            $request = app()->bound('request') ? request() : null;
+            $isSuperadminUpdate = $request?->routeIs('superadmin.studios.update') ?? false;
+
+            if ($isSuperadminUpdate && $studio->isDirty('status')) {
+                if ($studio->status === 'suspended') {
+                    $studio->manually_suspended_at = now();
+                    $studio->suspension_reason = trim((string) $request->input('suspension_reason')) ?: 'Suspended by superadmin';
+                } else {
+                    $studio->manually_suspended_at = null;
+                    $studio->suspension_reason = null;
+                }
+            }
+
             if ($studio->manually_suspended_at) {
                 $studio->status = 'suspended';
             }
