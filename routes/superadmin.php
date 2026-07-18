@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\PlatformMessageController;
+use App\Http\Controllers\Superadmin\AuditLogController;
 use App\Http\Controllers\Superadmin\DomainController;
 use App\Http\Controllers\Superadmin\PlanTrialController;
 use App\Http\Controllers\Superadmin\SuperadminController;
@@ -18,6 +19,7 @@ Route::middleware(['auth', 'central', 'role:superadmin'])
 
         Route::get('/users', [SuperadminController::class, 'users'])->name('users.index');
         Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 
         Route::get('/subscription-plans', [SuperadminController::class, 'plans'])->name('subscription-plans.index');
         Route::post('/subscription-plans', [SuperadminController::class, 'storePlan'])->name('subscription-plans.store');
