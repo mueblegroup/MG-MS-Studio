@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuditLogService;
 use App\Services\TwoFactorAuthenticationService;
+use App\Support\TenantManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,24 +14,13 @@ use Illuminate\View\View;
 
 class TwoFactorAuthenticationController extends Controller
 {
-    public function edit(Request $request, TwoFactorAuthenticationService $twoFactor): View
+    public function edit(Request $request): RedirectResponse
     {
-        $user = $request->user();
-
-        if (! $user->hasTwoFactorEnabled() && ! $user->two_factor_secret) {
-            $user->forceFill([
-                'two_factor_secret' => $twoFactor->generateSecret(),
-                'two_factor_recovery_codes' => $twoFactor->generateRecoveryCodes(),
-            ])->save();
+        if (! app(TenantManager::class)->current() && $request->user()?->role === 'admin') {
+            return redirect()->route('customer.account', ['#two-factor']);
         }
 
-        return view('auth.two-factor-settings', [
-            'user' => $user->fresh(),
-            'provisioningUri' => $user->two_factor_secret
-                ? $twoFactor->provisioningUri($user->two_factor_secret, $user->email)
-                : null,
-            'auditLogs' => $user->auditLogs()->latest()->limit(15)->get(),
-        ]);
+        return redirect()->route('profile.edit', ['#two-factor']);
     }
 
     public function enable(Request $request, TwoFactorAuthenticationService $twoFactor, AuditLogService $audit): RedirectResponse
