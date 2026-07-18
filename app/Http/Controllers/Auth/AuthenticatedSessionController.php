@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\AuditLogService;
 use App\Support\TenantManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,43 +29,54 @@ class AuthenticatedSessionController extends Controller
         ]);
     }
 
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request, AuditLogService $audit): RedirectResponse
     {
         $request->authenticate();
         $request->session()->regenerate();
 
         $user = Auth::user();
         $studio = app(TenantManager::class)->current();
+        $destination = $this->destinationFor($user->role, (bool) $studio);
 
-        if (! $studio) {
-            if ($user->role === 'superadmin') {
-                return redirect()->intended(route('superadmin.dashboard', absolute: false));
-            }
+        if ($user->hasTwoFactorEnabled()) {
+            $request->session()->put([
+                'two_factor_user_id' => $user->id,
+                'two_factor_remember' => $request->boolean('remember'),
+                'url.intended' => $destination,
+            ]);
+            Auth::logout();
 
-            return redirect()->intended(route('customer.dashboard', absolute: false));
+            return redirect()->route('two-factor.challenge');
         }
 
-        if ($user->role === 'superadmin' || $user->role === 'admin') {
-            return redirect()->intended(route('admin.dashboard', absolute: false));
-        }
+        $audit->record('authentication.login', $user);
 
-        if ($user->role === 'teacher') {
-            return redirect()->intended(route('teacher.dashboard', absolute: false));
-        }
-
-        if ($user->role === 'student') {
-            return redirect()->intended(route('student.dashboard', absolute: false));
-        }
-
-        return redirect()->intended(route('admin.dashboard', absolute: false));
+        return redirect()->intended($destination);
     }
 
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request, AuditLogService $audit): RedirectResponse
     {
+        $audit->record('authentication.logout', $request->user());
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    private function destinationFor(string $role, bool $hasStudio): string
+    {
+        if (! $hasStudio) {
+            return $role === 'superadmin'
+                ? route('superadmin.dashboard', absolute: false)
+                : route('customer.dashboard', absolute: false);
+        }
+
+        return match ($role) {
+            'superadmin', 'admin' => route('admin.dashboard', absolute: false),
+            'teacher' => route('teacher.dashboard', absolute: false),
+            'student' => route('student.dashboard', absolute: false),
+            default => route('login', absolute: false),
+        };
     }
 }
