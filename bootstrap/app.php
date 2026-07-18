@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ResolveStudioTenant::class,
         ]);
 
+        $middleware->web(append: [
+            \App\Http\Middleware\AuditAuthenticatedActions::class,
+        ]);
+
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckUserRole::class,
             'central' => \App\Http\Middleware\EnsureCentralDomain::class,
