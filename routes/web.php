@@ -17,8 +17,6 @@ use App\Http\Controllers\UserClassCardController;
 use App\Http\Controllers\ClassAssignmentController;
 use App\Http\Controllers\ClassCardController;
 use App\Http\Controllers\LogoutController;
-use App\Http\Controllers\StudentController;
-use App\Http\Controllers\ClassSessionBookingController;
 use App\Http\Controllers\UserPlanController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\CartController;
@@ -59,16 +57,12 @@ Route::get('/', function () {
             return redirect()->route('login');
         }
 
-        switch ($user->role) {
-            case 'admin':
-                return redirect()->route('admin.dashboard');
-            case 'teacher':
-                return redirect()->route('teacher.dashboard');
-            case 'student':
-                return redirect()->route('student.dashboard');
-            default:
-                return redirect()->route('login');
-        }
+        return match ($user->role) {
+            'admin' => redirect()->route('admin.dashboard'),
+            'teacher' => redirect()->route('teacher.dashboard'),
+            'student' => redirect()->route('student.dashboard'),
+            default => redirect()->route('login'),
+        };
     }
 
     return view('saas.landing');
@@ -79,54 +73,110 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', function () {
         abort_unless(auth()->user()->role === 'admin', 403);
-        return app(\App\Http\Controllers\ProfileController::class)->destroy(request());
-    })->middleware('auth')->name('profile.destroy');
+        return app(ProfileController::class)->destroy(request());
+    })->name('profile.destroy');
+    Route::match(['get', 'post'], '/logout', [LogoutController::class, 'logout'])->name('logout');
 });
 
-/***** ADMIN ROUTES *****/
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+/* Admin dashboard and user management */
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/admin/payments-summary', [AdminController::class, 'payments'])->name('admin.payments');
 
-    Route::get('/admins', [AdminController::class, 'admins'])->name('admin.admins');
-    Route::get('/admins/create', [AdminController::class, 'createAdmin'])->name('admin.admins.create');
-    Route::post('/admins', [AdminController::class, 'storeAdmin'])->name('admin.admins.store');
-    Route::get('/admins/{id}/edit', [AdminController::class, 'editAdmin'])->name('admin.admins.edit');
-    Route::put('/admins/{id}', [AdminController::class, 'updateAdmin'])->name('admin.admins.update');
-    Route::delete('/admins/{id}', [AdminController::class, 'destroyAdmin'])->name('admin.admins.destroy');
+    Route::get('/admin/teachers', [AdminController::class, 'teachers'])->name('admin.teachers');
+    Route::get('/admin/teachers/create', [AdminController::class, 'createTeacher'])->name('admin.teachers.create');
+    Route::post('/admin/teachers/store', [AdminController::class, 'storeTeacher'])->name('admin.teachers.store');
+    Route::get('/admin/teachers/{id}/edit', [AdminController::class, 'editTeacher'])->name('admin.teachers.edit');
+    Route::put('/admin/teachers/{id}/update', [AdminController::class, 'updateTeacher'])->name('admin.teachers.update');
+    Route::delete('/admin/teachers/{id}/destroy', [AdminController::class, 'destroyTeacher'])->name('admin.teachers.destroy');
 
-    Route::get('/teachers', [AdminController::class, 'teachers'])->name('admin.teachers');
-    Route::get('/teachers/create', [AdminController::class, 'createTeacher'])->name('admin.teachers.create');
-    Route::post('/teachers', [AdminController::class, 'storeTeacher'])->name('admin.teachers.store');
-    Route::get('/teachers/{id}/edit', [AdminController::class, 'editTeacher'])->name('admin.teachers.edit');
-    Route::put('/teachers/{id}', [AdminController::class, 'updateTeacher'])->name('admin.teachers.update');
-    Route::delete('/teachers/{id}', [AdminController::class, 'destroyTeacher'])->name('admin.teachers.destroy');
+    Route::get('/admin/students', [AdminController::class, 'students'])->name('admin.students');
+    Route::get('/admin/students/create', [AdminController::class, 'createStudent'])->name('admin.students.create');
+    Route::post('/admin/students/store', [AdminController::class, 'storeStudent'])->name('admin.students.store');
+    Route::get('/admin/students/{id}/edit', [AdminController::class, 'editStudent'])->name('admin.students.edit');
+    Route::put('/admin/students/{id}/update', [AdminController::class, 'updateStudent'])->name('admin.students.update');
+    Route::delete('/admin/students/{id}/destroy', [AdminController::class, 'destroyStudent'])->name('admin.students.destroy');
 
-    Route::get('/students', [AdminController::class, 'students'])->name('admin.students');
-    Route::get('/students/create', [AdminController::class, 'createStudent'])->name('admin.students.create');
-    Route::post('/students', [AdminController::class, 'storeStudent'])->name('admin.students.store');
-    Route::get('/students/{id}/edit', [AdminController::class, 'editStudent'])->name('admin.students.edit');
-    Route::put('/students/{id}', [AdminController::class, 'updateStudent'])->name('admin.students.update');
-    Route::delete('/students/{id}', [AdminController::class, 'destroyStudent'])->name('admin.students.destroy');
+    Route::get('/admin/admins', [AdminController::class, 'admins'])->name('admin.admins');
+    Route::get('/admin/admins/create', [AdminController::class, 'createAdmin'])->name('admin.admins.create');
+    Route::post('/admin/admins/store', [AdminController::class, 'storeAdmin'])->name('admin.admins.store');
+    Route::get('/admin/admins/{id}/edit', [AdminController::class, 'editAdmin'])->name('admin.admins.edit');
+    Route::put('/admin/admins/{id}/update', [AdminController::class, 'updateAdmin'])->name('admin.admins.update');
+    Route::delete('/admin/admins/{id}/destroy', [AdminController::class, 'destroyAdmin'])->name('admin.admins.destroy');
 
-    Route::get('/classes', [ClassController::class, 'index'])->name('admin.classes');
-    Route::get('/classes/create', [ClassController::class, 'create'])->name('admin.classes.create');
-    Route::post('/classes', [ClassController::class, 'store'])->name('admin.classes.store');
-    Route::get('/classes/{classSession}/edit', [ClassController::class, 'edit'])->name('admin.classes.edit');
-    Route::put('/classes/{classSession}', [ClassController::class, 'update'])->name('admin.classes.update');
-    Route::delete('/classes/{classSession}', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
-    Route::get('/classes/data', [ClassController::class, 'data'])->name('admin.classes.data');
+    Route::get('/admin/users/create', [AdminController::class, 'create'])->name('admin.users.create');
+    Route::post('/admin/users/store', [AdminController::class, 'store'])->name('admin.users.store');
+    Route::get('/admin/users/{id}/edit', [AdminController::class, 'edit'])->name('admin.users.edit');
+    Route::put('/admin/users/{id}/update', [AdminController::class, 'update'])->name('admin.users.update');
+    Route::delete('/admin/users/{id}/destroy', [AdminController::class, 'destroy'])->name('admin.users.destroy');
+});
 
-    Route::resource('plans', PlanController::class)->names('admin.plans');
-    Route::resource('plans.sessions', PlanSessionController::class)->names('admin.plans.sessions');
-    Route::post('/plans/{plan}/assign', [UserPlanController::class, 'store'])->name('admin.plans.assign');
+/* Classes */
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/classes', [ClassController::class, 'index'])->name('admin.classes');
+    Route::get('/admin/classes/create', [ClassController::class, 'create'])->name('admin.classes.create');
+    Route::post('/admin/classes/store', [ClassController::class, 'store'])->name('admin.classes.store');
+    Route::delete('/admin/classes/{classSession}/destroy', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
+    Route::get('/admin/classes/{classSession}/edit', [ClassController::class, 'edit'])->name('admin.classes.edit');
+    Route::put('/admin/classes/{classSession}/update', [ClassController::class, 'update'])->name('admin.classes.update');
+});
 
-    Route::post('classcards/classcard-purchases', [UserClassCardController::class, 'store'])
-        ->name('classcards.classcard-purchases.store');
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('class-assignments', [ClassAssignmentController::class, 'index'])->name('class-assignments.index');
+    Route::get('class-assignments/create', [ClassAssignmentController::class, 'create'])->name('class-assignments.create');
+    Route::post('class-assignments', [ClassAssignmentController::class, 'store'])->name('class-assignments.store');
+    Route::delete('class-assignments/{assignment}', [ClassAssignmentController::class, 'destroy'])->name('class-assignments.destroy');
+});
+
+/* Plans */
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/plans', [PlanController::class, 'index'])->name('admin.plans');
+    Route::get('/admin/plans/{plan}/show', [PlanController::class, 'show'])->name('admin.plans.show');
+    Route::get('/admin/plans/create', [PlanController::class, 'create'])->name('admin.plans.create');
+    Route::post('/admin/plans/store', [PlanController::class, 'store'])->name('admin.plans.store');
+    Route::delete('/admin/plans/{plan}/destroy', [PlanController::class, 'destroy'])->name('admin.plans.destroy');
+    Route::get('/admin/plans/{plan}/edit', [PlanController::class, 'edit'])->name('admin.plans.edit');
+    Route::put('/admin/plans/{plan}/update', [PlanController::class, 'update'])->name('admin.plans.update');
+
+    Route::get('/admin/plans/{plan}/sessions/{session}/edit', [PlanController::class, 'editSession'])->name('admin.plans.sessions.edit');
+    Route::put('/admin/plans/{plan}/sessions/{session}', [PlanSessionController::class, 'update'])->name('admin.plans.sessions.update');
+    Route::delete('/admin/plans/{plan}/sessions/{session}', [PlanSessionController::class, 'destroy'])->name('admin.plans.sessions.destroy');
+    Route::get('/admin/plans/{plan}/sessions/{session}/create', [PlanController::class, 'createSession'])->name('admin.plans.sessions.create');
+    Route::post('/admin/plans/{plan}/sessions/{session}/store', [PlanController::class, 'storeSession'])->name('admin.plans.sessions.store');
+});
+
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('plan-assignments', [UserPlanController::class, 'index'])->name('planassignments.index');
+    Route::get('plan-assignments/create', [UserPlanController::class, 'create'])->name('planassignments.create');
+    Route::post('plan-assignments', [UserPlanController::class, 'store'])->name('planassignments.store');
+    Route::delete('plan-assignments/{userPlan}', [UserPlanController::class, 'destroy'])->name('planassignments.destroy');
+});
+
+/* Admin notifications */
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('notifications', [AdminAppNotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{notification}/show', [AdminAppNotificationController::class, 'show'])->name('notifications.show');
+    Route::get('notifications/{notification}/edit', [AdminAppNotificationController::class, 'edit'])->name('notifications.edit');
+    Route::put('notifications/{notification}/update', [AdminAppNotificationController::class, 'update'])->name('notifications.update');
+    Route::delete('notifications/{notification}/destroy', [AdminAppNotificationController::class, 'destroy'])->name('notifications.destroy');
+    Route::get('notifications/create', [AdminAppNotificationController::class, 'create'])->name('notifications.create');
+    Route::post('notifications/store', [AdminAppNotificationController::class, 'store'])->name('notifications.store');
+});
+
+/* Class cards */
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('classcards/classcard-purchases/{userClassCard}/show', [UserClassCardController::class, 'show'])->name('classcards.classcard-purchases.show');
+    Route::get('classcards/classcard-purchases/{userClassCard}/edit', [UserClassCardController::class, 'edit'])->name('classcards.classcard-purchases.edit');
+    Route::put('classcards/classcard-purchases/{userClassCard}', [UserClassCardController::class, 'update'])->name('classcards.classcard-purchases.update');
+    Route::delete('classcards/classcard-purchases/{userClassCard}', [UserClassCardController::class, 'destroy'])->name('classcards.classcard-purchases.destroy');
+    Route::get('classcards/classcard-purchases', [UserClassCardController::class, 'index'])->name('classcards.classcard-purchases');
+    Route::get('classcards/classcard-purchases/create', [UserClassCardController::class, 'create'])->name('classcards.classcard-purchases.create');
+    Route::post('classcards/classcard-purchases', [UserClassCardController::class, 'store'])->name('classcards.classcard-purchases.store');
 
     Route::resource('classcards', ClassCardController::class);
 });
 
-/*******SHOP ROUTES *******/
+/* Shop */
 Route::prefix('shop')->name('shop.')->group(function () {
     Route::get('/', [ShopController::class, 'index'])->name('index');
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -149,32 +199,30 @@ Route::prefix('shop')->name('shop.')->group(function () {
 Route::post('/webhooks/stripe', [CheckoutController::class, 'stripeWebhook'])->name('webhooks.stripe');
 Route::post('/webhooks/hitpay', [CheckoutController::class, 'hitpayWebhook'])->name('webhooks.hitpay');
 
-Route::prefix('admin')->middleware(['auth'])->group(function () {
+/* Attendance */
+Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/classes/{classSessionId}/attendance', [ClassAttendanceController::class, 'show'])->name('admin.classes.attendance');
     Route::post('/classes/{classSessionId}/attendance/{assignmentId}', [ClassAttendanceController::class, 'mark'])->name('admin.classes.attendance.mark');
-});
-
-Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/plans/{planId}/sessions/{planSessionId}/attendance', [PlanAttendanceController::class, 'show'])->name('admin.plans.sessions.attendance');
     Route::post('/plans/{planId}/sessions/{planSessionId}/attendance/{userId}', [PlanAttendanceController::class, 'mark'])->name('admin.plans.sessions.attendance.mark');
-});
-
-Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::post('/classcards/usage/{userClassCardId}', [ClassCardAttendanceController::class, 'mark'])->name('admin.classcards.usage.mark');
 });
 
-Route::prefix('admin')->middleware(['auth'])->group(function () {
+/* Payment history */
+Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/payments', [PaymentHistoryController::class, 'index'])->name('payments.index');
     Route::get('/payments/{id}', [PaymentHistoryController::class, 'show'])->name('payments.show');
     Route::get('/payments/{id}/receipt', [PaymentHistoryController::class, 'downloadReceipt'])->name('payments.receipt.download');
 });
 
-Route::prefix('admin')->middleware(['auth'])->group(function () {
+/* Studio settings */
+Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/settings/studio', [StudioSettingsController::class, 'edit'])->name('settings.studio');
     Route::post('/settings/studio', [StudioSettingsController::class, 'update'])->name('settings.studio.update');
     Route::post('/settings/studio/test-email', [StudioSettingsController::class, 'sendTestEmail'])->name('settings.studio.test-email');
 });
 
+/* Teacher */
 Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
     Route::get('/dashboard', [TeacherController::class, 'index'])->name('dashboard');
     Route::get('/classes', [TeacherClassController::class, 'index'])->name('classes.index');
@@ -189,6 +237,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')
     Route::get('/classcards/{classCard}', [TeacherClassCardController::class, 'show'])->name('classcards.show');
     Route::post('/classcards/usage/{userClassCard}/mark', [TeacherClassCardAttendanceController::class, 'mark'])->name('classcards.usage.mark');
     Route::get('/schedule', [TeacherScheduleController::class, 'index'])->name('schedule.index');
+
     Route::get('notifications', [AppNotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/{notification}/show', [AppNotificationController::class, 'show'])->name('notifications.show');
     Route::get('notifications/{notification}/edit', [AppNotificationController::class, 'edit'])->name('notifications.edit');
@@ -198,25 +247,21 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')
     Route::post('notifications/store', [AppNotificationController::class, 'store'])->name('notifications.store');
 });
 
+/* Student */
 Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')->group(function () {
     Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
     Route::get('/attendance', [StudentAttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/schedule', [StudentScheduleController::class, 'index'])->name('schedule.index');
     Route::get('/payments', [StudentPaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/{id}/receipt', [StudentPaymentController::class, 'downloadReceipt'])->name('payments.receipt.download');
-});
 
-Route::middleware(['auth', 'role:student'])
-    ->prefix('student')
-    ->name('student.')
-    ->group(function () {
-        Route::get('notifications', [AppNotificationController::class, 'index'])->name('notifications.index');
-        Route::get('notifications/{notification}/show', [AppNotificationController::class, 'show'])->name('notifications.show');
-        Route::get('notifications/{notification}/edit', [AppNotificationController::class, 'edit'])->name('notifications.edit');
-        Route::put('notifications/{notification}/update', [AppNotificationController::class, 'update'])->name('notifications.update');
-        Route::delete('notifications/{notification}/destroy', [AppNotificationController::class, 'destroy'])->name('notifications.destroy');
-        Route::get('notifications/create', [AppNotificationController::class, 'create'])->name('notifications.create');
-        Route::post('notifications/store', [AppNotificationController::class, 'store'])->name('notifications.store');
-    });
+    Route::get('notifications', [AppNotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{notification}/show', [AppNotificationController::class, 'show'])->name('notifications.show');
+    Route::get('notifications/{notification}/edit', [AppNotificationController::class, 'edit'])->name('notifications.edit');
+    Route::put('notifications/{notification}/update', [AppNotificationController::class, 'update'])->name('notifications.update');
+    Route::delete('notifications/{notification}/destroy', [AppNotificationController::class, 'destroy'])->name('notifications.destroy');
+    Route::get('notifications/create', [AppNotificationController::class, 'create'])->name('notifications.create');
+    Route::post('notifications/store', [AppNotificationController::class, 'store'])->name('notifications.store');
+});
 
 require __DIR__ . '/auth.php';
