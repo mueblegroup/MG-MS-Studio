@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\ClassModel;
 use App\Models\StudioSubscription;
+use App\Observers\ClassModelObserver;
 use App\Observers\StudioSubscriptionObserver;
 use App\Services\PlatformStripeBillingService;
 use App\Services\TrialAwarePlatformStripeBillingService;
@@ -25,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        ClassModel::observe(ClassModelObserver::class);
         StudioSubscription::observe(StudioSubscriptionObserver::class);
 
         RateLimiter::for('api', function (Request $request) {
