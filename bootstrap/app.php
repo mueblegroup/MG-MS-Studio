@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')->group(base_path('routes/customer.php'));
             Route::middleware('web')->group(base_path('routes/superadmin.php'));
             Route::middleware('web')->group(base_path('routes/logout.php'));
+            Route::middleware('web')->group(base_path('routes/legacy-route-aliases.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
