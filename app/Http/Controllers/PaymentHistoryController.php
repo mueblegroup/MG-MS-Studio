@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\StudioSubscription;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
@@ -39,7 +40,21 @@ class PaymentHistoryController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.payments.index', compact('payments', 'q', 'status', 'provider'));
+        $upcomingSubscriptions = StudioSubscription::query()
+            ->with(['user', 'classModel'])
+            ->whereIn('status', ['active', 'trialing', 'past_due'])
+            ->whereNotNull('next_billing_at')
+            ->whereBetween('next_billing_at', [now()->startOfMinute(), now()->addDays(3)->endOfDay()])
+            ->orderBy('next_billing_at')
+            ->get();
+
+        return view('admin.payments.index', compact(
+            'payments',
+            'upcomingSubscriptions',
+            'q',
+            'status',
+            'provider'
+        ));
     }
 
     public function show(int $id)
