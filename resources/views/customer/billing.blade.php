@@ -16,7 +16,7 @@
             <div>
                 <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-500">Client Portal</p>
                 <h1 class="mt-2 text-3xl font-black text-slate-950 dark:text-white">Billing & Plan</h1>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Subscribe securely through Stripe, start an available free trial, manage auto-renewal, and upgrade with Stripe-calculated proration.</p>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Subscribe securely through Stripe, start an available free trial, manage auto-renewal, and review Stripe-calculated proration before approving an upgrade charge.</p>
             </div>
             <a href="{{ route('customer.dashboard') }}" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Back to Overview</a>
         </div>
@@ -48,7 +48,7 @@
 
             <section class="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-black/5 dark:bg-slate-900 dark:ring-white/10">
                 <h2 class="text-xl font-black text-slate-950 dark:text-white">Available Platform Plans</h2>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Plans marked with a free trial defer the first Stripe charge until the trial period ends.</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Upgrades open a review page before Stripe charges the saved payment method.</p>
                 <div class="mt-5 grid gap-4 md:grid-cols-2">
                     @forelse ($plans as $plan)
                         @php
@@ -82,7 +82,7 @@
                                 @if (! $studio?->stripe_subscription_id)
                                     <form method="POST" action="{{ route('customer.billing.checkout', $plan) }}">@csrf<button class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white hover:bg-orange-600">{{ $hasTrial ? 'Start Free Trial with Stripe' : 'Subscribe with Stripe' }}</button></form>
                                 @elseif ($isUpgrade)
-                                    <form method="POST" action="{{ route('customer.billing.upgrade', $plan) }}" onsubmit="return confirm('Upgrade now? Stripe will immediately invoice the prorated difference for the remaining period.');">@csrf<button class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white hover:bg-orange-600">Upgrade with proration</button></form>
+                                    <a href="{{ route('customer.billing.upgrade.confirm', $plan) }}" class="inline-flex w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white hover:bg-orange-600">Review upgrade & charge</a>
                                 @elseif ($isCurrent)
                                     <button disabled class="w-full cursor-not-allowed rounded-2xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-500 dark:bg-slate-800">Current plan</button>
                                 @else
