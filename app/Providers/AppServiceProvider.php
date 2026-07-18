@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\StudioSubscription;
+use App\Observers\StudioSubscriptionObserver;
 use App\Services\PlatformStripeBillingService;
 use App\Services\TrialAwarePlatformStripeBillingService;
 use App\Support\TenantManager;
@@ -23,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        StudioSubscription::observe(StudioSubscriptionObserver::class);
+
         RateLimiter::for('api', function (Request $request) {
             $userKey = optional($request->user())->id;
 
