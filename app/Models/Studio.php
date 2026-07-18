@@ -32,6 +32,16 @@ class Studio extends Model
             $request = app()->bound('request') ? request() : null;
             $isSuperadminUpdate = $request?->routeIs('superadmin.studios.update') ?? false;
 
+            if ($isSuperadminUpdate && $studio->stripe_subscription_id) {
+                if ($studio->isDirty('trial_ends_at')) {
+                    $studio->trial_ends_at = $studio->getOriginal('trial_ends_at');
+                }
+
+                if ($studio->isDirty('subscription_ends_at')) {
+                    $studio->subscription_ends_at = $studio->getOriginal('subscription_ends_at');
+                }
+            }
+
             if ($isSuperadminUpdate && $studio->isDirty('status')) {
                 if ($studio->status === 'suspended') {
                     $studio->manually_suspended_at = now();
