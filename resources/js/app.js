@@ -44,4 +44,42 @@ const renderSeatPromotion = async () => {
     }
 };
 
+const explainSubscriptionEndDate = () => {
+    const classType = document.getElementById('class_type');
+    const untilDate = document.getElementById('until_date');
+    const summary = document.getElementById('setupSummary');
+    const subscriptionPanel = document.getElementById('subscriptionPanel');
+
+    if (!classType || !untilDate || !summary || !subscriptionPanel) return;
+
+    const notice = subscriptionPanel.querySelector('.rounded-xl.border.border-amber-200');
+
+    const refresh = () => {
+        if (notice) {
+            notice.innerHTML = '<strong>Automatic cancellation:</strong> For subscription classes, Stripe billing will stop automatically at the end of the selected session end date.';
+        }
+
+        if (classType.value !== 'subscription') return;
+
+        const endDate = untilDate.value || 'the selected end date';
+        window.setTimeout(() => {
+            const current = summary.textContent || '';
+            summary.textContent = current.replace(
+                /Stripe billing continues until the subscription is cancelled\.?/,
+                `Stripe billing will cancel automatically at the end of ${endDate}.`
+            );
+        }, 0);
+    };
+
+    [classType, untilDate, document.getElementById('billing_interval'), document.getElementById('price'), document.getElementById('recurrence_frequency')]
+        .filter(Boolean)
+        .forEach((element) => {
+            element.addEventListener('change', refresh);
+            element.addEventListener('input', refresh);
+        });
+
+    window.setTimeout(refresh, 0);
+};
+
 document.addEventListener('DOMContentLoaded', renderSeatPromotion);
+document.addEventListener('DOMContentLoaded', explainSubscriptionEndDate);
