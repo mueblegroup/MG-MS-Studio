@@ -3,7 +3,7 @@
 
         <div class="mb-6">
             <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Payment History</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Your payment records, pending dues, and downloadable receipts.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Your payment records, pending dues, upcoming subscription charges, and downloadable receipts.</p>
         </div>
 
         @if(session('success'))
@@ -16,6 +16,45 @@
             <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
                 {{ session('error') }}
             </div>
+        @endif
+
+        @if($upcomingSubscriptions->isNotEmpty())
+            <section class="mb-5 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20">
+                <div class="border-b border-amber-200 px-5 py-4 dark:border-amber-900/50">
+                    <h2 class="flex items-center gap-2 text-base font-extrabold text-amber-950 dark:text-amber-100">
+                        <i class="bx bx-time-five text-xl"></i>
+                        Due within the next 3 days
+                    </h2>
+                    <p class="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-300">These are upcoming subscription charges. They are not completed payment records yet.</p>
+                </div>
+
+                <div class="divide-y divide-amber-200 dark:divide-amber-900/40">
+                    @foreach($upcomingSubscriptions as $subscription)
+                        @php
+                            $dueAt = $subscription->next_billing_at;
+                            $dueLabel = $dueAt->isToday()
+                                ? 'Due today'
+                                : ($dueAt->isTomorrow()
+                                    ? 'Due tomorrow'
+                                    : 'Due in '.now()->startOfDay()->diffInDays($dueAt->copy()->startOfDay()).' days');
+                        @endphp
+                        <div class="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-extrabold text-gray-950 dark:text-white">{{ $subscription->classModel?->name ?? 'Subscription class' }}</p>
+                                <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">Recurring {{ $subscription->billing_interval ?? 'subscription' }} billing</p>
+                            </div>
+                            <div class="text-left sm:text-right">
+                                <p class="text-sm font-extrabold text-gray-950 dark:text-white">{{ strtoupper($subscription->currency ?? 'MYR') }} {{ number_format((float) $subscription->amount, 2) }}</p>
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ strtoupper($subscription->provider ?? '—') }}</p>
+                            </div>
+                            <div class="sm:text-right">
+                                <span class="inline-flex rounded-full bg-amber-200 px-3 py-1 text-xs font-extrabold text-amber-900 dark:bg-amber-900/50 dark:text-amber-100">{{ $dueLabel }}</span>
+                                <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{{ $dueAt->format('d M Y, h:i A') }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
         @endif
 
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
