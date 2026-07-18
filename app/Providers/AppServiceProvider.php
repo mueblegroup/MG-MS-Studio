@@ -34,5 +34,6 @@ class AppServiceProvider extends ServiceProvider
         });
 
         require base_path('routes/seat-limits.php');
+        require base_path('routes/admin-compat.php');
     }
 }
