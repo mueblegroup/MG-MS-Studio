@@ -1,0 +1,15 @@
+[program:mueble-lms-worker]
+process_name=%(program_name)s_%(process_num)02d
+command={{PHP_BIN}} {{PROJECT_PATH}}/artisan queue:work database --sleep=2 --tries=3 --timeout=120 --max-time=3600
+directory={{PROJECT_PATH}}
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user={{APP_USER}}
+numprocs=1
+redirect_stderr=true
+stdout_logfile=/var/log/mueble-lms-worker.log
+stdout_logfile_maxbytes=20MB
+stdout_logfile_backups=5
+stopwaitsecs=130
