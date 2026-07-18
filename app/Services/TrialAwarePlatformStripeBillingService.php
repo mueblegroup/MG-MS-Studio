@@ -68,6 +68,24 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
     {
         parent::handleWebhook($event);
 
+        if (in_array($event->type, ['invoice.paid', 'invoice.payment_failed'], true)) {
+            $invoice = $event->data->object;
+            $subscriptionId = is_string($invoice->subscription ?? null)
+                ? $invoice->subscription
+                : ($invoice->subscription->id ?? null);
+
+            $studio = Studio::query()
+                ->when($subscriptionId, fn ($query) => $query->where('stripe_subscription_id', $subscriptionId))
+                ->when(! $subscriptionId && ! empty($invoice->customer), fn ($query) => $query->where('stripe_customer_id', $invoice->customer))
+                ->first();
+
+            if ($studio) {
+                app(PlatformSubscriptionDateSyncService::class)->sync($studio);
+            }
+
+            return;
+        }
+
         if (! in_array($event->type, [
             'customer.subscription.created',
             'customer.subscription.updated',
