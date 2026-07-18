@@ -15,6 +15,8 @@
         $shouldRecommendUpgrade = $hasLiveSubscription && $seatUsagePercent >= 70;
         $highestPlanPrice = (float) ($plans->max('price') ?? 0);
         $isHighestPlan = $currentPlan && (float) $currentPlan->price >= $highestPlanPrice;
+        $autoRenewEnabled = $hasLiveSubscription && ! $studio?->cancel_at_period_end;
+        $periodDateLabel = $studio?->cancel_at_period_end ? 'Access Ends' : 'Next Renewal';
     @endphp
 
     <div class="space-y-6">
@@ -47,7 +49,8 @@
                 <h2 class="mt-3 text-3xl font-black">{{ $currentPlan?->name ?? ucfirst($studio?->plan_name ?? 'No active plan') }}</h2>
                 <div class="mt-5 space-y-3 text-sm text-slate-300">
                     <div class="flex justify-between rounded-2xl bg-white/10 p-4"><span>Status</span><strong class="text-white">{{ ucfirst($effectiveStatus ?? '-') }}</strong></div>
-                    <div class="flex justify-between rounded-2xl bg-white/10 p-4"><span>Current Period Ends</span><strong class="text-white">{{ optional($studio?->subscription_ends_at)->format('d M Y H:i') ?? '-' }}</strong></div>
+                    <div class="flex justify-between rounded-2xl bg-white/10 p-4"><span>{{ $periodDateLabel }}</span><strong class="text-white">{{ optional($studio?->subscription_ends_at)->format('d M Y H:i') ?? '-' }}</strong></div>
+                    <div class="flex justify-between rounded-2xl bg-white/10 p-4"><span>Auto-renewal</span><strong class="{{ $autoRenewEnabled ? 'text-emerald-300' : 'text-amber-300' }}">{{ $autoRenewEnabled ? 'Enabled' : ($hasLiveSubscription ? 'Disabled' : '-') }}</strong></div>
                     <div class="flex justify-between rounded-2xl bg-white/10 p-4"><span>Highest seat usage</span><strong class="text-white">{{ min($seatUsagePercent, 100) }}%</strong></div>
                     <div class="grid grid-cols-3 gap-2 text-center text-xs">
                         <div class="rounded-xl bg-white/10 p-3"><strong class="block text-white">{{ $studentCount }}</strong>Students</div>
@@ -55,8 +58,27 @@
                         <div class="rounded-xl bg-white/10 p-3"><strong class="block text-white">{{ $adminCount }}</strong>Admins</div>
                     </div>
                 </div>
+
                 @if ($studio?->stripe_customer_id)
                     <form method="POST" action="{{ route('customer.billing.portal') }}" class="mt-5">@csrf<button class="w-full rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950 hover:bg-slate-100">Manage payment method</button></form>
+                @endif
+
+                @if ($hasLiveSubscription)
+                    @if ($studio?->cancel_at_period_end)
+                        <div class="mt-4 rounded-2xl border border-amber-300/40 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+                            Auto-renewal is off. Your studio remains active until {{ optional($studio?->subscription_ends_at)->format('d M Y H:i') ?? 'the current paid period ends' }}.
+                        </div>
+                        <form method="POST" action="{{ route('customer.billing.resume') }}" class="mt-3">
+                            @csrf
+                            <button class="w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white hover:bg-emerald-600">Resume auto-renewal</button>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('customer.billing.cancel') }}" class="mt-4" onsubmit="return confirm('Turn off auto-renewal? Your studio will remain active until the current paid period ends, then access will stop unless you resume or subscribe again.')">
+                            @csrf
+                            <button class="w-full rounded-2xl border border-red-400/60 bg-red-500/10 px-4 py-3 text-sm font-black text-red-200 hover:bg-red-500/20">Turn off auto-renewal</button>
+                        </form>
+                        <p class="mt-2 text-xs leading-5 text-slate-400">This does not immediately close the studio or issue a refund. It schedules cancellation at the end of the current paid period.</p>
+                    @endif
                 @endif
             </section>
 
