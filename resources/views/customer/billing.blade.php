@@ -12,7 +12,7 @@
             $currentPlan?->max_admins ? ($adminCount / max(1, $currentPlan->max_admins)) * 100 : 0,
         ]);
         $seatUsagePercent = (int) round($usagePercentages->max() ?? 0);
-        $showUpgradeOptions = $hasLiveSubscription && $seatUsagePercent >= 70;
+        $shouldRecommendUpgrade = $hasLiveSubscription && $seatUsagePercent >= 70;
         $highestPlanPrice = (float) ($plans->max('price') ?? 0);
         $isHighestPlan = $currentPlan && (float) $currentPlan->price >= $highestPlanPrice;
     @endphp
@@ -64,8 +64,10 @@
                 <h2 class="text-xl font-black text-slate-950 dark:text-white">Available Platform Plans</h2>
                 @if ($isHighestPlan)
                     <p class="mt-2 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">You are already on the highest available plan.</p>
-                @elseif ($hasLiveSubscription && ! $showUpgradeOptions)
-                    <p class="mt-2 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">Upgrade options appear when at least one seat category reaches 70% usage. Current highest usage is {{ $seatUsagePercent }}%.</p>
+                @elseif ($shouldRecommendUpgrade)
+                    <p class="mt-2 rounded-2xl bg-orange-50 p-4 text-sm font-bold text-orange-700 dark:bg-orange-950/30 dark:text-orange-300">Your highest seat usage is {{ $seatUsagePercent }}%. Upgrading is recommended before the studio reaches its current limits.</p>
+                @elseif ($hasLiveSubscription)
+                    <p class="mt-2 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">Your current highest seat usage is {{ $seatUsagePercent }}%. You may still upgrade at any time; the app will actively recommend it after usage reaches 70%.</p>
                 @endif
 
                 <div class="mt-5 grid gap-4 md:grid-cols-2">
@@ -73,7 +75,7 @@
                         @php
                             $isCurrent = (int) $studio?->platform_subscription_plan_id === (int) $plan->id;
                             $isUpgrade = $currentPlan && (float) $plan->price > (float) $currentPlan->price;
-                            $shouldShowPlan = ! $hasLiveSubscription || $isCurrent || ($isUpgrade && $showUpgradeOptions && ! $isHighestPlan);
+                            $shouldShowPlan = ! $hasLiveSubscription || $isCurrent || ($isUpgrade && ! $isHighestPlan);
                         @endphp
                         @continue(! $shouldShowPlan)
                         <div class="rounded-3xl border {{ $isCurrent ? 'border-emerald-400' : 'border-slate-200 dark:border-slate-800' }} p-5">
