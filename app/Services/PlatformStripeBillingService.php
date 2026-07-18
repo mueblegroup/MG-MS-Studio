@@ -57,29 +57,44 @@ class PlatformStripeBillingService
         ]);
     }
 
-    public function upgrade(Studio $studio, PlatformSubscriptionPlan $targetPlan): array
+    public function previewUpgrade(Studio $studio, PlatformSubscriptionPlan $targetPlan): array
     {
-        if (! $studio->stripe_subscription_id) {
-            throw new RuntimeException('No active Stripe subscription was found for this studio.');
-        }
+        [$subscription, $item, $priceId] = $this->upgradeContext($studio, $targetPlan);
+        $prorationDate = now()->timestamp;
 
-        $currentPlan = $studio->platformSubscriptionPlan;
-
-        if ($currentPlan && (float) $targetPlan->price <= (float) $currentPlan->price) {
-            throw new RuntimeException('This action only supports immediate upgrades to a higher-priced plan.');
-        }
-
-        $subscription = $this->stripe->subscriptions->retrieve($studio->stripe_subscription_id, [
-            'expand' => ['items.data.price', 'latest_invoice'],
+        $preview = $this->stripe->invoices->createPreview([
+            'customer' => $studio->stripe_customer_id,
+            'subscription' => $subscription->id,
+            'subscription_details' => [
+                'items' => [[
+                    'id' => $item->id,
+                    'price' => $priceId,
+                ]],
+                'proration_date' => $prorationDate,
+            ],
         ]);
 
-        $item = $subscription->items->data[0] ?? null;
+        $paymentMethod = $subscription->default_payment_method ?? null;
 
-        if (! $item) {
-            throw new RuntimeException('The Stripe subscription has no billable item.');
+        if (is_string($paymentMethod) && $paymentMethod !== '') {
+            $paymentMethod = $this->stripe->paymentMethods->retrieve($paymentMethod, []);
         }
 
-        $priceId = $this->ensureRecurringPrice($targetPlan);
+        return [
+            'amount_due' => $this->prorationAmount($preview) / 100,
+            'currency' => strtoupper((string) $preview->currency),
+            'proration_date' => Carbon::createFromTimestamp($prorationDate),
+            'period_end' => ! empty($item->current_period_end)
+                ? Carbon::createFromTimestamp((int) $item->current_period_end)
+                : null,
+            'payment_method_brand' => $paymentMethod?->card?->brand,
+            'payment_method_last4' => $paymentMethod?->card?->last4,
+        ];
+    }
+
+    public function upgrade(Studio $studio, PlatformSubscriptionPlan $targetPlan): array
+    {
+        [$subscription, $item, $priceId] = $this->upgradeContext($studio, $targetPlan);
         $prorationDate = now()->timestamp;
 
         $preview = $this->stripe->invoices->createPreview([
@@ -197,6 +212,31 @@ class PlatformStripeBillingService
             'invoice.payment_failed' => $this->syncInvoice($object, $event->type),
             default => null,
         };
+    }
+
+    private function upgradeContext(Studio $studio, PlatformSubscriptionPlan $targetPlan): array
+    {
+        if (! $studio->stripe_subscription_id) {
+            throw new RuntimeException('No active Stripe subscription was found for this studio.');
+        }
+
+        $currentPlan = $studio->platformSubscriptionPlan;
+
+        if ($currentPlan && (float) $targetPlan->price <= (float) $currentPlan->price) {
+            throw new RuntimeException('This action only supports immediate upgrades to a higher-priced plan.');
+        }
+
+        $subscription = $this->stripe->subscriptions->retrieve($studio->stripe_subscription_id, [
+            'expand' => ['items.data.price', 'latest_invoice', 'default_payment_method'],
+        ]);
+
+        $item = $subscription->items->data[0] ?? null;
+
+        if (! $item) {
+            throw new RuntimeException('The Stripe subscription has no billable item.');
+        }
+
+        return [$subscription, $item, $this->ensureRecurringPrice($targetPlan)];
     }
 
     private function ensureCustomer(Studio $studio): string
