@@ -23,10 +23,18 @@ class ResolveStudioTenant
             return $next($request);
         }
 
-        $hostStudio = $this->resolveFromHost($request);
+        $hostStudio = $this->resolveStudioFromHost($request);
         $userStudio = $this->resolveFromAuthenticatedUser($request);
 
         if ($hostStudio) {
+            if (! $hostStudio->isActive()) {
+                return response()->view('errors.studio-inactive', [
+                    'studio' => $hostStudio,
+                    'billingUrl' => $this->centralUrl('/customer/billing'),
+                    'loginUrl' => $this->centralUrl('/login'),
+                ], 402);
+            }
+
             if ($request->user()) {
                 $this->authorizeUserForStudio($request, $hostStudio);
             }
@@ -52,7 +60,7 @@ class ResolveStudioTenant
             return $next($request);
         }
 
-        abort(404, 'Studio not found or subscription access has ended.');
+        abort(404, 'Studio not found.');
     }
 
     private function authorizeUserForStudio(Request $request, Studio $studio): void
@@ -87,7 +95,7 @@ class ResolveStudioTenant
         return $studio?->isActive() ? $studio : null;
     }
 
-    private function resolveFromHost(Request $request): ?Studio
+    private function resolveStudioFromHost(Request $request): ?Studio
     {
         $host = strtolower($request->getHost());
 
@@ -101,7 +109,7 @@ class ResolveStudioTenant
             ->with('studio')
             ->first();
 
-        if ($domain && $domain->studio?->isActive()) {
+        if ($domain?->studio) {
             return $domain->studio;
         }
 
@@ -109,36 +117,32 @@ class ResolveStudioTenant
 
         if ($rootDomain && str_ends_with($host, '.' . $rootDomain)) {
             $subdomain = str_replace('.' . $rootDomain, '', $host);
-            $studio = Studio::query()->where('subdomain', $subdomain)->first();
-
-            return $studio?->isActive() ? $studio : null;
+            return Studio::query()->where('subdomain', $subdomain)->first();
         }
 
-        $studio = Studio::query()->where('custom_domain', $host)->first();
+        return Studio::query()->where('custom_domain', $host)->first();
+    }
 
-        return $studio?->isActive() ? $studio : null;
+    private function centralUrl(string $path = '/'): string
+    {
+        $base = rtrim((string) config('app.url'), '/');
+        return $base . '/' . ltrim($path, '/');
     }
 
     private function isCentralDomain(Request $request): bool
     {
-        $host = strtolower($request->getHost());
-        $centralDomains = array_map('strtolower', config('saas.central_domains', []));
-
-        return in_array($host, $centralDomains, true);
+        return in_array(strtolower($request->getHost()), array_map('strtolower', config('saas.central_domains', [])), true);
     }
 
     private function isRootDomain(Request $request): bool
     {
         $rootDomain = strtolower((string) config('saas.root_domain'));
-
         return $rootDomain !== '' && strtolower($request->getHost()) === $rootDomain;
     }
 
     private function isPlatformWebhookPath(Request $request): bool
     {
-        return $request->is('webhooks/platform-stripe')
-            || $request->is('webhooks/stripe')
-            || $request->is('webhooks/hitpay');
+        return $request->is('webhooks/platform-stripe') || $request->is('webhooks/stripe') || $request->is('webhooks/hitpay');
     }
 
     private function isCentralPlatformPath(Request $request): bool
@@ -147,14 +151,8 @@ class ResolveStudioTenant
             return false;
         }
 
-        return $request->is('/')
-            || $request->is('login')
-            || $request->is('register')
-            || $request->is('forgot-password')
-            || $request->is('reset-password*')
-            || $request->is('customer*')
-            || $request->is('superadmin*')
-            || $request->is('institutes*');
+        return $request->is('/') || $request->is('login') || $request->is('register') || $request->is('forgot-password')
+            || $request->is('reset-password*') || $request->is('customer*') || $request->is('superadmin*') || $request->is('institutes*');
     }
 
     private function isStudioAreaPath(Request $request): bool
@@ -165,8 +163,6 @@ class ResolveStudioTenant
     private function isLocalDevelopmentHost(Request $request): bool
     {
         $host = strtolower($request->getHost());
-
-        return in_array($host, ['localhost', '127.0.0.1'], true)
-            || str_ends_with($host, '.test');
+        return in_array($host, ['localhost', '127.0.0.1'], true) || str_ends_with($host, '.test');
     }
 }
