@@ -27,16 +27,28 @@ class StudentPaymentController extends Controller
             ->orderByDesc('payments.created_at')
             ->paginate(15);
 
-        $upcomingSubscriptions = StudioSubscription::query()
+        $activeSubscriptions = StudioSubscription::query()
             ->with('classModel')
             ->where('user_id', $studentId)
             ->whereIn('status', ['active', 'trialing', 'past_due'])
-            ->whereNotNull('next_billing_at')
-            ->whereBetween('next_billing_at', [now()->startOfMinute(), now()->addDays(3)->endOfDay()])
             ->orderBy('next_billing_at')
             ->get();
 
-        return view('student.payments.index', compact('payments', 'upcomingSubscriptions'));
+        $upcomingSubscriptions = $activeSubscriptions
+            ->filter(fn (StudioSubscription $subscription) =>
+                $subscription->next_billing_at
+                && $subscription->next_billing_at->between(
+                    now()->startOfMinute(),
+                    now()->copy()->addDays(3)->endOfDay()
+                )
+            )
+            ->values();
+
+        return view('student.payments.index', compact(
+            'payments',
+            'activeSubscriptions',
+            'upcomingSubscriptions'
+        ));
     }
 
     public function downloadReceipt(int $id)
