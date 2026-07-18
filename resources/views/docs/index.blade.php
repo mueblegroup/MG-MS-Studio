@@ -18,6 +18,21 @@
         $previousSlug = $currentIndex > 0 ? $allPages->keys()->get($currentIndex - 1) : null;
         $nextSlug = $currentIndex !== false && $currentIndex < $allPages->count() - 1 ? $allPages->keys()->get($currentIndex + 1) : null;
         $dashboardUrl = url('/');
+        $docsSearchIndex = $allPages->map(function ($page, $slug) {
+            return [
+                'slug' => $slug,
+                'title' => $page['title'],
+                'summary' => $page['summary'],
+                'role' => $page['role'],
+                'url' => route('docs.show', $slug),
+                'text' => strtolower(
+                    $page['title'].' '.
+                    $page['summary'].' '.
+                    $page['role'].' '.
+                    implode(' ', $page['steps'] ?? [])
+                ),
+            ];
+        })->values()->all();
     @endphp
 
     <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -81,7 +96,7 @@
                     <p class="mt-4 max-w-3xl text-base font-medium leading-7 text-slate-600 sm:text-lg">{{ $currentPage['summary'] }}</p>
                 </div>
 
-                <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <div id="steps" class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                     <h2 class="flex items-center gap-3 text-xl font-black text-slate-950">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500 text-white"><i class="bx bx-list-check text-xl"></i></span>
                         Step-by-step
@@ -97,7 +112,7 @@
                 </div>
 
                 @if(!empty($currentPage['tips']))
-                    <div class="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-6 sm:p-8">
+                    <div id="notes" class="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-6 sm:p-8">
                         <h2 class="flex items-center gap-2 text-lg font-black text-amber-950"><i class="bx bx-bulb text-2xl"></i> Important notes</h2>
                         <ul class="mt-4 space-y-3">
                             @foreach($currentPage['tips'] as $tip)
@@ -140,14 +155,7 @@
     </div>
 
     <script>
-        const docs = @json($allPages->map(fn ($page, $slug) => [
-            'slug' => $slug,
-            'title' => $page['title'],
-            'summary' => $page['summary'],
-            'role' => $page['role'],
-            'url' => route('docs.show', $slug),
-            'text' => strtolower($page['title'].' '.$page['summary'].' '.$page['role'].' '.implode(' ', $page['steps'] ?? [])),
-        ])->values());
+        const docs = @json($docsSearchIndex);
 
         const input = document.getElementById('docsSearch');
         const results = document.getElementById('searchResults');
