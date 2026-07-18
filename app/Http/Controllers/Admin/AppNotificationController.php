@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AppNotification;
 use App\Models\User;
+use App\Support\TenantManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -12,11 +13,15 @@ class AppNotificationController extends Controller
 {
     public function index()
     {
+        $studioId = $this->currentStudioId();
+
         $notifications = AppNotification::with(['user', 'creator'])
+            ->where('studio_id', $studioId)
             ->latest()
             ->paginate(20);
 
         $users = User::query()
+            ->where('studio_id', $studioId)
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'role']);
 
@@ -25,6 +30,8 @@ class AppNotificationController extends Controller
 
     public function store(Request $request)
     {
+        $studioId = $this->currentStudioId();
+
         $validated = $request->validate([
             'recipient_type' => 'required|in:all,specific',
             'user_ids' => 'nullable|array',
@@ -35,19 +42,21 @@ class AppNotificationController extends Controller
             'action_url' => 'nullable|string|max:2048',
         ]);
 
-        $recipientType = $validated['recipient_type'];
+        $eligibleUsers = User::query()->where('studio_id', $studioId);
 
-        $userIds = $recipientType === 'all'
-            ? User::query()->pluck('id')
-            : collect($validated['user_ids'] ?? [])->filter()->unique()->values();
+        $userIds = $validated['recipient_type'] === 'all'
+            ? $eligibleUsers->pluck('id')
+            : $eligibleUsers
+                ->whereIn('id', collect($validated['user_ids'] ?? [])->filter()->unique())
+                ->pluck('id');
 
         if ($userIds->isEmpty()) {
-            return back()->with('error', 'Please choose at least one user.')->withInput();
+            return back()->with('error', 'Please choose at least one user from this studio.')->withInput();
         }
 
         $now = now();
-
         $rows = $userIds->map(fn ($userId) => [
+            'studio_id' => $studioId,
             'user_id' => $userId,
             'created_by' => auth()->id(),
             'title' => $validated['title'],
@@ -63,5 +72,13 @@ class AppNotificationController extends Controller
         return redirect()
             ->route('admin.notifications.index')
             ->with('success', count($rows) . ' notification(s) sent successfully.');
+    }
+
+    private function currentStudioId(): int
+    {
+        $studio = app(TenantManager::class)->current();
+        abort_unless($studio, 404, 'Studio context is required.');
+
+        return (int) $studio->id;
     }
 }
