@@ -3,7 +3,7 @@
 
         <div class="mb-6">
             <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Payment History</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Your payment records, pending dues, upcoming subscription charges, and downloadable receipts.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Your subscriptions, upcoming charges, payment records, and downloadable receipts.</p>
         </div>
 
         @if(session('success'))
@@ -16,6 +16,46 @@
             <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
                 {{ session('error') }}
             </div>
+        @endif
+
+        @if($activeSubscriptions->isNotEmpty())
+            <section class="mb-5 overflow-hidden rounded-2xl border border-blue-200 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/20">
+                <div class="border-b border-blue-200 px-5 py-4 dark:border-blue-900/50">
+                    <h2 class="flex items-center gap-2 text-base font-extrabold text-blue-950 dark:text-blue-100">
+                        <i class="bx bx-calendar-check text-xl"></i>
+                        My active subscriptions
+                    </h2>
+                    <p class="mt-1 text-xs font-semibold text-blue-800 dark:text-blue-300">The end date is the final day of access and the date recurring billing is scheduled to stop.</p>
+                </div>
+
+                <div class="divide-y divide-blue-200 dark:divide-blue-900/40">
+                    @foreach($activeSubscriptions as $subscription)
+                        @php
+                            $scheduledEndDate = $subscription->meta['scheduled_class_end_date'] ?? $subscription->classModel?->until_date;
+                            $endAt = $scheduledEndDate ? \Carbon\Carbon::parse($scheduledEndDate)->endOfDay() : null;
+                        @endphp
+                        <div class="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-extrabold text-gray-950 dark:text-white">{{ $subscription->classModel?->name ?? 'Subscription class' }}</p>
+                                <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{{ ucfirst($subscription->status) }} · {{ ucfirst($subscription->billing_interval ?? 'recurring') }} billing</p>
+                            </div>
+                            <div class="text-left sm:text-right">
+                                <p class="text-sm font-extrabold text-gray-950 dark:text-white">{{ strtoupper($subscription->currency ?? 'MYR') }} {{ number_format((float) $subscription->amount, 2) }}</p>
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ strtoupper($subscription->provider ?? '—') }}</p>
+                            </div>
+                            <div class="sm:text-right">
+                                @if($endAt)
+                                    <span class="inline-flex rounded-full bg-blue-200 px-3 py-1 text-xs font-extrabold text-blue-900 dark:bg-blue-900/50 dark:text-blue-100">Ends {{ $endAt->format('d M Y') }}</span>
+                                    <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">Billing stops after the final day</p>
+                                @else
+                                    <span class="inline-flex rounded-full bg-gray-200 px-3 py-1 text-xs font-extrabold text-gray-700 dark:bg-gray-700 dark:text-gray-200">No scheduled end date</span>
+                                    <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">Continues until cancelled</p>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
         @endif
 
         @if($upcomingSubscriptions->isNotEmpty())
@@ -115,19 +155,13 @@
                                     </div>
 
                                     @if($p->billing_reason === 'subscription_cycle')
-                                        <div class="mt-1 text-xs font-semibold text-amber-600 dark:text-amber-300">
-                                            Subscription renewal
-                                        </div>
+                                        <div class="mt-1 text-xs font-semibold text-amber-600 dark:text-amber-300">Subscription renewal</div>
                                     @elseif($p->billing_reason === 'subscription_initial')
-                                        <div class="mt-1 text-xs font-semibold text-amber-600 dark:text-amber-300">
-                                            Subscription start
-                                        </div>
+                                        <div class="mt-1 text-xs font-semibold text-amber-600 dark:text-amber-300">Subscription start</div>
                                     @endif
 
                                     @if($p->provider_reference)
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">
-                                            {{ $p->provider_reference }}
-                                        </div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ $p->provider_reference }}</div>
                                     @endif
                                 </td>
 
@@ -140,9 +174,7 @@
                                 </td>
 
                                 <td class="px-4 py-4">
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $badge }}">
-                                        {{ strtoupper($p->status ?? '—') }}
-                                    </span>
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $badge }}">{{ strtoupper($p->status ?? '—') }}</span>
                                 </td>
 
                                 <td class="px-4 py-4 text-right">
@@ -150,31 +182,25 @@
                                         @if($canPay)
                                             <form method="POST" action="{{ route('shop.checkout.payments.retry', $p->id) }}">
                                                 @csrf
-                                                <button type="submit"
-                                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
+                                                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
                                                     <i class="bx bx-credit-card"></i> Pay Now
                                                 </button>
                                             </form>
                                         @endif
 
                                         @if($canDownload)
-                                            <a href="{{ route('student.payments.receipt.download', $p->id) }}"
-                                               class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition">
+                                            <a href="{{ route('student.payments.receipt.download', $p->id) }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition">
                                                 <i class="bx bx-download"></i> Receipt
                                             </a>
                                         @elseif(!$canPay)
-                                            <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800">
-                                                Unavailable
-                                            </span>
+                                            <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800">Unavailable</span>
                                         @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    No payments found.
-                                </td>
+                                <td colspan="6" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">No payments found.</td>
                             </tr>
                         @endforelse
                     </tbody>
