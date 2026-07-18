@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\TwoFactorAuthenticationService;
 use App\Support\TenantManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,23 +13,21 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
-    public function edit(Request $request): View|RedirectResponse
+    public function edit(Request $request, TwoFactorAuthenticationService $twoFactor): View|RedirectResponse
     {
         if (! app(TenantManager::class)->current() && $request->user()?->role === 'admin') {
             return redirect()->route('customer.account');
         }
 
+        $user = $request->user();
+        $this->ensureTwoFactorSetup($user, $twoFactor);
+
         return view('profile.edit', [
-            'user' => $request->user(),
+            'user' => $user->fresh(),
+            'twoFactorProvisioningUri' => $twoFactor->provisioningUri((string) $user->two_factor_secret, $user->email),
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $request->user()->fill($request->validated());
@@ -42,9 +41,6 @@ class ProfileController extends Controller
         return Redirect::back()->with('status', 'profile-updated');
     }
 
-    /**
-     * Delete the user's account.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
@@ -52,14 +48,23 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-
         Auth::logout();
-
         $user->delete();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    private function ensureTwoFactorSetup($user, TwoFactorAuthenticationService $twoFactor): void
+    {
+        if ($user->hasTwoFactorEnabled() || $user->two_factor_secret) {
+            return;
+        }
+
+        $user->forceFill([
+            'two_factor_secret' => $twoFactor->generateSecret(),
+            'two_factor_recovery_codes' => $twoFactor->generateRecoveryCodes(),
+        ])->save();
     }
 }
