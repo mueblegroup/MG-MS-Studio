@@ -81,5 +81,19 @@ const explainSubscriptionEndDate = () => {
     window.setTimeout(refresh, 0);
 };
 
+const renderDocumentationLink = () => {
+    if (window.location.pathname.startsWith('/docs') || document.getElementById('mueble-docs-link')) return;
+
+    const link = document.createElement('a');
+    link.id = 'mueble-docs-link';
+    link.href = '/docs';
+    link.setAttribute('aria-label', 'Open Mueble LMS documentation');
+    link.title = 'Help & Documentation';
+    link.className = 'fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-extrabold text-white shadow-2xl transition hover:-translate-y-0.5 hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200';
+    link.innerHTML = '<i class="bx bx-book-open text-xl"></i><span class="hidden sm:inline">Docs</span>';
+    document.body.appendChild(link);
+};
+
 document.addEventListener('DOMContentLoaded', renderSeatPromotion);
 document.addEventListener('DOMContentLoaded', explainSubscriptionEndDate);
+document.addEventListener('DOMContentLoaded', renderDocumentationLink);
