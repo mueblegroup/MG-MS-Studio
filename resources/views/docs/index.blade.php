@@ -11,7 +11,7 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800,900&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
+<body class="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased lg:h-screen lg:overflow-hidden">
     @php
         $allPages = collect($sections)->flatMap(fn ($section) => $section['pages'] ?? []);
         $currentIndex = $allPages->keys()->search($currentSlug);
@@ -58,8 +58,8 @@
         </div>
     </header>
 
-    <div class="mx-auto max-w-[1600px] lg:grid lg:grid-cols-[300px_minmax(0,1fr)_220px]">
-        <aside class="border-r border-slate-200 bg-white lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
+    <div class="mx-auto max-w-[1600px] lg:grid lg:h-[calc(100vh-4rem)] lg:grid-cols-[300px_minmax(0,1fr)_220px] lg:overflow-hidden">
+        <aside class="border-r border-slate-200 bg-white lg:h-full lg:overflow-y-auto">
             <div class="p-4 lg:p-5">
                 @if($viewerRole)
                     <div class="mb-5 rounded-2xl bg-orange-50 p-4 text-sm text-orange-900 ring-1 ring-orange-100">
@@ -85,7 +85,7 @@
             </div>
         </aside>
 
-        <main class="min-w-0 px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
+        <main id="top" class="min-w-0 px-5 py-8 sm:px-8 lg:h-full lg:overflow-y-auto lg:scroll-smooth lg:px-12 lg:py-12">
             <article class="mx-auto max-w-4xl">
                 <div class="mb-8">
                     <div class="mb-4 flex flex-wrap items-center gap-2">
@@ -122,7 +122,7 @@
                     </div>
                 @endif
 
-                <div class="mt-10 grid gap-4 sm:grid-cols-2">
+                <div class="mt-10 grid gap-4 pb-12 sm:grid-cols-2">
                     @if($previousSlug)
                         <a href="{{ route('docs.show', $previousSlug) }}" class="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-orange-300 hover:shadow-md">
                             <span class="text-xs font-black uppercase tracking-wide text-slate-400">Previous</span>
@@ -141,7 +141,7 @@
             </article>
         </main>
 
-        <aside class="hidden border-l border-slate-200 bg-white px-5 py-8 lg:sticky lg:top-16 lg:block lg:h-[calc(100vh-4rem)]">
+        <aside class="hidden border-l border-slate-200 bg-white px-5 py-8 lg:block lg:h-full lg:overflow-y-auto">
             <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">On this page</p>
             <nav class="mt-4 space-y-2 text-sm font-bold text-slate-600">
                 <a href="#top" class="block hover:text-orange-600">Overview</a>
