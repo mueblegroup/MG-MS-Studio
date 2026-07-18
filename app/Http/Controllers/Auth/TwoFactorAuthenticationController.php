@@ -17,10 +17,10 @@ class TwoFactorAuthenticationController extends Controller
     public function edit(Request $request): RedirectResponse
     {
         if (! app(TenantManager::class)->current() && $request->user()?->role === 'admin') {
-            return redirect()->route('customer.account', ['#two-factor']);
+            return redirect(route('customer.account').'#two-factor');
         }
 
-        return redirect()->route('profile.edit', ['#two-factor']);
+        return redirect(route('profile.edit').'#two-factor');
     }
 
     public function enable(Request $request, TwoFactorAuthenticationService $twoFactor, AuditLogService $audit): RedirectResponse
