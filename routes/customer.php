@@ -40,6 +40,7 @@ Route::middleware(['auth', 'central'])
         Route::post('messages/read-all', [PlatformMessageController::class, 'markAllRead'])->name('messages.read-all');
 
         Route::post('billing/checkout/{plan}', [PlatformBillingController::class, 'checkout'])->name('billing.checkout');
+        Route::get('billing/upgrade/{plan}/confirm', [PlatformBillingController::class, 'confirmUpgrade'])->name('billing.upgrade.confirm');
         Route::post('billing/upgrade/{plan}', [PlatformBillingController::class, 'upgrade'])->name('billing.upgrade');
         Route::post('billing/cancel', [PlatformBillingController::class, 'cancel'])->name('billing.cancel');
         Route::post('billing/resume', [PlatformBillingController::class, 'resume'])->name('billing.resume');
