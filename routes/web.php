@@ -34,8 +34,13 @@ use App\Http\Controllers\Student\StudentScheduleController;
 use App\Http\Controllers\Student\StudentPaymentController;
 use App\Http\Controllers\Admin\AppNotificationController as AdminAppNotificationController;
 use App\Http\Controllers\AppNotificationController;
+use App\Http\Controllers\DocumentationController;
 use App\Support\TenantManager;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/docs', [DocumentationController::class, 'index'])->name('docs.index');
+Route::get('/docs/{page}', [DocumentationController::class, 'index'])->name('docs.show');
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -78,210 +83,51 @@ Route::middleware('auth')->group(function () {
     abort_unless(auth()->user()->role === 'admin', 403);
     return app(\App\Http\Controllers\ProfileController::class)->destroy(request());
 })->middleware('auth')->name('profile.destroy');
-    Route::get('/logout', [LogoutController::class, 'logout'])->name('logout')->middleware('auth');
 });
 
 
-/* -------------------------------- */
-/*             ADMIN ROUTES         */
-/* -------------------------------- */
+/***** ADMIN ROUTES *****/
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
+    Route::get('/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
 
+    Route::get('/admins', [AdminController::class, 'admins'])->name('admin.admins');
+    Route::get('/admins/create', [AdminController::class, 'createAdmin'])->name('admin.admins.create');
+    Route::post('/admins', [AdminController::class, 'storeAdmin'])->name('admin.admins.store');
+    Route::get('/admins/{id}/edit', [AdminController::class, 'editAdmin'])->name('admin.admins.edit');
+    Route::put('/admins/{id}', [AdminController::class, 'updateAdmin'])->name('admin.admins.update');
+    Route::delete('/admins/{id}', [AdminController::class, 'destroyAdmin'])->name('admin.admins.destroy');
 
-/*----- Admin Routes (Admin)------*/
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/teachers', [AdminController::class, 'teachers'])->name('admin.teachers');
+    Route::get('/teachers/create', [AdminController::class, 'createTeacher'])->name('admin.teachers.create');
+    Route::post('/teachers', [AdminController::class, 'storeTeacher'])->name('admin.teachers.store');
+    Route::get('/teachers/{id}/edit', [AdminController::class, 'editTeacher'])->name('admin.teachers.edit');
+    Route::put('/teachers/{id}', [AdminController::class, 'updateTeacher'])->name('admin.teachers.update');
+    Route::delete('/teachers/{id}', [AdminController::class, 'destroyTeacher'])->name('admin.teachers.destroy');
+
+    Route::get('/students', [AdminController::class, 'students'])->name('admin.students');
+    Route::get('/students/create', [AdminController::class, 'createStudent'])->name('admin.students.create');
+    Route::post('/students', [AdminController::class, 'storeStudent'])->name('admin.students.store');
+    Route::get('/students/{id}/edit', [AdminController::class, 'editStudent'])->name('admin.students.edit');
+    Route::put('/students/{id}', [AdminController::class, 'updateStudent'])->name('admin.students.update');
+    Route::delete('/students/{id}', [AdminController::class, 'destroyStudent'])->name('admin.students.destroy');
+
+    Route::get('/classes', [ClassController::class, 'index'])->name('admin.classes');
+    Route::get('/classes/create', [ClassController::class, 'create'])->name('admin.classes.create');
+    Route::post('/classes', [ClassController::class, 'store'])->name('admin.classes.store');
+    Route::get('/classes/{classSession}/edit', [ClassController::class, 'edit'])->name('admin.classes.edit');
+    Route::put('/classes/{classSession}', [ClassController::class, 'update'])->name('admin.classes.update');
+    Route::delete('/classes/{classSession}', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
+    Route::get('/classes/data', [ClassController::class, 'data'])->name('admin.classes.data');
+
+    Route::resource('plans', PlanController::class)->names('admin.plans');
+    Route::resource('plans.sessions', PlanSessionController::class)->names('admin.plans.sessions');
+    Route::post('/plans/{plan}/assign', [UserPlanController::class, 'store'])->name('admin.plans.assign');
+
+    Route::post('classcards/classcard-purchases', [UserClassCardController::class, 'store'])
+        ->name('classcards.classcard-purchases.store');
+
+    Route::resource('classcards', ClassCardController::class);
 });
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/payments', [AdminController::class, 'payments'])->name('admin.payments');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/students', [AdminController::class, 'students'])->name('admin.students');
-});
-/*----- Teacher Routes (Admin)------*/
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/teachers', [AdminController::class, 'teachers'])->name('admin.teachers');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/teachers/create', [AdminController::class, 'createTeacher'])->name('admin.teachers.create');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::post('/admin/teachers/store', [AdminController::class, 'storeTeacher'])->name('admin.teachers.store');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/teachers/{id}/edit', [AdminController::class, 'editTeacher'])->name('admin.teachers.edit');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::put('/admin/teachers/{id}/update', [AdminController::class, 'updateTeacher'])->name('admin.teachers.update');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::delete('/admin/teachers/{id}/destroy', [AdminController::class, 'destroyTeacher'])->name('admin.teachers.destroy');
-});
-
-/*----- Student Routes (Admin)------*/
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/students', [AdminController::class, 'students'])->name('admin.students');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/students/create', [AdminController::class, 'createStudent'])->name('admin.students.create');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::post('/admin/students/store', [AdminController::class, 'storeStudent'])->name('admin.students.store');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/students/{id}/edit', [AdminController::class, 'editStudent'])->name('admin.students.edit');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::put('/admin/students/{id}/update', [AdminController::class, 'updateStudent'])->name('admin.students.update');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::delete('/admin/students/{id}/destroy', [AdminController::class, 'destroyStudent'])->name('admin.students.destroy');
-});
-
-/*----- Admin Routes (Admin)------*/
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/admins', [AdminController::class, 'admins'])->name('admin.admins');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/admins/create', [AdminController::class, 'createAdmin'])->name('admin.admins.create');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::post('/admin/admins/store', [AdminController::class, 'storeAdmin'])->name('admin.admins.store');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/admins/{id}/edit', [AdminController::class, 'editAdmin'])->name('admin.admins.edit');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::put('/admin/admins/{id}/update', [AdminController::class, 'updateAdmin'])->name('admin.admins.update');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::delete('/admin/admins/{id}/destroy', [AdminController::class, 'destroyAdmin'])->name('admin.admins.destroy');
-});
-
-/*----- User Routes (Admin)------*/
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/users/create', [AdminController::class, 'create'])->name('admin.users.create');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::post('/admin/users/store', [AdminController::class, 'store'])->name('admin.users.store');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/users/{id}/edit', [AdminController::class, 'edit'])->name('admin.users.edit');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::put('/admin/users/{id}/update', [AdminController::class, 'update'])->name('admin.users.update');
-});
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::delete('/admin/users/{id}/destroy', [AdminController::class, 'destroy'])->name('admin.users.destroy');
-});
-
-/*----- Class Routes (Admin)------*/
-Route::middleware(['auth','role:admin'])->group(function () {
-    Route::get('/admin/classes', [ClassController::class, 'index'])->name('admin.classes');
-
-    Route::get('/admin/classes/create', [ClassController::class, 'create'])->name('admin.classes.create');
-    Route::post('/admin/classes/store', [ClassController::class, 'store'])->name('admin.classes.store');
-
-    Route::delete('/admin/classes/{classSession}/destroy', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
-    Route::get('/admin/classes/{classSession}/edit', [ClassController::class, 'edit'])->name('admin.classes.edit');
-    Route::put('/admin/classes/{classSession}/update', [ClassController::class, 'update'])->name('admin.classes.update');
-
-});
-
-Route::middleware(['auth', 'role:admin'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-
-        Route::get('class-assignments', [ClassAssignmentController::class, 'index'])
-            ->name('class-assignments.index');
-
-        Route::get('class-assignments/create', [ClassAssignmentController::class, 'create'])
-            ->name('class-assignments.create');
-
-        Route::post('class-assignments', [ClassAssignmentController::class, 'store'])
-            ->name('class-assignments.store');
-
-        Route::delete('class-assignments/{assignment}', [ClassAssignmentController::class, 'destroy'])
-            ->name('class-assignments.destroy');
-    });
-
-/*----- Plan Routes (Admin)------*/
-Route::middleware(['auth','role:admin'])->group(function () {
-    Route::get('/admin/plans', [PlanController::class, 'index'])->name('admin.plans');
-    Route::get('/admin/plans/{plan}/show', [PlanController::class, 'show'])->name('admin.plans.show');
-    Route::get('/admin/plans/create', [PlanController::class, 'create'])->name('admin.plans.create');
-    Route::post('/admin/plans/store', [PlanController::class, 'store'])->name('admin.plans.store');
-
-    Route::delete('/admin/plans/{plan}/destroy', [PlanController::class, 'destroy'])->name('admin.plans.destroy');
-    Route::get('/admin/plans/{plan}/edit', [PlanController::class, 'edit'])->name('admin.plans.edit');
-    Route::put('/admin/plans/{plan}/update', [PlanController::class, 'update'])->name('admin.plans.update');
-
-    // Plan sessions (inside a plan)
-    Route::get('/admin/plans/{plan}/sessions/{session}/edit', [PlanController::class, 'editSession'])->name('admin.plans.sessions.edit');
-    Route::put('/admin/plans/{plan}/sessions/{session}', [PlanSessionController::class, 'update'])->name('admin.plans.sessions.update');
-    Route::delete('/admin/plans/{plan}/sessions/{session}', [PlanSessionController::class, 'destroy'])->name('admin.plans.sessions.destroy');
-    Route::get('/admin/plans/{plan}/sessions/{session}/create', [PlanController::class, 'createSession'])->name('admin.plans.sessions.create');
-    Route::post('/admin/plans/{plan}/sessions/{session}/store', [PlanController::class, 'storeSession'])->name('admin.plans.sessions.store');
-});
-
-Route::middleware(['auth','role:admin'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-    Route::get('plan-assignments', [UserPlanController::class, 'index'])->name('planassignments.index');
-    Route::get('plan-assignments/create', [UserPlanController::class, 'create'])->name('planassignments.create');
-    Route::post('plan-assignments', [UserPlanController::class, 'store'])->name('planassignments.store');
-    Route::delete('plan-assignments/{userPlan}', [UserPlanController::class, 'destroy'])->name('planassignments.destroy');
-    });
-
-/*---- Notification ----*/
-Route::middleware(['auth', 'role:admin'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-        Route::get('notifications', [AdminAppNotificationController::class, 'index'])->name('notifications.index');
-        Route::get('notifications/{notification}/show', [AdminAppNotificationController::class, 'show'])->name('notifications.show');
-        Route::get('notifications/{notification}/edit', [AdminAppNotificationController::class, 'edit'])->name('notifications.edit');
-        Route::put('notifications/{notification}/update', [AdminAppNotificationController::class, 'update'])->name('notifications.update');
-        Route::delete('notifications/{notification}/destroy', [AdminAppNotificationController::class, 'destroy'])->name('notifications.destroy');
-        Route::get('notifications/create', [AdminAppNotificationController::class, 'create'])->name('notifications.create');
-        Route::post('notifications/store', [AdminAppNotificationController::class, 'store'])->name('notifications.store');
-    });
-      
-/*----- Class Card Routes (Admin)------*/
-Route::middleware(['auth', 'role:admin'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-
-        Route::get('classcards/classcard-purchases/{userClassCard}/show', [UserClassCardController::class, 'show'])
-            ->name('classcards.classcard-purchases.show');
-
-        Route::get('classcards/classcard-purchases/{userClassCard}/edit', [UserClassCardController::class, 'edit'])
-            ->name('classcards.classcard-purchases.edit');
-
-        Route::put('classcards/classcard-purchases/{userClassCard}', [UserClassCardController::class, 'update'])
-            ->name('classcards.classcard-purchases.update');
-
-        Route::delete('classcards/classcard-purchases/{userClassCard}', [UserClassCardController::class, 'destroy'])
-            ->name('classcards.classcard-purchases.destroy');
-        // Purchases CRUD
-        Route::resource('classcards/classcard-purchases', UserClassCardController::class);
-        Route::get('classcards/classcard-purchases', [UserClassCardController::class, 'index'])
-            ->name('classcards.classcard-purchases');
-
-        Route::get('classcards/classcard-purchases/create', [UserClassCardController::class, 'create'])
-            ->name('classcards.classcard-purchases.create');
-
-        Route::post('classcards/classcard-purchases', [UserClassCardController::class, 'store'])
-            ->name('classcards.classcard-purchases.store');
-
-
-        // ClassCard product CRUD (this already includes index/create/store/edit/update/destroy)
-        Route::resource('classcards', ClassCardController::class);
-
-
-    });
 
 /*******SHOP ROUTES *******/
 
