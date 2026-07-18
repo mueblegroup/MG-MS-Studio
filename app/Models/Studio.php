@@ -80,7 +80,9 @@ class Studio extends Model
 
     public function isSubscriptionExpired(): bool
     {
-        return $this->status === 'active' && $this->subscription_ends_at && $this->subscription_ends_at->isPast();
+        return in_array($this->status, ['active', 'inactive'], true)
+            && $this->subscription_ends_at
+            && $this->subscription_ends_at->isPast();
     }
 
     public function isManuallySuspended(): bool
@@ -95,7 +97,7 @@ class Studio extends Model
         }
 
         if ($this->isTrialExpired() || $this->isSubscriptionExpired()) {
-            return 'expired';
+            return 'inactive';
         }
 
         return $this->status;
