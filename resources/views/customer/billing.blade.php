@@ -37,7 +37,7 @@
         @if ($effectiveStatus === 'inactive')
             <div class="rounded-[2rem] border border-red-200 bg-red-50 p-6 dark:border-red-900/50 dark:bg-red-950/30">
                 <h2 class="text-xl font-black text-red-900 dark:text-red-100">Studio access is inactive</h2>
-                <p class="mt-2 text-sm font-semibold leading-6 text-red-700 dark:text-red-200">The paid period or trial has ended. The studio domain is paused until a studio owner renews or subscribes to another available plan below. Existing studio data remains محفوظ and will return after successful payment.</p>
+                <p class="mt-2 text-sm font-semibold leading-6 text-red-700 dark:text-red-200">The paid period or trial has ended. The studio domain is paused until a studio owner renews or subscribes to another available plan below. Existing studio data remains safely stored and will return after successful payment.</p>
             </div>
         @endif
 
