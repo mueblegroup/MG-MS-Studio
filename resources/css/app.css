@@ -41,6 +41,27 @@
     svg {
         max-width: 100%;
     }
+
+    @media (min-width: 768px) {
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body > div:first-of-type {
+            height: 100vh;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        body > div:first-of-type > div:last-of-type {
+            height: 100vh;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+    }
 }
 
 @layer components {
