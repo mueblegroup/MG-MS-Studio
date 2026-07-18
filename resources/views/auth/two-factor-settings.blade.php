@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Two-Factor Authentication</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if (! $user->hasTwoFactorEnabled() && $provisioningUri)
+        <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js" defer></script>
+    @endif
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-white">
     <main class="mx-auto max-w-4xl px-4 py-10">
@@ -50,11 +53,22 @@
                     </form>
                 @else
                     <h2 class="text-xl font-black">Set up your authenticator</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">In Google Authenticator, Microsoft Authenticator, Authy, 1Password, or Bitwarden, choose to enter a setup key manually.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Open your authenticator app, choose to add an account, then scan the QR code below. You can use the manual setup key if scanning is unavailable.</p>
+
+                    @if ($provisioningUri)
+                        <div class="mt-5 rounded-3xl border border-slate-200 bg-white p-5 text-center dark:border-slate-700 dark:bg-white">
+                            <p class="text-xs font-black uppercase tracking-wider text-slate-500">Scan with your authenticator app</p>
+                            <div id="two-factor-qr" class="mx-auto mt-4 flex min-h-64 max-w-64 items-center justify-center rounded-2xl bg-white p-3" aria-label="Two-factor authentication QR code">
+                                <p id="two-factor-qr-loading" class="text-sm font-bold text-slate-500">Generating secure QR code…</p>
+                            </div>
+                            <p class="mt-3 text-xs font-semibold text-slate-500">The QR code contains the same private setup information shown below. Do not share it.</p>
+                        </div>
+                    @endif
+
                     <div class="mt-5 rounded-2xl bg-slate-100 p-5 dark:bg-slate-950">
                         <p class="text-xs font-black uppercase tracking-wider text-slate-500">Account</p>
                         <p class="mt-1 font-bold">{{ $user->email }}</p>
-                        <p class="mt-4 text-xs font-black uppercase tracking-wider text-slate-500">Setup key</p>
+                        <p class="mt-4 text-xs font-black uppercase tracking-wider text-slate-500">Manual setup key</p>
                         <code class="mt-2 block break-all text-lg font-black tracking-widest text-orange-600">{{ $user->two_factor_secret }}</code>
                         <p class="mt-3 text-xs text-slate-500">Type: Time based · Digits: 6 · Period: 30 seconds</p>
                     </div>
@@ -104,5 +118,42 @@
             </div>
         </section>
     </main>
+
+    @if (! $user->hasTwoFactorEnabled() && $provisioningUri)
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const container = document.getElementById('two-factor-qr');
+
+                if (!container) {
+                    return;
+                }
+
+                try {
+                    if (typeof window.qrcode !== 'function') {
+                        throw new Error('QR library unavailable');
+                    }
+
+                    const qr = window.qrcode(0, 'M');
+                    qr.addData(@json($provisioningUri));
+                    qr.make();
+                    container.innerHTML = qr.createSvgTag({
+                        cellSize: 5,
+                        margin: 4,
+                        scalable: true,
+                    });
+
+                    const svg = container.querySelector('svg');
+                    if (svg) {
+                        svg.setAttribute('role', 'img');
+                        svg.setAttribute('aria-label', 'Scan this QR code with your authenticator app');
+                        svg.classList.add('h-auto', 'w-full', 'max-w-60');
+                    }
+                } catch (error) {
+                    container.innerHTML = '<p class="text-sm font-bold text-amber-700">QR code could not be generated. Use the manual setup key below.</p>';
+                    console.error('Unable to generate two-factor QR code.', error);
+                }
+            });
+        </script>
+    @endif
 </body>
 </html>
