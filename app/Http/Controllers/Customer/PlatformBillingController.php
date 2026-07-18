@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Stripe\Event;
 use Throwable;
 
@@ -42,8 +43,35 @@ class PlatformBillingController extends Controller
         }
     }
 
+    public function confirmUpgrade(Request $request, PlatformSubscriptionPlan $plan, PlatformStripeBillingService $billing): View|RedirectResponse
+    {
+        $studio = $this->ownedStudio($request);
+        abort_unless($plan->is_active, 404);
+
+        try {
+            $preview = $billing->previewUpgrade($studio, $plan);
+
+            return view('customer.billing-upgrade-confirm', [
+                'studio' => $studio,
+                'currentPlan' => $studio->platformSubscriptionPlan,
+                'targetPlan' => $plan,
+                'preview' => $preview,
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('customer.billing')->with('error', $exception->getMessage());
+        }
+    }
+
     public function upgrade(Request $request, PlatformSubscriptionPlan $plan, PlatformStripeBillingService $billing): RedirectResponse
     {
+        $request->validate([
+            'acknowledge_immediate_charge' => ['accepted'],
+        ], [
+            'acknowledge_immediate_charge.accepted' => 'You must acknowledge that Stripe may immediately charge the saved payment method before continuing.',
+        ]);
+
         $studio = $this->ownedStudio($request);
         abort_unless($plan->is_active, 404);
 
