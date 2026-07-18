@@ -50,6 +50,29 @@ class ClassModel extends Model
         return $this->hasMany(StudioSubscription::class, 'class_id');
     }
 
+    public function getRegisteredStudentsCountAttribute(): int
+    {
+        $assignedStudentIds = ClassSessionAssignment::query()
+            ->whereHas('classSession', fn ($query) => $query->where('class_id', $this->id))
+            ->where(function ($query) {
+                $query->whereNull('status')
+                    ->orWhereNotIn('status', ['cancelled', 'inactive']);
+            })
+            ->distinct()
+            ->pluck('user_id');
+
+        $subscriptionStudentIds = $this->studioSubscriptions()
+            ->whereIn('status', ['active', 'trialing', 'past_due'])
+            ->distinct()
+            ->pluck('user_id');
+
+        return $assignedStudentIds
+            ->merge($subscriptionStudentIds)
+            ->filter()
+            ->unique()
+            ->count();
+    }
+
     public function isSubscriptionClass(): bool
     {
         return $this->type === 'subscription';
