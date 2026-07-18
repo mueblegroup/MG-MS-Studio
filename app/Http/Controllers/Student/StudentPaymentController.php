@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\StudioSubscription;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +27,16 @@ class StudentPaymentController extends Controller
             ->orderByDesc('payments.created_at')
             ->paginate(15);
 
-        return view('student.payments.index', compact('payments'));
+        $upcomingSubscriptions = StudioSubscription::query()
+            ->with('classModel')
+            ->where('user_id', $studentId)
+            ->whereIn('status', ['active', 'trialing', 'past_due'])
+            ->whereNotNull('next_billing_at')
+            ->whereBetween('next_billing_at', [now()->startOfMinute(), now()->addDays(3)->endOfDay()])
+            ->orderBy('next_billing_at')
+            ->get();
+
+        return view('student.payments.index', compact('payments', 'upcomingSubscriptions'));
     }
 
     public function downloadReceipt(int $id)
@@ -40,7 +50,6 @@ class StudentPaymentController extends Controller
             ->findOrFail($id);
 
         $payload = $this->normalizePayload($payment->payload ?? null);
-
         $invoiceNumber = $this->makeInvoiceNumber($payment);
         $issuedAt = $payment->paid_at ?? $payment->created_at;
 
