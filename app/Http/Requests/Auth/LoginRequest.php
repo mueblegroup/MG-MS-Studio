@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\Studio;
+use App\Models\User;
 use App\Support\TenantManager;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -38,7 +41,8 @@ class LoginRequest extends FormRequest
      * Attempt to authenticate the request's credentials.
      *
      * Central login is for platform users only: superadmin and client/studio admins.
-     * Studio login is scoped to the current studio tenant.
+     * Studio login accepts users assigned to the current studio and the client owner
+     * whose account owns the current studio through studios.owner_user_id.
      * Teachers and students must login through their studio subdomain.
      *
      * @throws \Illuminate\Validation\ValidationException
@@ -53,7 +57,7 @@ class LoginRequest extends FormRequest
         $password = (string) $this->input('password');
 
         if ($studio) {
-            if ($this->attemptStudioUser($studio->id, $email, $password, $remember)) {
+            if ($this->attemptStudioUser($studio, $email, $password, $remember)) {
                 RateLimiter::clear($this->throttleKey());
 
                 return;
@@ -80,13 +84,27 @@ class LoginRequest extends FormRequest
         ]);
     }
 
-    private function attemptStudioUser(int $studioId, string $email, string $password, bool $remember): bool
+    private function attemptStudioUser(Studio $studio, string $email, string $password, bool $remember): bool
     {
-        return Auth::attempt([
-            'email' => $email,
-            'password' => $password,
-            'studio_id' => $studioId,
-        ], $remember);
+        $user = User::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->where(function ($query) use ($studio): void {
+                $query->where('studio_id', $studio->id)
+                    ->orWhere(function ($ownerQuery) use ($studio): void {
+                        $ownerQuery->whereKey($studio->owner_user_id)
+                            ->where('role', 'admin')
+                            ->whereNull('studio_id');
+                    });
+            })
+            ->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
+            return false;
+        }
+
+        Auth::login($user, $remember);
+
+        return true;
     }
 
     /**
