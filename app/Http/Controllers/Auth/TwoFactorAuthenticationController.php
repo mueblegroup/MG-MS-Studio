@@ -9,7 +9,6 @@ use App\Services\TwoFactorAuthenticationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class TwoFactorAuthenticationController extends Controller
@@ -30,6 +29,7 @@ class TwoFactorAuthenticationController extends Controller
             'provisioningUri' => $user->two_factor_secret
                 ? $twoFactor->provisioningUri($user->two_factor_secret, $user->email)
                 : null,
+            'auditLogs' => $user->auditLogs()->latest()->limit(15)->get(),
         ]);
     }
 
