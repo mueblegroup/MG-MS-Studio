@@ -37,7 +37,21 @@ class Plan extends Model
 
     public function userPlans()
     {
-        return $this->hasMany(\App\Models\UserPlan::class, 'plan_id');
+        return $this->hasMany(UserPlan::class, 'plan_id');
+    }
+
+    public function getRegisteredStudentsCountAttribute(): int
+    {
+        return $this->userPlans()
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('starts_on')->orWhereDate('starts_on', '<=', today());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ends_on')->orWhereDate('ends_on', '>=', today());
+            })
+            ->distinct()
+            ->count('user_id');
     }
 
     public function teacher()
