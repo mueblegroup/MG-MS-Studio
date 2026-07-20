@@ -25,7 +25,7 @@
                         <i class="bx bx-calendar-check text-xl"></i>
                         My active subscriptions
                     </h2>
-                    <p class="mt-1 text-xs font-semibold text-blue-800 dark:text-blue-300">The end date is the final day of access and the date recurring billing is scheduled to stop.</p>
+                    <p class="mt-1 text-xs font-semibold text-blue-800 dark:text-blue-300">Stripe renewal dates are refreshed from the active Stripe subscription. The end date is when recurring billing is scheduled to stop.</p>
                 </div>
 
                 <div class="divide-y divide-blue-200 dark:divide-blue-900/40">
@@ -33,11 +33,18 @@
                         @php
                             $scheduledEndDate = $subscription->meta['scheduled_class_end_date'] ?? $subscription->classModel?->until_date;
                             $endAt = $scheduledEndDate ? \Carbon\Carbon::parse($scheduledEndDate)->endOfDay() : null;
+                            $isStripe = strtolower((string) $subscription->provider) === 'stripe';
                         @endphp
                         <div class="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-extrabold text-gray-950 dark:text-white">{{ $subscription->classModel?->name ?? 'Subscription class' }}</p>
                                 <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{{ ucfirst($subscription->status) }} · {{ ucfirst($subscription->billing_interval ?? 'recurring') }} billing</p>
+                                @if($subscription->next_billing_at)
+                                    <p class="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                        {{ $isStripe ? 'Next Stripe renewal' : 'Next payment request' }}:
+                                        {{ $subscription->next_billing_at->format('d M Y, h:i A') }}
+                                    </p>
+                                @endif
                             </div>
                             <div class="text-left sm:text-right">
                                 <p class="text-sm font-extrabold text-gray-950 dark:text-white">{{ strtoupper($subscription->currency ?? 'MYR') }} {{ number_format((float) $subscription->amount, 2) }}</p>
@@ -65,13 +72,14 @@
                         <i class="bx bx-time-five text-xl"></i>
                         Due within the next 3 days
                     </h2>
-                    <p class="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-300">These are upcoming subscription charges. They are not completed payment records yet.</p>
+                    <p class="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-300">Stripe dates come from Stripe’s current billing period. HitPay dates indicate when a payment request is due.</p>
                 </div>
 
                 <div class="divide-y divide-amber-200 dark:divide-amber-900/40">
                     @foreach($upcomingSubscriptions as $subscription)
                         @php
                             $dueAt = $subscription->next_billing_at;
+                            $isStripe = strtolower((string) $subscription->provider) === 'stripe';
                             $dueLabel = $dueAt->isToday()
                                 ? 'Due today'
                                 : ($dueAt->isTomorrow()
@@ -81,7 +89,7 @@
                         <div class="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-extrabold text-gray-950 dark:text-white">{{ $subscription->classModel?->name ?? 'Subscription class' }}</p>
-                                <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">Recurring {{ $subscription->billing_interval ?? 'subscription' }} billing</p>
+                                <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{{ $isStripe ? 'Automatic Stripe renewal' : 'HitPay payment request' }} · {{ $subscription->billing_interval ?? 'subscription' }}</p>
                             </div>
                             <div class="text-left sm:text-right">
                                 <p class="text-sm font-extrabold text-gray-950 dark:text-white">{{ strtoupper($subscription->currency ?? 'MYR') }} {{ number_format((float) $subscription->amount, 2) }}</p>
