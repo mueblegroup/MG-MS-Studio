@@ -5,14 +5,16 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\StudioSubscription;
+use App\Services\ReliableSubscriptionClassService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class StudentPaymentController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, ReliableSubscriptionClassService $subscriptions)
     {
         $studentId = Auth::id();
 
@@ -31,8 +33,26 @@ class StudentPaymentController extends Controller
             ->with('classModel')
             ->where('user_id', $studentId)
             ->whereIn('status', ['active', 'trialing', 'past_due'])
-            ->orderBy('next_billing_at')
-            ->get();
+            ->get()
+            ->map(function (StudioSubscription $subscription) use ($subscriptions) {
+                if ($subscription->provider !== 'stripe' || ! $subscription->provider_subscription_id) {
+                    return $subscription;
+                }
+
+                try {
+                    return $subscriptions->refreshStripeBillingPeriod($subscription);
+                } catch (\Throwable $exception) {
+                    Log::warning('Unable to refresh Stripe class subscription period for student display.', [
+                        'studio_subscription_id' => $subscription->id,
+                        'stripe_subscription_id' => $subscription->provider_subscription_id,
+                        'message' => $exception->getMessage(),
+                    ]);
+
+                    return $subscription;
+                }
+            })
+            ->sortBy(fn (StudioSubscription $subscription) => $subscription->next_billing_at?->timestamp ?? PHP_INT_MAX)
+            ->values();
 
         $upcomingSubscriptions = $activeSubscriptions
             ->filter(fn (StudioSubscription $subscription) =>
