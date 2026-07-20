@@ -7,6 +7,8 @@ use App\Models\StudioSubscription;
 use App\Observers\ClassModelObserver;
 use App\Observers\StudioSubscriptionObserver;
 use App\Services\PlatformStripeBillingService;
+use App\Services\ReliableSubscriptionClassService;
+use App\Services\SubscriptionClassService;
 use App\Services\TrialAwarePlatformStripeBillingService;
 use App\Support\TenantManager;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -23,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->bind(PlatformStripeBillingService::class, TrialAwarePlatformStripeBillingService::class);
+        $this->app->bind(SubscriptionClassService::class, ReliableSubscriptionClassService::class);
     }
 
     public function boot(): void
