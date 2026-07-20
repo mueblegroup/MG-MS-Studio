@@ -18,6 +18,24 @@ Artisan::command('subscriptions:bill-due-hitpay', function (SubscriptionClassSer
     $this->info("Processed {$count} due HitPay subscription renewal item(s).");
 })->purpose('Process due HitPay subscription renewals');
 
+Artisan::command('subscriptions:recover-stripe-invoice {invoice}', function (string $invoice, SubscriptionClassService $subscriptions) {
+    \Stripe\Stripe::setApiKey((string) config('services.stripe.secret'));
+
+    $stripeInvoice = \Stripe\Invoice::retrieve([
+        'id' => $invoice,
+        'expand' => ['lines.data.parent.subscription_item_details.subscription'],
+    ]);
+
+    $order = $subscriptions->handleStripeInvoicePayment($stripeInvoice);
+
+    if ($order) {
+        $this->info("Recovered Stripe renewal invoice {$invoice} into order #{$order->id}.");
+        return;
+    }
+
+    $this->warn('No renewal order was created. The invoice may be the initial payment, already processed, unmatched, or the class may have no remaining session.');
+})->purpose('Recover a paid Stripe class-subscription invoice that missed webhook processing');
+
 Artisan::command('platform-subscriptions:sync-dates', function (PlatformSubscriptionDateSyncService $sync) {
     $count = 0;
 
