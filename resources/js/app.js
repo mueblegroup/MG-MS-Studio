@@ -94,6 +94,39 @@ const renderDocumentationLink = () => {
     document.body.appendChild(link);
 };
 
+const renderMobileLogout = () => {
+    if (document.getElementById('mueble-mobile-logout')) return;
+
+    const mobileHeader = document.querySelector('header.md\\:hidden');
+    const controls = mobileHeader?.querySelector('.flex.items-center.gap-1\\.5');
+    if (!controls) return;
+
+    const logout = document.createElement('a');
+    logout.id = 'mueble-mobile-logout';
+    logout.href = '/logout';
+    logout.setAttribute('aria-label', 'Log out');
+    logout.title = 'Log out';
+    logout.className = 'rounded-xl p-2 text-red-600 transition hover:bg-red-50 hover:text-red-700 dark:text-red-300 dark:hover:bg-red-950/30';
+    logout.innerHTML = '<i class="bx bx-log-out text-xl"></i>';
+    controls.appendChild(logout);
+};
+
+const renderStudentSubscriptionsLink = () => {
+    if (!window.location.pathname.startsWith('/student') || document.getElementById('mueble-student-subscriptions-link')) return;
+
+    const navs = document.querySelectorAll('aside nav');
+    navs.forEach((nav, index) => {
+        const link = document.createElement('a');
+        link.id = index === 0 ? 'mueble-student-subscriptions-link' : `mueble-student-subscriptions-link-${index}`;
+        link.href = '/student/subscriptions';
+        link.className = `${window.location.pathname.startsWith('/student/subscriptions') ? 'bg-[#fff3df] text-[#9a4f00] ring-1 ring-[#f4d7ae]' : 'text-[#6b5f52] hover:bg-[#fff3df] hover:text-[#9a4f00]'} group flex items-center gap-3 rounded-xl p-3 transition-all duration-200 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-amber-200`;
+        link.innerHTML = '<i class="bx bx-calendar-check h-5 w-5 shrink-0 text-xl text-[#9a8c7d]"></i><span class="truncate text-sm font-bold">My Subscriptions</span>';
+        nav.appendChild(link);
+    });
+};
+
 document.addEventListener('DOMContentLoaded', renderSeatPromotion);
 document.addEventListener('DOMContentLoaded', explainSubscriptionEndDate);
 document.addEventListener('DOMContentLoaded', renderDocumentationLink);
+document.addEventListener('DOMContentLoaded', renderMobileLogout);
+document.addEventListener('DOMContentLoaded', renderStudentSubscriptionsLink);
