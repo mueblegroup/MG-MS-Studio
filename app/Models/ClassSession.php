@@ -11,12 +11,23 @@ class ClassSession extends Model
     use AssignsStudio;
 
     protected $fillable = [
-        'studio_id', 'class_id', 'start_time', 'end_time', 'capacity', 'venue_name'
+        'studio_id',
+        'class_id',
+        'start_time',
+        'end_time',
+        'capacity',
+        'venue_name',
+        'status',
+        'change_type',
+        'change_reason',
+        'changed_by',
+        'changed_at',
     ];
 
     protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
+        'changed_at' => 'datetime',
     ];
 
     public function classModel()
@@ -32,5 +43,15 @@ class ClassSession extends Model
     public function assignments()
     {
         return $this->hasMany(\App\Models\ClassSessionAssignment::class, 'class_session_id');
+    }
+
+    public function changedBy()
+    {
+        return $this->belongsTo(User::class, 'changed_by');
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
     }
 }
