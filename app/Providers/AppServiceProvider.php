@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\ClassController;
+use App\Http\Controllers\FilteredClassController;
 use App\Http\Controllers\GroupedShopController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\Customer\StudioOnboardingController;
+use App\Http\Controllers\Customer\ValidatedStudioOnboardingController;
 use App\Models\ClassModel;
 use App\Models\StudioSubscription;
 use App\Observers\ClassModelObserver;
@@ -28,9 +32,9 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(PlatformStripeBillingService::class, TrialAwarePlatformStripeBillingService::class);
         $this->app->bind(SubscriptionClassService::class, ReliableSubscriptionClassService::class);
-
-        // Preserve the original named shop.index route while serving the grouped catalogue.
         $this->app->bind(ShopController::class, GroupedShopController::class);
+        $this->app->bind(ClassController::class, FilteredClassController::class);
+        $this->app->bind(StudioOnboardingController::class, ValidatedStudioOnboardingController::class);
     }
 
     public function boot(): void
