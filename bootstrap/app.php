@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')->group(base_path('routes/admin-api.php'));
             Route::middleware('web')->group(base_path('routes/customer.php'));
             Route::middleware('web')->group(base_path('routes/superadmin.php'));
+            Route::middleware('web')->group(base_path('routes/subscription-classes.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
