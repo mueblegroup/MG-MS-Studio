@@ -9,7 +9,7 @@
             @forelse($subscriptions as $subscription)
                 @php
                     $subscriptionStatus = strtolower((string) $subscription->status);
-                    $canAttendSubscription = in_array($subscriptionStatus, ['active', 'trialing'], true);
+                    $canAttendSubscription = in_array($subscriptionStatus, ['active', 'trialing'], true) && ! $subscription->billing_interval_mismatch;
                 @endphp
 
                 <section class="mg-card overflow-hidden">
@@ -19,7 +19,7 @@
                                 <h2 class="text-lg font-extrabold text-[#171717] dark:text-white">{{ $subscription->classModel?->name ?? 'Subscription class' }}</h2>
                                 <p class="mt-1 text-sm text-[#6b5f52] dark:text-gray-400">
                                     {{ $subscription->classModel?->teacher?->name ?? 'Teacher not assigned' }}
-                                    · {{ ucfirst($subscription->billing_interval ?? 'recurring') }} billing
+                                    · {{ ucfirst($subscription->billing_interval ?? 'recurring') }} provider billing
                                 </p>
                             </div>
                             <div class="flex flex-wrap gap-2">
@@ -30,18 +30,31 @@
                             </div>
                         </div>
 
+                        @if($subscription->billing_interval_mismatch)
+                            <div class="mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+                                <div class="font-extrabold">Billing configuration mismatch</div>
+                                <p class="mt-1">
+                                    This class expects {{ strtoupper($subscription->class_billing_interval) }} billing, but the active Stripe subscription is {{ strtoupper($subscription->provider_billing_interval) }}. Stripe will only charge using its existing {{ $subscription->provider_billing_interval }} interval until the subscription is replaced or corrected by the studio.
+                                </p>
+                            </div>
+                        @endif
+
+                        @if($subscription->stripe_sync_error)
+                            <div class="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">{{ $subscription->stripe_sync_error }}</div>
+                        @endif
+
                         <div class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
                             <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
                                 <div class="text-xs font-bold uppercase text-[#9a8c7d]">Amount</div>
                                 <div class="mt-1 font-extrabold">{{ strtoupper($subscription->currency ?? 'MYR') }} {{ number_format((float) $subscription->amount, 2) }}</div>
                             </div>
                             <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
-                                <div class="text-xs font-bold uppercase text-[#9a8c7d]">Next billing</div>
+                                <div class="text-xs font-bold uppercase text-[#9a8c7d]">Next Stripe billing</div>
                                 <div class="mt-1 font-extrabold">{{ $subscription->next_billing_at?->format('d M Y, h:i A') ?? '—' }}</div>
                             </div>
                             <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
                                 <div class="text-xs font-bold uppercase text-[#9a8c7d]">Attendance</div>
-                                <div class="mt-1 font-extrabold {{ $canAttendSubscription ? 'text-green-700' : 'text-red-700' }}">{{ $canAttendSubscription ? 'Eligible when session is paid' : 'Blocked until payment succeeds' }}</div>
+                                <div class="mt-1 font-extrabold {{ $canAttendSubscription ? 'text-green-700' : 'text-red-700' }}">{{ $canAttendSubscription ? 'Eligible when session is paid' : 'Blocked until billing is valid and paid' }}</div>
                             </div>
                         </div>
                     </div>
