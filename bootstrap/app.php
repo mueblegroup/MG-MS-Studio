@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')->group(base_path('routes/customer.php'));
             Route::middleware('web')->group(base_path('routes/superadmin.php'));
             Route::middleware('web')->group(base_path('routes/subscription-classes.php'));
+            Route::middleware('web')->group(base_path('routes/grouped-shop.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
