@@ -23,15 +23,21 @@ class SubscriptionClassManagementController extends Controller
         $subscriptions = StudioSubscription::query()
             ->with(['user:id,name,email', 'lastFulfilledClassSession:id,start_time'])
             ->where('class_id', $class->id)
-            ->orderByRaw("FIELD(status, 'past_due', 'active', 'trialing', 'pending', 'cancelled', 'completed')")
+            ->whereIn('status', ['pending', 'active', 'trialing', 'past_due'])
+            ->orderByRaw("FIELD(status, 'past_due', 'active', 'trialing', 'pending')")
             ->orderByDesc('id')
             ->get()
             ->map(function (StudioSubscription $subscription) {
                 $latestPayment = $subscription->payments()->latest('id')->first();
-                $subscription->setAttribute('latest_payment_status', $latestPayment?->status ?? 'unpaid');
+                $paymentStatus = strtolower((string) ($latestPayment?->status ?? 'unpaid'));
+
+                $subscription->setAttribute('latest_payment_status', $paymentStatus);
                 $subscription->setAttribute('latest_payment_reference', $latestPayment?->reference);
-                $subscription->setAttribute('can_attend', in_array($subscription->status, ['active', 'trialing'], true)
-                    && in_array(strtolower((string) ($latestPayment?->status ?? '')), ['paid', 'success', 'completed', 'complete'], true));
+                $subscription->setAttribute(
+                    'can_attend',
+                    in_array($subscription->status, ['active', 'trialing'], true)
+                    && in_array($paymentStatus, ['paid', 'success', 'completed', 'complete'], true)
+                );
 
                 return $subscription;
             });
@@ -76,11 +82,15 @@ class SubscriptionClassManagementController extends Controller
         ]);
 
         DB::transaction(function () use ($subscription, $validated) {
+            $subscription->loadMissing('classModel');
+
             if ($subscription->provider === 'stripe' && $subscription->provider_subscription_id) {
                 \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
-                \Stripe\Subscription::cancel($subscription->provider_subscription_id, [
-                    'prorate' => false,
-                ]);
+                $stripeSubscription = \Stripe\Subscription::retrieve($subscription->provider_subscription_id);
+
+                if (! in_array((string) $stripeSubscription->status, ['canceled', 'incomplete_expired'], true)) {
+                    $stripeSubscription->cancel(['prorate' => false]);
+                }
             }
 
             $meta = $subscription->meta ?? [];
