@@ -5,11 +5,12 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\ClassSession;
 use App\Models\ClassSessionAssignment;
-use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\StudioSubscription;
+use App\Services\SubscriptionClassService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class StudentSubscriptionController extends Controller
 {
@@ -24,6 +25,38 @@ class StudentSubscriptionController extends Controller
             ->orderByRaw("FIELD(status, 'past_due', 'active', 'trialing', 'pending', 'cancelled', 'completed')")
             ->orderByDesc('id')
             ->get();
+
+        $stripeService = app(SubscriptionClassService::class);
+
+        $subscriptions->each(function (StudioSubscription $subscription) use ($stripeService) {
+            $subscription->setAttribute('stripe_sync_error', null);
+
+            if ($subscription->provider === 'stripe' && $subscription->provider_subscription_id) {
+                try {
+                    $fresh = $stripeService->refreshStripeBillingPeriod($subscription);
+                    $subscription->setRawAttributes($fresh->getAttributes(), true);
+                } catch (\Throwable $exception) {
+                    $subscription->setAttribute('stripe_sync_error', 'Live Stripe billing details could not be refreshed.');
+                    Log::warning('Unable to refresh Stripe subscription for student view.', [
+                        'studio_subscription_id' => $subscription->id,
+                        'stripe_subscription_id' => $subscription->provider_subscription_id,
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
+            }
+
+            $classInterval = strtolower((string) ($subscription->classModel?->billing_interval ?? ''));
+            $providerInterval = strtolower((string) ($subscription->billing_interval ?? ''));
+            $subscription->setAttribute(
+                'billing_interval_mismatch',
+                $subscription->provider === 'stripe'
+                && $classInterval !== ''
+                && $providerInterval !== ''
+                && $classInterval !== $providerInterval
+            );
+            $subscription->setAttribute('class_billing_interval', $classInterval);
+            $subscription->setAttribute('provider_billing_interval', $providerInterval);
+        });
 
         $subscriptionIds = $subscriptions->pluck('id');
         $sessionIds = $subscriptions
