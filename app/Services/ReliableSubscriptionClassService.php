@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Jobs\FulfillOrderJob;
+use App\Models\AppNotification;
 use App\Models\ClassModel;
+use App\Models\ClassSession;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\StudioSubscription;
@@ -60,33 +62,24 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
         }
 
         $item = $stripeSubscription->items->data[0] ?? null;
-        $periodStart = $stripeSubscription->current_period_start
-            ?? $item?->current_period_start
-            ?? null;
-        $periodEnd = $stripeSubscription->current_period_end
-            ?? $item?->current_period_end
-            ?? null;
+        $periodStart = $stripeSubscription->current_period_start ?? $item?->current_period_start ?? null;
+        $periodEnd = $stripeSubscription->current_period_end ?? $item?->current_period_end ?? null;
         $interval = $item?->price?->recurring?->interval ?? null;
 
         $updates = [];
-
         if ($periodStart) {
             $updates['current_period_start'] = Carbon::createFromTimestamp((int) $periodStart);
         }
-
         if ($periodEnd) {
             $updates['current_period_end'] = Carbon::createFromTimestamp((int) $periodEnd);
             $updates['next_billing_at'] = Carbon::createFromTimestamp((int) $periodEnd);
         }
-
         if (is_string($interval) && in_array($interval, ['day', 'week', 'month', 'year'], true)) {
             $updates['billing_interval'] = $interval;
         }
 
         if ($updates !== []) {
-            StudioSubscription::query()
-                ->whereKey($subscriptionId)
-                ->update($updates);
+            StudioSubscription::query()->whereKey($subscriptionId)->update($updates);
         }
     }
 
@@ -97,12 +90,10 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
         }
 
         \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
-
         $stripeSubscription = \Stripe\Subscription::retrieve([
             'id' => $subscription->provider_subscription_id,
             'expand' => ['items.data.price'],
         ]);
-
         $this->syncFromStripeSubscription($stripeSubscription);
 
         return $subscription->fresh(['classModel']);
@@ -114,11 +105,7 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
         $providerSubscriptionId = $this->stripeSubscriptionIdFromInvoice($invoice);
 
         if ($providerSubscriptionId === null) {
-            Log::warning('Stripe class renewal skipped: invoice has no subscription ID.', [
-                'invoice_id' => $invoiceId ?: null,
-                'billing_reason' => $invoice->billing_reason ?? null,
-            ]);
-
+            Log::warning('Stripe class renewal skipped: invoice has no subscription ID.', ['invoice_id' => $invoiceId ?: null]);
             return null;
         }
 
@@ -132,7 +119,6 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
                 'invoice_id' => $invoiceId ?: null,
                 'stripe_subscription_id' => $providerSubscriptionId,
             ]);
-
             return null;
         }
 
@@ -140,27 +126,13 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
             return null;
         }
 
-        if ($invoiceId !== '' && Payment::query()
-            ->where('provider', 'stripe')
-            ->where('provider_reference', $invoiceId)
-            ->exists()) {
+        if ($invoiceId !== '' && Payment::query()->where('provider', 'stripe')->where('provider_reference', $invoiceId)->exists()) {
             return null;
         }
 
         $nextSession = $this->nextUnfulfilledSession($subscription);
-
         if (! $nextSession) {
-            $subscription->update([
-                'status' => 'completed',
-                'next_billing_at' => null,
-            ]);
-
-            Log::info('Stripe class subscription completed because no future session remains.', [
-                'invoice_id' => $invoiceId ?: null,
-                'studio_subscription_id' => $subscription->id,
-                'class_id' => $subscription->class_id,
-            ]);
-
+            $subscription->updateQuietly(['status' => 'completed', 'next_billing_at' => null]);
             return null;
         }
 
@@ -170,7 +142,6 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
         }
 
         [$periodStart, $periodEnd] = $this->billingPeriodFromInvoice($invoice);
-
         $order = $this->createSubscriptionRenewalOrder(
             subscription: $subscription,
             classSession: $nextSession,
@@ -187,7 +158,6 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
 
         Log::info('Stripe class renewal order created.', [
             'invoice_id' => $invoiceId ?: null,
-            'stripe_subscription_id' => $providerSubscriptionId,
             'studio_subscription_id' => $subscription->id,
             'order_id' => $order->id,
             'class_session_id' => $nextSession->id,
@@ -196,10 +166,62 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
         return $order;
     }
 
+    public function handleStripeInvoiceFailure(object $invoice): void
+    {
+        $providerSubscriptionId = $this->stripeSubscriptionIdFromInvoice($invoice);
+        if (! $providerSubscriptionId) {
+            return;
+        }
+
+        $subscription = StudioSubscription::query()
+            ->with(['user:id,name,email', 'classModel:id,name'])
+            ->where('provider', 'stripe')
+            ->where('provider_subscription_id', $providerSubscriptionId)
+            ->first();
+
+        if (! $subscription) {
+            return;
+        }
+
+        $subscription->updateQuietly(['status' => 'past_due']);
+
+        AppNotification::create([
+            'studio_id' => $subscription->studio_id,
+            'user_id' => $subscription->user_id,
+            'created_by' => null,
+            'title' => 'Subscription payment failed',
+            'message' => 'Your renewal payment for '.$subscription->classModel?->name.' failed. You cannot attend the next session until Stripe successfully retries the payment.',
+            'type' => 'subscription_payment_failed',
+            'action_url' => route('student.payments.index'),
+            'data' => [
+                'studio_subscription_id' => $subscription->id,
+                'stripe_invoice_id' => $invoice->id ?? null,
+            ],
+        ]);
+    }
+
+    public function nextUnfulfilledSession(StudioSubscription $subscription): ?ClassSession
+    {
+        $after = null;
+
+        if ($subscription->last_fulfilled_class_session_id) {
+            $after = ClassSession::whereKey($subscription->last_fulfilled_class_session_id)->value('start_time');
+        }
+
+        return ClassSession::with('classModel')
+            ->where('class_id', $subscription->class_id)
+            ->where('status', '!=', 'cancelled')
+            ->when($after, fn ($query) => $query->where('start_time', '>', $after))
+            ->when(! $after && $subscription->current_class_session_id, function ($query) use ($subscription) {
+                $query->where('id', $subscription->current_class_session_id);
+            })
+            ->orderBy('start_time')
+            ->first();
+    }
+
     private function intendedBillingInterval(?ClassModel $class): string
     {
         $configured = strtolower((string) ($class?->billing_interval ?? ''));
-
         if (in_array($configured, ['day', 'week', 'month', 'year'], true)) {
             return $configured;
         }
@@ -209,34 +231,17 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
 
     private function stripeSubscriptionIdFromInvoice(object $invoice): ?string
     {
-        $subscription = $invoice->subscription ?? null;
-
-        if (is_string($subscription) && $subscription !== '') {
-            return $subscription;
-        }
-
-        if (is_object($subscription) && ! empty($subscription->id)) {
-            return (string) $subscription->id;
-        }
-
-        $parentSubscription = $invoice->parent->subscription_details->subscription ?? null;
-
-        if (is_string($parentSubscription) && $parentSubscription !== '') {
-            return $parentSubscription;
-        }
-
-        if (is_object($parentSubscription) && ! empty($parentSubscription->id)) {
-            return (string) $parentSubscription->id;
-        }
-
-        $lineSubscription = $invoice->lines->data[0]->parent->subscription_item_details->subscription ?? null;
-
-        if (is_string($lineSubscription) && $lineSubscription !== '') {
-            return $lineSubscription;
-        }
-
-        if (is_object($lineSubscription) && ! empty($lineSubscription->id)) {
-            return (string) $lineSubscription->id;
+        foreach ([
+            $invoice->subscription ?? null,
+            $invoice->parent->subscription_details->subscription ?? null,
+            $invoice->lines->data[0]->parent->subscription_item_details->subscription ?? null,
+        ] as $subscription) {
+            if (is_string($subscription) && $subscription !== '') {
+                return $subscription;
+            }
+            if (is_object($subscription) && ! empty($subscription->id)) {
+                return (string) $subscription->id;
+            }
         }
 
         return null;
