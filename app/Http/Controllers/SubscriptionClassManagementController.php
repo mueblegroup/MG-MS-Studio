@@ -13,6 +13,7 @@ class SubscriptionClassManagementController extends Controller
 {
     public function show(ClassModel $class)
     {
+        $this->authorizeClassOperator($class);
         $class->load(['teacher:id,name,email']);
 
         $sessions = $class->sessions()
@@ -47,6 +48,7 @@ class SubscriptionClassManagementController extends Controller
 
     public function notify(Request $request, ClassModel $class, StudioSubscription $subscription)
     {
+        $this->authorizeClassOperator($class);
         abort_unless((int) $subscription->class_id === (int) $class->id, 404);
 
         $validated = $request->validate([
@@ -129,5 +131,14 @@ class SubscriptionClassManagementController extends Controller
         });
 
         return redirect()->route('student.payments.index')->with('success', 'Subscription cancelled successfully.');
+    }
+
+    private function authorizeClassOperator(ClassModel $class): void
+    {
+        $user = auth()->user();
+        $allowed = $user
+            && ($user->role === 'admin' || ($user->role === 'teacher' && (int) $class->teacher_id === (int) $user->id));
+
+        abort_unless($allowed, 403);
     }
 }
