@@ -16,8 +16,14 @@
                 <div class="rounded-2xl border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700">{{ session('success') }}</div>
             @endif
 
-            <form method="GET" action="{{ route('admin.classes') }}" class="grid grid-cols-1 gap-3 rounded-2xl border border-[#eadfce] bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:grid-cols-[1fr_auto]">
-                <input name="q" value="{{ $search }}" placeholder="Search class name, description, teacher..." class="mg-input" />
+            <form method="GET" action="{{ route('admin.classes') }}" class="grid grid-cols-1 gap-3 rounded-2xl border border-[#eadfce] bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
+                <input name="q" value="{{ $search }}" placeholder="Search class name, description, type or teacher..." class="mg-input" />
+                <select name="class_type" class="mg-select" onchange="this.form.submit()">
+                    <option value="all" @selected(($classType ?? 'all') === 'all')>All class types</option>
+                    <option value="single" @selected(($classType ?? 'all') === 'single')>One-time classes</option>
+                    <option value="recurring" @selected(($classType ?? 'all') === 'recurring')>Repeating classes</option>
+                    <option value="subscription" @selected(($classType ?? 'all') === 'subscription')>Subscription classes</option>
+                </select>
                 <div class="flex flex-wrap gap-2">
                     <button type="submit" class="mg-btn-primary"><i class="bx bx-search"></i> Search</button>
                     <a href="{{ route('admin.classes') }}" class="mg-btn-secondary"><i class="bx bx-reset"></i> Reset</a>
