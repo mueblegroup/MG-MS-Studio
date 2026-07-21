@@ -12,11 +12,11 @@
                 </div>
                 <div class="rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
                     <p class="font-black">Automatic renewal</p>
-                    <p class="mt-1 text-sm leading-6 text-slate-300">The selected subscription renews automatically according to its monthly or annual billing interval.</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-300">The selected platform subscription renews automatically according to the plan billing interval.</p>
                 </div>
                 <div class="rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
-                    <p class="font-black">1 user = 1 studio</p>
-                    <p class="mt-1 text-sm leading-6 text-slate-300">Each client administrator account can own one studio workspace.</p>
+                    <p class="font-black">Locale controls</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-300">Timezone controls how studio schedules and billing dates are displayed. Currency controls the default currency for studio products and future customer charges.</p>
                 </div>
             </div>
         </section>
@@ -69,17 +69,29 @@
 
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
-                        <label class="mb-1.5 block text-sm font-black text-slate-700 dark:text-slate-300">Timezone</label>
-                        <input type="text" name="timezone" value="{{ old('timezone', config('app.timezone')) }}" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                        <label class="mb-1.5 block text-sm font-black text-slate-700 dark:text-slate-300">Studio Timezone</label>
+                        <select name="timezone" required class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            @foreach($timezoneOptions as $value => $label)
+                                <option value="{{ $value }}" @selected(old('timezone', 'Asia/Kuala_Lumpur') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-2 text-xs font-semibold text-slate-500">Used for class schedules, reminders and display of Stripe billing timestamps. Stripe still stores timestamps in UTC.</p>
+                        @error('timezone') <p class="mt-1 text-sm font-semibold text-red-500">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-sm font-black text-slate-700 dark:text-slate-300">Currency</label>
-                        <input type="text" name="currency" maxlength="3" value="{{ old('currency', 'MYR') }}" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold uppercase dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                        <label class="mb-1.5 block text-sm font-black text-slate-700 dark:text-slate-300">Studio Currency</label>
+                        <select name="currency" required class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            @foreach($currencyOptions as $value => $label)
+                                <option value="{{ $value }}" @selected(old('currency', 'MYR') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-2 text-xs font-semibold text-slate-500">Default currency for studio classes, plans and class cards. Existing Stripe prices and subscriptions keep their original currency.</p>
+                        @error('currency') <p class="mt-1 text-sm font-semibold text-red-500">{{ $message }}</p> @enderror
                     </div>
                 </div>
 
                 <div class="rounded-3xl bg-orange-50 p-4 text-sm leading-6 text-orange-800 dark:bg-orange-950/40 dark:text-orange-200">
-                    Clicking below opens Stripe Checkout. The first subscription charge is collected immediately. The studio and login domain are provisioned only after payment confirmation.
+                    Clicking below opens Stripe Checkout. The platform plan is charged in the plan currency shown above. Studio timezone and currency do not change that platform subscription price.
                 </div>
 
                 <div class="flex justify-end pt-2">
