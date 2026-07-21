@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\ReliableSubscriptionClassService;
 use App\Services\SubscriptionClassService;
 use Closure;
 use Illuminate\Http\Request;
@@ -35,12 +36,16 @@ class ProcessStripeClassRenewalWebhook
                 $secret,
             );
 
-            if (! in_array($event->type, ['invoice.paid', 'invoice.payment_succeeded'], true)) {
+            $service = app(SubscriptionClassService::class);
+
+            if (in_array($event->type, ['invoice.paid', 'invoice.payment_succeeded'], true)) {
+                $service->handleStripeInvoicePayment($event->data->object);
                 return;
             }
 
-            app(SubscriptionClassService::class)
-                ->handleStripeInvoicePayment($event->data->object);
+            if ($event->type === 'invoice.payment_failed' && $service instanceof ReliableSubscriptionClassService) {
+                $service->handleStripeInvoiceFailure($event->data->object);
+            }
         } catch (\Throwable $exception) {
             Log::error('Stripe class renewal webhook processing failed.', [
                 'message' => $exception->getMessage(),
