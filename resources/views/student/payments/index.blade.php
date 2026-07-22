@@ -1,4 +1,5 @@
 <x-app-layout>
+    @php($studioTimezone = app(\App\Services\StudioSettingsService::class)->get('timezone', config('app.timezone', 'UTC')))
     <div class="p-6 sm:p-8 bg-gray-50/60 dark:bg-gray-900 min-h-screen">
         <div class="mb-6">
             <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Payment History</h1>
@@ -19,14 +20,15 @@
                     @foreach($activeSubscriptions as $subscription)
                         @php
                             $scheduledEndDate = $subscription->meta['scheduled_class_end_date'] ?? $subscription->classModel?->until_date;
-                            $endAt = $scheduledEndDate ? \Carbon\Carbon::parse($scheduledEndDate)->endOfDay() : null;
+                            $endAt = $scheduledEndDate ? \Carbon\Carbon::parse($scheduledEndDate, 'UTC')->timezone($studioTimezone)->endOfDay() : null;
                             $isStripe = strtolower((string) $subscription->provider) === 'stripe';
+                            $nextBillingAt = $subscription->next_billing_at?->copy()->timezone($studioTimezone);
                         @endphp
                         <div class="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto_auto_minmax(260px,340px)] lg:items-start">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-extrabold text-gray-950 dark:text-white">{{ $subscription->classModel?->name ?? 'Subscription class' }}</p>
                                 <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{{ ucfirst($subscription->status) }} · {{ ucfirst($subscription->billing_interval ?? 'recurring') }} billing</p>
-                                @if($subscription->next_billing_at)<p class="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-300">{{ $isStripe ? 'Next Stripe renewal' : 'Next payment request' }}: {{ $subscription->next_billing_at->format('d M Y, h:i A') }}</p>@endif
+                                @if($nextBillingAt)<p class="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-300">{{ $isStripe ? 'Next Stripe renewal' : 'Next payment request' }}: {{ $nextBillingAt->format('d M Y, h:i A') }}</p>@endif
                             </div>
                             <div class="text-left lg:text-right"><p class="text-sm font-extrabold text-gray-950 dark:text-white">{{ strtoupper($subscription->currency ?? 'MYR') }} {{ number_format((float) $subscription->amount, 2) }}</p><p class="text-xs font-semibold text-gray-500">{{ strtoupper($subscription->provider ?? '—') }}</p></div>
                             <div class="lg:text-right">
@@ -54,9 +56,10 @@
                 <div class="divide-y divide-amber-200 dark:divide-amber-900/40">
                     @foreach($upcomingSubscriptions as $subscription)
                         @php
-                            $dueAt = $subscription->next_billing_at;
+                            $dueAt = $subscription->next_billing_at?->copy()->timezone($studioTimezone);
                             $isStripe = strtolower((string) $subscription->provider) === 'stripe';
-                            $dueLabel = $dueAt->isToday() ? 'Due today' : ($dueAt->isTomorrow() ? 'Due tomorrow' : 'Due in '.now()->startOfDay()->diffInDays($dueAt->copy()->startOfDay()).' days');
+                            $nowLocal = now()->timezone($studioTimezone);
+                            $dueLabel = $dueAt->isToday() ? 'Due today' : ($dueAt->isTomorrow() ? 'Due tomorrow' : 'Due in '.$nowLocal->copy()->startOfDay()->diffInDays($dueAt->copy()->startOfDay()).' days');
                         @endphp
                         <div class="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
                             <div class="min-w-0"><p class="truncate text-sm font-extrabold text-gray-950 dark:text-white">{{ $subscription->classModel?->name ?? 'Subscription class' }}</p><p class="mt-1 text-xs font-semibold text-gray-500">{{ $isStripe ? 'Automatic Stripe renewal' : 'HitPay payment request' }} · {{ $subscription->billing_interval ?? 'subscription' }}</p></div>
@@ -82,7 +85,7 @@
                                 $canDownload = in_array($st, ['paid','success','completed','complete'], true);
                                 $canPay = in_array($st, ['pending','past_due'], true) && in_array($orderStatus, ['pending','past_due'], true) && $provider === 'hitpay';
                                 $displayDate = $p->paid_at ?: $p->created_at;
-                                $formattedDate = $displayDate ? \Carbon\Carbon::parse($displayDate)->format('Y-m-d H:i') : '—';
+                                $formattedDate = $displayDate ? \Carbon\Carbon::parse($displayDate, 'UTC')->timezone($studioTimezone)->format('Y-m-d H:i') : '—';
                             @endphp
                             <tr>
                                 <td class="px-4 py-4 text-sm whitespace-nowrap">{{ $formattedDate }}</td>
