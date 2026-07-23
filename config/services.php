@@ -9,8 +9,8 @@ return [
     |
     | This file is for storing the credentials for third party services such
     | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
+    | location for this type of information, allowing packages to have a
+    | conventional place for this type of information.
     |
     */
 
@@ -34,18 +34,19 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+
     'stripe' => [
-    'secret' => env('STRIPE_SECRET'),
-    'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
-    'key' => env('STRIPE_PUBLISHABLE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'key' => env('STRIPE_PUBLISHABLE_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'platform_webhook_secret' => env('STRIPE_PLATFORM_WEBHOOK_SECRET', env('STRIPE_WEBHOOK_SECRET')),
     ],
+
     'hitpay' => [
-    'api_key' => env('HITPAY_API_KEY'),
-    'salt' => env('HITPAY_SALT'),
-    'event_webhook_salt_key' => env('HITPAY_EVENT_WEBHOOK_SALT_KEY'),
-    'base_url' => env('HITPAY_BASE_URL', 'https://api.sandbox.hit-pay.com/v1'),
+        'api_key' => env('HITPAY_API_KEY'),
+        'salt' => env('HITPAY_SALT'),
+        'event_webhook_salt_key' => env('HITPAY_EVENT_WEBHOOK_SALT_KEY'),
+        'base_url' => env('HITPAY_BASE_URL', 'https://api.sandbox.hit-pay.com/v1'),
     ],
-
-
 
 ];
