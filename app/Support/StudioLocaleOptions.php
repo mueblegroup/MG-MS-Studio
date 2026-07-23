@@ -4,6 +4,7 @@ namespace App\Support;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Throwable;
 
 class StudioLocaleOptions
 {
@@ -12,12 +13,17 @@ class StudioLocaleOptions
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $options = [];
 
-        foreach (DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC) as $identifier) {
+        foreach (DateTimeZone::listIdentifiers(DateTimeZone::ALL) as $identifier) {
             if (str_starts_with($identifier, 'Etc/') || in_array($identifier, ['Factory'], true)) {
                 continue;
             }
 
-            $timezone = new DateTimeZone($identifier);
+            try {
+                $timezone = new DateTimeZone($identifier);
+            } catch (Throwable) {
+                continue;
+            }
+
             $offset = $timezone->getOffset($now);
             $sign = $offset >= 0 ? '+' : '-';
             $absolute = abs($offset);
