@@ -6,14 +6,32 @@ use App\Http\Controllers\Customer\PlatformBillingController;
 use App\Http\Controllers\Customer\StudioOnboardingController;
 use App\Http\Controllers\Customer\StudioRegistrationSettingsController;
 use App\Http\Controllers\PlatformMessageController;
+use App\Models\PlatformSubscriptionPlan;
 use Illuminate\Support\Facades\Route;
 
 Route::post('webhooks/platform-stripe', [PlatformBillingController::class, 'webhook'])
     ->name('webhooks.platform-stripe');
 
+Route::middleware('central')->group(function (): void {
+    Route::view('features', 'saas.marketing.features')->name('marketing.features');
+    Route::view('solutions', 'saas.marketing.solutions')->name('marketing.solutions');
+    Route::view('platform', 'saas.marketing.platform')->name('marketing.platform');
+    Route::view('security', 'saas.marketing.security')->name('marketing.security');
+    Route::get('pricing', function () {
+        return view('saas.marketing.pricing', [
+            'plans' => PlatformSubscriptionPlan::query()
+                ->where('is_active', true)
+                ->where('price', '>', 0)
+                ->orderBy('sort_order')
+                ->orderBy('price')
+                ->get(),
+        ]);
+    })->name('marketing.pricing');
+});
+
 Route::get('/', function () {
     if (! auth()->check()) {
-        return view('saas.landing');
+        return view('saas.marketing.home');
     }
 
     if (auth()->user()->role === 'superadmin') {
