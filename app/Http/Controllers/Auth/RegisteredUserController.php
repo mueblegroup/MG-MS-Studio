@@ -38,18 +38,26 @@ class RegisteredUserController extends Controller
         $studio = app(TenantManager::class)->current();
 
         if (! $studio) {
-            $request->validate([
+            $validated = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
+                'phone_number' => ['required', 'string', 'max:40'],
+                'organisation_name' => ['required', 'string', 'max:255'],
+                'job_title' => ['nullable', 'string', 'max:255'],
+                'country' => ['required', 'string', 'max:100'],
                 'password' => ['required', 'confirmed', Rules\Password::defaults()],
             ]);
 
             $user = User::create([
                 'studio_id' => null,
-                'name' => $request->name,
-                'email' => $request->email,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone_number' => $validated['phone_number'],
+                'organisation_name' => $validated['organisation_name'],
+                'job_title' => $validated['job_title'] ?? null,
+                'country' => $validated['country'],
                 'role' => 'admin',
-                'password' => Hash::make($request->password),
+                'password' => Hash::make($validated['password']),
             ]);
 
             event(new Registered($user));
@@ -64,7 +72,7 @@ class RegisteredUserController extends Controller
             'Student self-registration is disabled for this studio. Please contact the studio administrator.'
         );
 
-        $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
@@ -74,15 +82,27 @@ class RegisteredUserController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->where(fn ($query) => $query->where('studio_id', $studio->id)),
             ],
+            'phone_number' => ['required', 'string', 'max:40'],
+            'date_of_birth' => ['required', 'date', 'before:today', 'after:1900-01-01'],
+            'gender' => ['nullable', Rule::in(['female', 'male', 'non_binary', 'prefer_not_to_say', 'other'])],
+            'address' => ['required', 'string', 'max:2000'],
+            'emergency_contact_name' => ['required', 'string', 'max:255'],
+            'emergency_contact_phone' => ['required', 'string', 'max:40'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
             'studio_id' => $studio->id,
-            'name' => $request->name,
-            'email' => $request->email,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone_number' => $validated['phone_number'],
+            'date_of_birth' => $validated['date_of_birth'],
+            'gender' => $validated['gender'] ?? null,
+            'address' => $validated['address'],
+            'emergency_contact_name' => $validated['emergency_contact_name'],
+            'emergency_contact_phone' => $validated['emergency_contact_phone'],
             'role' => 'student',
-            'password' => Hash::make($request->password),
+            'password' => Hash::make($validated['password']),
         ]);
 
         event(new Registered($user));
