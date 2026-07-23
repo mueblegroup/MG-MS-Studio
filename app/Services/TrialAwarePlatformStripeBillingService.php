@@ -9,6 +9,7 @@ use RuntimeException;
 use Stripe\Checkout\Session;
 use Stripe\Event;
 use Stripe\StripeClient;
+use Stripe\Webhook;
 
 class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingService
 {
@@ -25,6 +26,17 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
         }
 
         $this->trialStripe = new StripeClient($secret);
+    }
+
+    public function constructWebhookEvent(string $payload, ?string $signature): Event
+    {
+        $secret = (string) config('services.stripe.platform_webhook_secret');
+
+        if ($secret === '') {
+            throw new RuntimeException('Stripe platform webhook signing secret is not configured. Set STRIPE_PLATFORM_WEBHOOK_SECRET.');
+        }
+
+        return Webhook::constructEvent($payload, (string) $signature, $secret);
     }
 
     public function createCheckoutSession(Studio $studio, PlatformSubscriptionPlan $plan, string $successUrl, string $cancelUrl): Session
