@@ -43,23 +43,38 @@
     }
 
     @media (min-width: 768px) {
-        html,
-        body {
+        html:not(.marketing-document),
+        body:not(.marketing-page) {
             height: 100%;
             overflow: hidden;
         }
 
-        body > div:first-of-type {
+        body:not(.marketing-page) > div:first-of-type {
             height: 100vh;
             min-height: 0;
             overflow: hidden;
         }
 
-        body > div:first-of-type > div:last-of-type {
+        body:not(.marketing-page) > div:first-of-type > div:last-of-type {
             height: 100vh;
             min-height: 0;
             overflow-y: auto;
             overscroll-behavior: contain;
+        }
+
+        html.marketing-document,
+        body.marketing-page {
+            height: auto;
+            min-height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        body.marketing-page > div:first-of-type,
+        body.marketing-page > div:first-of-type > div:last-of-type {
+            height: auto;
+            min-height: 0;
+            overflow: visible;
         }
     }
 }
