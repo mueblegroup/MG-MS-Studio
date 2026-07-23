@@ -22,6 +22,14 @@ class User extends Authenticatable
         'password',
         'role',
         'phone_number',
+        'organisation_name',
+        'job_title',
+        'country',
+        'date_of_birth',
+        'gender',
+        'address',
+        'emergency_contact_name',
+        'emergency_contact_phone',
     ];
 
     protected $hidden = [
@@ -47,6 +55,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'date_of_birth' => 'date',
             'password' => 'hashed',
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
