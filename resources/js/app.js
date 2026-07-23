@@ -125,8 +125,29 @@ const renderStudentSubscriptionsLink = () => {
     });
 };
 
+const renderMarketingLogo = () => {
+    if (!document.body.classList.contains('marketing-page')) return;
+
+    document.querySelectorAll('.brand-mark').forEach((mark) => {
+        const logo = document.createElement('img');
+        logo.src = '/images/mueble-logo.svg';
+        logo.alt = 'Mueble';
+        logo.width = 300;
+        logo.height = 300;
+        logo.style.width = '44px';
+        logo.style.height = '44px';
+        logo.style.display = 'block';
+        logo.style.objectFit = 'contain';
+        logo.style.borderRadius = '0';
+        logo.style.background = 'transparent';
+        logo.style.boxShadow = 'none';
+        mark.replaceWith(logo);
+    });
+};
+
 document.addEventListener('DOMContentLoaded', renderSeatPromotion);
 document.addEventListener('DOMContentLoaded', explainSubscriptionEndDate);
 document.addEventListener('DOMContentLoaded', renderDocumentationLink);
 document.addEventListener('DOMContentLoaded', renderMobileLogout);
 document.addEventListener('DOMContentLoaded', renderStudentSubscriptionsLink);
+document.addEventListener('DOMContentLoaded', renderMarketingLogo);
