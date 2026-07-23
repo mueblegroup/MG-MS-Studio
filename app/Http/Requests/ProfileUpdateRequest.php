@@ -12,7 +12,6 @@ class ProfileUpdateRequest extends FormRequest
     {
         $user = $this->user();
         $isStudent = $user?->role === 'student';
-        $isAdmin = $user?->role === 'admin';
 
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -25,9 +24,9 @@ class ProfileUpdateRequest extends FormRequest
                 Rule::unique(User::class)->ignore($user?->id),
             ],
             'phone_number' => ['required', 'string', 'max:40'],
-            'organisation_name' => [$isAdmin ? 'required' : 'nullable', 'string', 'max:255'],
+            'organisation_name' => ['nullable', 'string', 'max:255'],
             'job_title' => ['nullable', 'string', 'max:255'],
-            'country' => [$isAdmin ? 'required' : 'nullable', 'string', 'max:100'],
+            'country' => ['nullable', 'string', 'max:100'],
             'date_of_birth' => [$isStudent ? 'required' : 'nullable', 'date', 'before:today', 'after:1900-01-01'],
             'gender' => ['nullable', Rule::in(['female', 'male', 'non_binary', 'prefer_not_to_say', 'other'])],
             'address' => [$isStudent ? 'required' : 'nullable', 'string', 'max:2000'],
