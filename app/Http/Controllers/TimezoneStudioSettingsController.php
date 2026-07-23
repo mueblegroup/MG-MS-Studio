@@ -28,7 +28,9 @@ class TimezoneStudioSettingsController extends StudioSettingsController
         ]);
 
         $response = parent::update($request, $settings);
-        $settings->set('timezone', (string) $request->input('timezone'));
+        $settings->setMany([
+            'timezone' => (string) $request->input('timezone'),
+        ]);
 
         return $response;
     }
