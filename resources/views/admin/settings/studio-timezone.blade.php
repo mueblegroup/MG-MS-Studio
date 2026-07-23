@@ -1,3 +1,10 @@
+@php
+    $timezoneFieldHtml = view('admin.settings.partials.timezone-field', [
+        'data' => $data,
+        'timezoneOptions' => $timezoneOptions,
+    ])->render();
+@endphp
+
 @include('admin.settings.studio')
 
 <script>
@@ -12,11 +19,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!currencyWrapper || !currencyWrapper.parentElement) return;
 
     const wrapper = document.createElement('div');
-    wrapper.innerHTML = @json(view('admin.settings.partials.timezone-field', [
-        'data' => $data,
-        'timezoneOptions' => $timezoneOptions,
-    ])->render());
+    wrapper.innerHTML = @js($timezoneFieldHtml);
 
-    currencyWrapper.parentElement.insertBefore(wrapper.firstElementChild, currencyWrapper.nextSibling);
+    if (wrapper.firstElementChild) {
+        currencyWrapper.parentElement.insertBefore(wrapper.firstElementChild, currencyWrapper.nextSibling);
+    }
 });
 </script>
