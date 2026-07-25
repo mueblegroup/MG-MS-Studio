@@ -76,6 +76,136 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
         ]);
     }
 
+    public function previewUpgrade(Studio $studio, PlatformSubscriptionPlan $targetPlan): array
+    {
+        [$subscription, $item, $priceId, $intervalChanged, $targetInterval] = $this->intervalChangeContext($studio, $targetPlan);
+
+        if (! $intervalChanged) {
+            return parent::previewUpgrade($studio, $targetPlan) + [
+                'interval_changed' => false,
+                'current_interval' => $this->normaliseInterval($item->price?->recurring?->interval ?? null),
+                'target_interval' => $targetInterval,
+                'new_period_end' => null,
+                'credit_amount' => 0.0,
+            ];
+        }
+
+        $prorationDate = now()->timestamp;
+        $preview = $this->trialStripe->invoices->createPreview([
+            'customer' => $studio->stripe_customer_id,
+            'subscription' => $subscription->id,
+            'subscription_details' => [
+                'items' => [[
+                    'id' => $item->id,
+                    'price' => $priceId,
+                ]],
+                'billing_cycle_anchor' => 'now',
+                'proration_behavior' => 'always_invoice',
+                'proration_date' => $prorationDate,
+            ],
+        ]);
+
+        $paymentMethod = $subscription->default_payment_method ?? null;
+        if (is_string($paymentMethod) && $paymentMethod !== '') {
+            $paymentMethod = $this->trialStripe->paymentMethods->retrieve($paymentMethod, []);
+        }
+
+        $netTotal = ((int) ($preview->total ?? $preview->amount_due ?? 0)) / 100;
+
+        return [
+            'amount_due' => ((int) ($preview->amount_due ?? 0)) / 100,
+            'credit_amount' => max(0, -$netTotal),
+            'currency' => strtoupper((string) $preview->currency),
+            'proration_date' => Carbon::createFromTimestamp($prorationDate),
+            'period_end' => ! empty($item->current_period_end)
+                ? Carbon::createFromTimestamp((int) $item->current_period_end)
+                : null,
+            'new_period_end' => $this->estimatedPeriodEnd($prorationDate, $targetInterval),
+            'payment_method_brand' => $paymentMethod?->card?->brand,
+            'payment_method_last4' => $paymentMethod?->card?->last4,
+            'interval_changed' => true,
+            'current_interval' => $this->normaliseInterval($item->price?->recurring?->interval ?? null),
+            'target_interval' => $targetInterval,
+        ];
+    }
+
+    public function upgrade(Studio $studio, PlatformSubscriptionPlan $targetPlan): array
+    {
+        [$subscription, $item, $priceId, $intervalChanged, $targetInterval] = $this->intervalChangeContext($studio, $targetPlan);
+
+        if (! $intervalChanged) {
+            return parent::upgrade($studio, $targetPlan) + [
+                'interval_changed' => false,
+                'target_interval' => $targetInterval,
+            ];
+        }
+
+        $prorationDate = now()->timestamp;
+        $preview = $this->trialStripe->invoices->createPreview([
+            'customer' => $studio->stripe_customer_id,
+            'subscription' => $subscription->id,
+            'subscription_details' => [
+                'items' => [[
+                    'id' => $item->id,
+                    'price' => $priceId,
+                ]],
+                'billing_cycle_anchor' => 'now',
+                'proration_behavior' => 'always_invoice',
+                'proration_date' => $prorationDate,
+            ],
+        ]);
+
+        $updated = $this->trialStripe->subscriptions->update($subscription->id, [
+            'items' => [[
+                'id' => $item->id,
+                'price' => $priceId,
+            ]],
+            'billing_cycle_anchor' => 'now',
+            'proration_behavior' => 'always_invoice',
+            'proration_date' => $prorationDate,
+            'payment_behavior' => 'pending_if_incomplete',
+            'expand' => ['items.data.price', 'latest_invoice.payment_intent'],
+        ]);
+
+        $latestInvoice = $updated->latest_invoice ?? null;
+        if (is_string($latestInvoice)) {
+            $latestInvoice = $this->trialStripe->invoices->retrieve($latestInvoice, [
+                'expand' => ['payment_intent'],
+            ]);
+        }
+
+        $invoiceStatus = (string) ($latestInvoice->status ?? '');
+        $paymentUrl = $invoiceStatus === 'open'
+            ? ($latestInvoice->hosted_invoice_url ?? null)
+            : null;
+
+        // Metadata is not part of Stripe pending updates. Update it only after the
+        // interval-change invoice has succeeded and Stripe has applied the new item.
+        if ($invoiceStatus === 'paid' && empty($updated->pending_update)) {
+            $this->trialStripe->subscriptions->update($subscription->id, [
+                'metadata' => [
+                    'studio_id' => (string) $studio->id,
+                    'plan_id' => (string) $targetPlan->id,
+                ],
+            ]);
+        }
+
+        $netTotal = ((int) ($preview->total ?? $preview->amount_due ?? 0)) / 100;
+
+        return [
+            'amount_due' => ((int) ($preview->amount_due ?? 0)) / 100,
+            'credit_amount' => max(0, -$netTotal),
+            'currency' => strtoupper((string) $preview->currency),
+            'subscription_status' => (string) $updated->status,
+            'invoice_status' => $invoiceStatus,
+            'payment_url' => $paymentUrl,
+            'paid_immediately' => $invoiceStatus === 'paid',
+            'interval_changed' => true,
+            'target_interval' => $targetInterval,
+            'new_period_end' => $this->estimatedPeriodEnd($prorationDate, $targetInterval),
+        ];
+    }
+
     public function handleWebhook(Event $event): void
     {
         parent::handleWebhook($event);
@@ -125,6 +255,73 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
         ])->save();
     }
 
+    private function intervalChangeContext(Studio $studio, PlatformSubscriptionPlan $targetPlan): array
+    {
+        if (! $studio->stripe_subscription_id) {
+            throw new RuntimeException('No active Stripe subscription was found for this studio.');
+        }
+
+        $subscription = $this->trialStripe->subscriptions->retrieve($studio->stripe_subscription_id, [
+            'expand' => ['items.data.price', 'latest_invoice', 'default_payment_method'],
+        ]);
+
+        if (! in_array((string) $subscription->status, ['active', 'trialing', 'past_due'], true)) {
+            throw new RuntimeException('The current Stripe subscription cannot be changed in its present status.');
+        }
+
+        if (! empty($subscription->pending_update)) {
+            throw new RuntimeException('A previous subscription change is still waiting for payment. Complete or cancel that invoice before changing plans again.');
+        }
+
+        $item = $subscription->items->data[0] ?? null;
+        if (! $item) {
+            throw new RuntimeException('The Stripe subscription has no billable item.');
+        }
+
+        $currentPlan = $studio->platformSubscriptionPlan;
+        if ($currentPlan && (int) $currentPlan->id === (int) $targetPlan->id) {
+            throw new RuntimeException('The studio is already subscribed to this plan.');
+        }
+
+        $currentInterval = $this->normaliseInterval($item->price?->recurring?->interval ?? $currentPlan?->billing_interval);
+        $targetInterval = $this->normaliseInterval($targetPlan->billing_interval);
+        $intervalChanged = $currentInterval !== $targetInterval;
+
+        if (! $intervalChanged && $currentPlan && (float) $targetPlan->price <= (float) $currentPlan->price) {
+            throw new RuntimeException('Same-cycle changes must be upgrades to a higher-priced plan.');
+        }
+
+        return [
+            $subscription,
+            $item,
+            $this->ensureTrialRecurringPrice($targetPlan),
+            $intervalChanged,
+            $targetInterval,
+        ];
+    }
+
+    private function normaliseInterval(?string $interval): string
+    {
+        return match (strtolower((string) $interval)) {
+            'day', 'daily' => 'day',
+            'week', 'weekly' => 'week',
+            'year', 'yearly', 'annual', 'annually' => 'year',
+            default => 'month',
+        };
+    }
+
+    private function estimatedPeriodEnd(int $periodStart, string $interval): Carbon
+    {
+        $start = Carbon::createFromTimestamp($periodStart);
+
+        return match ($interval) {
+            'day' => $start->copy()->addDay(),
+            'week' => $start->copy()->addWeek(),
+            'year' => $start->copy()->addYear(),
+            default => $start->copy()->addMonth(),
+        };
+    }
+
     private function ensureTrialCustomer(Studio $studio): string
     {
         if ($studio->stripe_customer_id) {
@@ -168,12 +365,7 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
             'currency' => strtolower($plan->currency ?: 'MYR'),
             'unit_amount' => (int) round(((float) $plan->price) * 100),
             'recurring' => [
-                'interval' => match (strtolower((string) $plan->billing_interval)) {
-                    'day', 'daily' => 'day',
-                    'week', 'weekly' => 'week',
-                    'year', 'yearly', 'annual', 'annually' => 'year',
-                    default => 'month',
-                },
+                'interval' => $this->normaliseInterval($plan->billing_interval),
             ],
             'metadata' => ['platform_plan_id' => (string) $plan->id],
         ]);
