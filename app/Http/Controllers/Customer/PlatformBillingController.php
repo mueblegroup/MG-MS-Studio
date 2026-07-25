@@ -82,17 +82,32 @@ class PlatformBillingController extends Controller
                 return redirect()->away((string) $result['payment_url']);
             }
 
-            $message = ! empty($result['paid_immediately'])
-                ? sprintf(
-                    'Upgrade payment completed. Stripe charged a prorated difference of %s %s and the plan will sync from the paid subscription update.',
-                    $result['currency'],
-                    number_format((float) $result['amount_due'], 2),
-                )
-                : sprintf(
-                    'Upgrade submitted. The prorated difference is %s %s. Your current plan remains active until Stripe confirms payment.',
-                    $result['currency'],
-                    number_format((float) $result['amount_due'], 2),
-                );
+            if (! empty($result['interval_changed'])) {
+                $message = ! empty($result['paid_immediately'])
+                    ? sprintf(
+                        'Billing cycle changed successfully. Stripe charged %s %s after applying any unused-time credit. The new %s cycle starts now and the studio will sync from Stripe.',
+                        $result['currency'],
+                        number_format((float) $result['amount_due'], 2),
+                        $result['target_interval'],
+                    )
+                    : sprintf(
+                        'Billing cycle change submitted. Stripe calculated %s %s after applying any unused-time credit. The change will apply after payment is confirmed.',
+                        $result['currency'],
+                        number_format((float) $result['amount_due'], 2),
+                    );
+            } else {
+                $message = ! empty($result['paid_immediately'])
+                    ? sprintf(
+                        'Upgrade payment completed. Stripe charged a prorated difference of %s %s and the plan will sync from the paid subscription update.',
+                        $result['currency'],
+                        number_format((float) $result['amount_due'], 2),
+                    )
+                    : sprintf(
+                        'Upgrade submitted. The prorated difference is %s %s. Your current plan remains active until Stripe confirms payment.',
+                        $result['currency'],
+                        number_format((float) $result['amount_due'], 2),
+                    );
+            }
 
             return redirect()->route('customer.billing')->with('success', $message);
         } catch (Throwable $exception) {
