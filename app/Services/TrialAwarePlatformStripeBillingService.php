@@ -90,7 +90,7 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
             ];
         }
 
-        $prorationDate = now()->timestamp;
+        $previewedAt = now()->timestamp;
         $preview = $this->trialStripe->invoices->createPreview([
             'customer' => $studio->stripe_customer_id,
             'subscription' => $subscription->id,
@@ -101,7 +101,6 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
                 ]],
                 'billing_cycle_anchor' => 'now',
                 'proration_behavior' => 'always_invoice',
-                'proration_date' => $prorationDate,
             ],
         ]);
 
@@ -110,17 +109,15 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
             $paymentMethod = $this->trialStripe->paymentMethods->retrieve($paymentMethod, []);
         }
 
-        $netTotal = ((int) ($preview->total ?? $preview->amount_due ?? 0)) / 100;
-
         return [
             'amount_due' => ((int) ($preview->amount_due ?? 0)) / 100,
-            'credit_amount' => max(0, -$netTotal),
+            'credit_amount' => $this->previewCreditAmount($preview),
             'currency' => strtoupper((string) $preview->currency),
-            'proration_date' => Carbon::createFromTimestamp($prorationDate),
+            'proration_date' => Carbon::createFromTimestamp($previewedAt),
             'period_end' => ! empty($item->current_period_end)
                 ? Carbon::createFromTimestamp((int) $item->current_period_end)
                 : null,
-            'new_period_end' => $this->estimatedPeriodEnd($prorationDate, $targetInterval),
+            'new_period_end' => $this->previewPeriodEnd($preview, $priceId),
             'payment_method_brand' => $paymentMethod?->card?->brand,
             'payment_method_last4' => $paymentMethod?->card?->last4,
             'interval_changed' => true,
@@ -140,7 +137,6 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
             ];
         }
 
-        $prorationDate = now()->timestamp;
         $preview = $this->trialStripe->invoices->createPreview([
             'customer' => $studio->stripe_customer_id,
             'subscription' => $subscription->id,
@@ -151,7 +147,6 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
                 ]],
                 'billing_cycle_anchor' => 'now',
                 'proration_behavior' => 'always_invoice',
-                'proration_date' => $prorationDate,
             ],
         ]);
 
@@ -162,7 +157,6 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
             ]],
             'billing_cycle_anchor' => 'now',
             'proration_behavior' => 'always_invoice',
-            'proration_date' => $prorationDate,
             'payment_behavior' => 'pending_if_incomplete',
             'expand' => ['items.data.price', 'latest_invoice.payment_intent'],
         ]);
@@ -190,11 +184,11 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
             ]);
         }
 
-        $netTotal = ((int) ($preview->total ?? $preview->amount_due ?? 0)) / 100;
+        $updatedItem = $updated->items->data[0] ?? null;
 
         return [
             'amount_due' => ((int) ($preview->amount_due ?? 0)) / 100,
-            'credit_amount' => max(0, -$netTotal),
+            'credit_amount' => $this->previewCreditAmount($preview),
             'currency' => strtoupper((string) $preview->currency),
             'subscription_status' => (string) $updated->status,
             'invoice_status' => $invoiceStatus,
@@ -202,7 +196,9 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
             'paid_immediately' => $invoiceStatus === 'paid',
             'interval_changed' => true,
             'target_interval' => $targetInterval,
-            'new_period_end' => $this->estimatedPeriodEnd($prorationDate, $targetInterval),
+            'new_period_end' => ! empty($updatedItem?->current_period_end)
+                ? Carbon::createFromTimestamp((int) $updatedItem->current_period_end)
+                : $this->previewPeriodEnd($preview, $priceId),
         ];
     }
 
@@ -310,16 +306,46 @@ class TrialAwarePlatformStripeBillingService extends PlatformStripeBillingServic
         };
     }
 
-    private function estimatedPeriodEnd(int $periodStart, string $interval): Carbon
+    private function previewCreditAmount(object $preview): float
     {
-        $start = Carbon::createFromTimestamp($periodStart);
+        $credit = 0;
 
-        return match ($interval) {
-            'day' => $start->copy()->addDay(),
-            'week' => $start->copy()->addWeek(),
-            'year' => $start->copy()->addYear(),
-            default => $start->copy()->addMonth(),
-        };
+        foreach ($preview->lines->data ?? [] as $line) {
+            $isProration = (bool) ($line->proration
+                ?? $line->parent?->subscription_item_details?->proration
+                ?? false);
+            $amount = (int) ($line->amount ?? 0);
+
+            if ($isProration && $amount < 0) {
+                $credit += abs($amount);
+            }
+        }
+
+        return $credit / 100;
+    }
+
+    private function previewPeriodEnd(object $preview, string $targetPriceId): ?Carbon
+    {
+        $periodEnd = null;
+
+        foreach ($preview->lines->data ?? [] as $line) {
+            $linePriceId = is_string($line->price ?? null)
+                ? $line->price
+                : ($line->price?->id
+                    ?? $line->pricing?->price_details?->price
+                    ?? null);
+
+            if ($linePriceId !== $targetPriceId || (int) ($line->amount ?? 0) <= 0) {
+                continue;
+            }
+
+            $linePeriodEnd = (int) ($line->period?->end ?? 0);
+            if ($linePeriodEnd > 0) {
+                $periodEnd = max($periodEnd ?? 0, $linePeriodEnd);
+            }
+        }
+
+        return $periodEnd ? Carbon::createFromTimestamp($periodEnd) : null;
     }
 
     private function ensureTrialCustomer(Studio $studio): string
