@@ -21,15 +21,19 @@ class StudentScheduleController extends Controller
         $classItems = DB::table('class_session_assignments as a')
             ->join('class_sessions as s', 'a.class_session_id', '=', 's.id')
             ->join('classes as c', 's.class_id', '=', 'c.id')
+            ->leftJoin('users as teacher', 'c.teacher_id', '=', 'teacher.id')
             ->whereNull('a.deleted_at')
             ->where('a.user_id', $studentId)
             ->whereBetween('s.start_time', [$startMonth->toDateTimeString(), $endMonth->toDateTimeString()])
             ->orderBy('s.start_time')
             ->select([
+                'c.id as course_id',
                 's.start_time as start',
                 's.end_time as end',
                 's.venue_name as venue',
                 'c.name as title',
+                'c.description',
+                'teacher.name as teacher_name',
                 DB::raw("CASE WHEN c.type = 'subscription' THEN 'subscription' ELSE 'class' END as type"),
             ])
             ->get();
@@ -38,6 +42,7 @@ class StudentScheduleController extends Controller
         $planItems = DB::table('user_plans as up')
             ->join('plans as p', 'up.plan_id', '=', 'p.id')
             ->join('plan_sessions as ps', 'ps.plan_id', '=', 'p.id')
+            ->leftJoin('users as teacher', 'p.teacher_id', '=', 'teacher.id')
             ->where('up.user_id', $studentId)
             ->where('up.is_active', 1)
             ->whereNull('p.deleted_at')
@@ -52,10 +57,13 @@ class StudentScheduleController extends Controller
             })
             ->orderBy('ps.start_time')
             ->select([
+                'p.id as course_id',
                 'ps.start_time as start',
                 'ps.end_time as end',
                 'ps.venue_name as venue',
                 DB::raw("COALESCE(NULLIF(ps.session_name,''), p.name) as title"),
+                'p.description',
+                'teacher.name as teacher_name',
                 DB::raw("'plan' as type"),
             ])
             ->get();
@@ -64,7 +72,9 @@ class StudentScheduleController extends Controller
 
         $calendarEvents = $items->map(function ($i) {
             return [
-                'title' => $i->title . ($i->venue ? ' • ' . $i->venue : ''),
+                'title' => $i->title
+                    . ($i->teacher_name ? ' • '.$i->teacher_name : '')
+                    . ($i->venue ? ' • '.$i->venue : ''),
                 'start' => $i->start,
                 'end'   => $i->end,
             ];
