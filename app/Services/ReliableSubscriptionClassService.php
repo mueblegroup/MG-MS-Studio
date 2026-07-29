@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\StudioSubscription;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ReliableSubscriptionClassService extends SubscriptionClassService
@@ -99,6 +100,77 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
         return $subscription->fresh(['classModel']);
     }
 
+    public function activateFromStripeSession($session): void
+    {
+        parent::activateFromStripeSession($session);
+
+        $subscriptionId = isset($session->metadata->studio_subscription_id)
+            ? (int) $session->metadata->studio_subscription_id
+            : null;
+
+        if (! $subscriptionId) {
+            return;
+        }
+
+        $subscription = StudioSubscription::query()
+            ->with(['classModel.sessions' => fn ($query) => $query->orderBy('start_time')])
+            ->find($subscriptionId);
+
+        if (! $subscription) {
+            return;
+        }
+
+        $this->createScheduledSessionOrders($subscription);
+        $this->alignStripeChargeToNextSession($subscription);
+    }
+
+    /**
+     * Create the student's local schedule/payment records immediately.
+     *
+     * These are local pending orders only. Stripe invoices remain responsible
+     * for collecting money, so creating the schedule cannot double-charge.
+     */
+    public function createScheduledSessionOrders(StudioSubscription $subscription): int
+    {
+        $subscription->loadMissing('classModel.sessions');
+        $initialSessionId = (int) ($subscription->meta['initial_class_session_id']
+            ?? $subscription->current_class_session_id);
+        $initialStart = ClassSession::query()->whereKey($initialSessionId)->value('start_time');
+        $created = 0;
+
+        $sessions = $subscription->classModel?->sessions
+            ?->filter(fn (ClassSession $session) => $session->status !== 'cancelled')
+            ->filter(fn (ClassSession $session) => ! $initialStart || $session->start_time?->gt($initialStart))
+            ->sortBy('start_time') ?? collect();
+
+        foreach ($sessions as $session) {
+            if ($this->renewalOrderForSession($subscription, $session)) {
+                continue;
+            }
+
+            $chargeAt = $this->chargeAtForSession($session);
+            $this->createSubscriptionRenewalOrder(
+                subscription: $subscription,
+                classSession: $session,
+                provider: $subscription->provider,
+                amount: (float) $subscription->amount,
+                currency: strtoupper((string) ($subscription->currency ?? 'MYR')),
+                providerReference: null,
+                payload: [
+                    'billing_cycle' => 'scheduled_before_class',
+                    'charge_at' => $chargeAt->toIso8601String(),
+                    'class_starts_at' => $session->start_time?->toIso8601String(),
+                ],
+                billingPeriodStart: $chargeAt,
+                billingPeriodEnd: $session->start_time,
+                status: 'pending',
+            );
+            $created++;
+        }
+
+        return $created;
+    }
+
     public function handleStripeInvoicePayment($invoice): ?Order
     {
         $invoiceId = (string) ($invoice->id ?? '');
@@ -142,19 +214,58 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
         }
 
         [$periodStart, $periodEnd] = $this->billingPeriodFromInvoice($invoice);
-        $order = $this->createSubscriptionRenewalOrder(
-            subscription: $subscription,
-            classSession: $nextSession,
-            provider: 'stripe',
-            amount: $amount,
-            currency: strtoupper((string) ($invoice->currency ?? $subscription->currency ?? 'MYR')),
-            providerReference: $invoiceId !== '' ? $invoiceId : null,
-            payload: method_exists($invoice, 'toArray') ? $invoice->toArray() : (array) $invoice,
-            billingPeriodStart: $periodStart,
-            billingPeriodEnd: $periodEnd,
-        );
+        $invoicePayload = method_exists($invoice, 'toArray') ? $invoice->toArray() : (array) $invoice;
+        $order = $this->renewalOrderForSession($subscription, $nextSession);
+
+        if ($order) {
+            DB::transaction(function () use ($order, $amount, $invoiceId, $invoicePayload, $periodStart, $periodEnd): void {
+                $lockedOrder = Order::query()->lockForUpdate()->find($order->id);
+                if (! $lockedOrder || $lockedOrder->status === 'paid') {
+                    return;
+                }
+
+                $lockedOrder->update([
+                    'subtotal' => $amount,
+                    'total' => $amount,
+                    'status' => 'paid',
+                    'provider_reference' => $invoiceId !== '' ? $invoiceId : $lockedOrder->provider_reference,
+                    'paid_at' => now(),
+                ]);
+
+                $payment = Payment::query()->where('order_id', $lockedOrder->id)->latest('id')->first();
+                if ($payment) {
+                    $payment->update([
+                        'amount' => $amount,
+                        'provider' => 'stripe',
+                        'method' => 'stripe',
+                        'provider_reference' => $invoiceId !== '' ? $invoiceId : $payment->provider_reference,
+                        'status' => 'paid',
+                        'paid_at' => now(),
+                        'billing_period_start' => $periodStart,
+                        'billing_period_end' => $periodEnd,
+                        'payload' => array_merge((array) $payment->payload, $invoicePayload),
+                    ]);
+                }
+            });
+            $order->refresh();
+        } else {
+            // Compatibility path for subscriptions created before scheduled
+            // orders were introduced.
+            $order = $this->createSubscriptionRenewalOrder(
+                subscription: $subscription,
+                classSession: $nextSession,
+                provider: 'stripe',
+                amount: $amount,
+                currency: strtoupper((string) ($invoice->currency ?? $subscription->currency ?? 'MYR')),
+                providerReference: $invoiceId !== '' ? $invoiceId : null,
+                payload: $invoicePayload,
+                billingPeriodStart: $periodStart,
+                billingPeriodEnd: $periodEnd,
+            );
+        }
 
         FulfillOrderJob::dispatch($order->id);
+        $this->alignStripeChargeToSessionAfter($subscription, $nextSession);
 
         Log::info('Stripe class renewal order created.', [
             'invoice_id' => $invoiceId ?: null,
@@ -184,6 +295,19 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
         }
 
         $subscription->updateQuietly(['status' => 'past_due']);
+
+        $nextSession = $this->nextUnfulfilledSession($subscription);
+        if ($nextSession && ($order = $this->renewalOrderForSession($subscription, $nextSession))) {
+            $order->updateQuietly([
+                'status' => 'past_due',
+                'provider_reference' => $invoice->id ?? $order->provider_reference,
+            ]);
+            Payment::query()->where('order_id', $order->id)->update([
+                'status' => 'past_due',
+                'provider_reference' => $invoice->id ?? null,
+                'payload' => method_exists($invoice, 'toArray') ? $invoice->toArray() : (array) $invoice,
+            ]);
+        }
 
         AppNotification::create([
             'studio_id' => $subscription->studio_id,
@@ -227,6 +351,97 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
         }
 
         return $this->mapClassFrequencyToBillingInterval($class?->recurrence_frequency);
+    }
+
+    private function renewalOrderForSession(StudioSubscription $subscription, ClassSession $session): ?Order
+    {
+        return Order::query()
+            ->where('studio_subscription_id', $subscription->id)
+            ->where('billing_reason', 'subscription_cycle')
+            ->whereHas('items', fn ($query) => $query
+                ->where('purchasable_type', ClassSession::class)
+                ->where('purchasable_id', $session->id))
+            ->latest('id')
+            ->first();
+    }
+
+    private function chargeAtForSession(ClassSession $session): Carbon
+    {
+        return Carbon::parse($session->start_time)->subDay();
+    }
+
+    private function alignStripeChargeToNextSession(StudioSubscription $subscription): void
+    {
+        $nextSession = $this->nextUnfulfilledSession($subscription);
+        $initialSessionId = (int) ($subscription->meta['initial_class_session_id']
+            ?? $subscription->current_class_session_id);
+
+        if ($nextSession && (int) $nextSession->id === $initialSessionId) {
+            $nextSession = ClassSession::query()
+                ->where('class_id', $subscription->class_id)
+                ->where('status', '!=', 'cancelled')
+                ->where('start_time', '>', $nextSession->start_time)
+                ->orderBy('start_time')
+                ->first();
+        }
+
+        if ($nextSession) {
+            $this->updateStripeBillingAnchor($subscription, $nextSession);
+        }
+    }
+
+    private function alignStripeChargeToSessionAfter(
+        StudioSubscription $subscription,
+        ClassSession $paidSession
+    ): void {
+        $followingSession = ClassSession::query()
+            ->where('class_id', $subscription->class_id)
+            ->where('status', '!=', 'cancelled')
+            ->where('start_time', '>', $paidSession->start_time)
+            ->orderBy('start_time')
+            ->first();
+
+        if ($followingSession) {
+            $this->updateStripeBillingAnchor($subscription, $followingSession);
+        }
+    }
+
+    private function updateStripeBillingAnchor(
+        StudioSubscription $subscription,
+        ClassSession $session
+    ): void {
+        if ($subscription->provider !== 'stripe' || ! $subscription->provider_subscription_id) {
+            return;
+        }
+
+        $chargeAt = $this->chargeAtForSession($session);
+        $anchor = $chargeAt->isFuture() ? $chargeAt->getTimestamp() : 'now';
+
+        try {
+            \Stripe\Stripe::setApiKey((string) config('services.stripe.secret'));
+            \Stripe\Subscription::update($subscription->provider_subscription_id, [
+                'billing_cycle_anchor' => $anchor,
+                'proration_behavior' => 'none',
+                'metadata' => [
+                    'next_class_session_id' => (string) $session->id,
+                    'next_class_starts_at' => $session->start_time?->toIso8601String(),
+                    'charge_policy' => '24_hours_before_class',
+                ],
+            ]);
+
+            $subscription->updateQuietly(['next_billing_at' => $chargeAt->isFuture() ? $chargeAt : now()]);
+        } catch (\Throwable $exception) {
+            // Never fail a paid webhook after Stripe has already collected
+            // money. Keep the event retry-safe and expose the scheduling issue
+            // in logs for immediate operational attention.
+            Log::error('Unable to align Stripe class charge 24 hours before session.', [
+                'studio_subscription_id' => $subscription->id,
+                'stripe_subscription_id' => $subscription->provider_subscription_id,
+                'class_session_id' => $session->id,
+                'charge_at' => $chargeAt->toIso8601String(),
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function stripeSubscriptionIdFromInvoice(object $invoice): ?string
