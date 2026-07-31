@@ -38,6 +38,10 @@ Route::get('/', function () {
         return redirect()->route('superadmin.dashboard');
     }
 
+    if (auth()->user()->role === 'admin' && ! auth()->user()->studio_id && ! auth()->user()->hasCompleteClientProfile()) {
+        return redirect()->route('customer.account');
+    }
+
     return redirect()->route('customer.dashboard');
 })->middleware('central');
 
@@ -45,27 +49,30 @@ Route::middleware(['auth', 'central'])
     ->prefix('customer')
     ->name('customer.')
     ->group(function (): void {
-        Route::get('dashboard', [CustomerPortalController::class, 'dashboard'])->name('dashboard');
-        Route::get('studio', [CustomerPortalController::class, 'studio'])->name('studio');
-        Route::patch('studio/{studio}/registration-settings', [StudioRegistrationSettingsController::class, 'update'])->name('studio.registration-settings.update');
-        Route::get('billing', [CustomerPortalController::class, 'billing'])->name('billing');
-        Route::get('invoices', [CustomerPortalController::class, 'invoices'])->name('invoices');
         Route::get('account', [CustomerAccountController::class, 'edit'])->name('account');
 
-        Route::get('messages', [PlatformMessageController::class, 'index'])->name('messages.index');
-        Route::post('messages', [PlatformMessageController::class, 'store'])->name('messages.store');
-        Route::get('messages/{message}', [PlatformMessageController::class, 'show'])->name('messages.show');
-        Route::post('messages/read-all', [PlatformMessageController::class, 'markAllRead'])->name('messages.read-all');
+        Route::middleware('client.profile.complete')->group(function (): void {
+            Route::get('dashboard', [CustomerPortalController::class, 'dashboard'])->name('dashboard');
+            Route::get('studio', [CustomerPortalController::class, 'studio'])->name('studio');
+            Route::patch('studio/{studio}/registration-settings', [StudioRegistrationSettingsController::class, 'update'])->name('studio.registration-settings.update');
+            Route::get('billing', [CustomerPortalController::class, 'billing'])->name('billing');
+            Route::get('invoices', [CustomerPortalController::class, 'invoices'])->name('invoices');
 
-        Route::post('billing/checkout/{plan}', [PlatformBillingController::class, 'checkout'])->name('billing.checkout');
-        Route::get('billing/upgrade/{plan}/confirm', [PlatformBillingController::class, 'confirmUpgrade'])->name('billing.upgrade.confirm');
-        Route::post('billing/upgrade/{plan}', [PlatformBillingController::class, 'upgrade'])->name('billing.upgrade');
-        Route::post('billing/cancel', [PlatformBillingController::class, 'cancel'])->name('billing.cancel');
-        Route::post('billing/resume', [PlatformBillingController::class, 'resume'])->name('billing.resume');
-        Route::post('billing/portal', [PlatformBillingController::class, 'portal'])->name('billing.portal');
+            Route::get('messages', [PlatformMessageController::class, 'index'])->name('messages.index');
+            Route::post('messages', [PlatformMessageController::class, 'store'])->name('messages.store');
+            Route::get('messages/{message}', [PlatformMessageController::class, 'show'])->name('messages.show');
+            Route::post('messages/read-all', [PlatformMessageController::class, 'markAllRead'])->name('messages.read-all');
 
-        Route::get('studios/create', [StudioOnboardingController::class, 'create'])->name('studios.create');
-        Route::post('studios', [StudioOnboardingController::class, 'store'])->name('studios.store');
-        Route::get('studios/payment-success', [StudioOnboardingController::class, 'paymentSuccess'])->name('studios.payment-success');
-        Route::get('studios/{studio}/open', [CustomerPortalController::class, 'launchStudio'])->name('studios.launch');
+            Route::post('billing/checkout/{plan}', [PlatformBillingController::class, 'checkout'])->name('billing.checkout');
+            Route::get('billing/upgrade/{plan}/confirm', [PlatformBillingController::class, 'confirmUpgrade'])->name('billing.upgrade.confirm');
+            Route::post('billing/upgrade/{plan}', [PlatformBillingController::class, 'upgrade'])->name('billing.upgrade');
+            Route::post('billing/cancel', [PlatformBillingController::class, 'cancel'])->name('billing.cancel');
+            Route::post('billing/resume', [PlatformBillingController::class, 'resume'])->name('billing.resume');
+            Route::post('billing/portal', [PlatformBillingController::class, 'portal'])->name('billing.portal');
+
+            Route::get('studios/create', [StudioOnboardingController::class, 'create'])->name('studios.create');
+            Route::post('studios', [StudioOnboardingController::class, 'store'])->name('studios.store');
+            Route::get('studios/payment-success', [StudioOnboardingController::class, 'paymentSuccess'])->name('studios.payment-success');
+            Route::get('studios/{studio}/open', [CustomerPortalController::class, 'launchStudio'])->name('studios.launch');
+        });
     });
