@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\ClientSocialAuthController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -34,6 +35,16 @@ Route::middleware('guest')->group(function () {
     Route::get('institutes/register', [InstituteRegisterController::class, 'create'])->name('institutes.register');
     Route::post('institutes/register', [InstituteRegisterController::class, 'store'])->name('institutes.register.store');
     Route::get('institutes/check-subdomain', [InstituteRegisterController::class, 'checkSubdomain'])->name('institutes.check-subdomain');
+});
+
+Route::middleware(['guest', 'central', 'throttle:30,1'])->group(function () {
+    Route::get('auth/sso/providers', [ClientSocialAuthController::class, 'providers'])->name('client-sso.providers');
+    Route::get('auth/{provider}/redirect', [ClientSocialAuthController::class, 'redirect'])
+        ->whereIn('provider', ['google', 'microsoft', 'apple'])
+        ->name('client-sso.redirect');
+    Route::match(['get', 'post'], 'auth/{provider}/callback', [ClientSocialAuthController::class, 'callback'])
+        ->whereIn('provider', ['google', 'microsoft', 'apple'])
+        ->name('client-sso.callback');
 });
 
 Route::middleware('auth')->group(function () {
