@@ -131,8 +131,49 @@ const renderMarketingLogo = () => {
     });
 };
 
+const renderClientSso = async () => {
+    if (!['/login', '/register'].includes(window.location.pathname) || document.getElementById('client-sso-options')) return;
+
+    const form = document.querySelector('form[action$="/login"], form[action$="/register"]');
+    if (!form) return;
+
+    try {
+        const response = await fetch('/auth/sso/providers', {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        });
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (!Array.isArray(data.providers) || !data.providers.length) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'client-sso-options';
+        wrapper.className = 'mb-6 space-y-3';
+
+        const icons = {
+            google: '<span class="text-lg font-black text-blue-600">G</span>',
+            microsoft: '<span class="grid grid-cols-2 gap-0.5"><i class="h-2 w-2 bg-red-500"></i><i class="h-2 w-2 bg-green-500"></i><i class="h-2 w-2 bg-blue-500"></i><i class="h-2 w-2 bg-yellow-500"></i></span>',
+            apple: '<span class="text-xl leading-none">●</span>',
+        };
+
+        wrapper.innerHTML = data.providers.map((provider) => `
+            <a href="${provider.url}" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 shadow-sm transition hover:border-blue-400 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:border-blue-500">
+                ${icons[provider.id] || ''}<span>${provider.label}</span>
+            </a>`).join('') + `
+            <div class="flex items-center gap-4 py-1">
+                <hr class="flex-grow border-slate-200 dark:border-gray-700"><span class="text-xs font-bold uppercase tracking-wider text-slate-400">or use email</span><hr class="flex-grow border-slate-200 dark:border-gray-700">
+            </div>`;
+
+        form.parentNode.insertBefore(wrapper, form);
+    } catch (_) {
+        // Password authentication remains available when provider discovery fails.
+    }
+};
+
 document.addEventListener('DOMContentLoaded', renderSeatPromotion);
 document.addEventListener('DOMContentLoaded', explainSubscriptionEndDate);
 document.addEventListener('DOMContentLoaded', renderDocumentationLink);
 document.addEventListener('DOMContentLoaded', renderMobileLogout);
 document.addEventListener('DOMContentLoaded', renderMarketingLogo);
+document.addEventListener('DOMContentLoaded', renderClientSso);
