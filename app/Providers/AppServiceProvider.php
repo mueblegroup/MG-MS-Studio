@@ -21,8 +21,10 @@ use App\Services\TrialAwarePlatformStripeBillingService;
 use App\Support\TenantManager;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use SocialiteProviders\Manager\SocialiteWasCalled;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,6 +46,11 @@ class AppServiceProvider extends ServiceProvider
     {
         ClassModel::observe(ClassModelObserver::class);
         StudioSubscription::observe(StudioSubscriptionObserver::class);
+
+        Event::listen(function (SocialiteWasCalled $event): void {
+            $event->extendSocialite('microsoft', \SocialiteProviders\Microsoft\Provider::class);
+            $event->extendSocialite('apple', \SocialiteProviders\Apple\Provider::class);
+        });
 
         RateLimiter::for('api', function (Request $request) {
             $userKey = optional($request->user())->id;
