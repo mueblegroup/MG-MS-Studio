@@ -16,7 +16,15 @@ class PlatformSsoService
             ->whereIn('provider', self::PROVIDERS)
             ->where('is_enabled', true)
             ->get()
-            ->filter(fn (PlatformSsoProvider $provider) => filled($provider->client_id) && filled($provider->client_secret))
+            ->filter(function (PlatformSsoProvider $provider): bool {
+                if (blank($provider->client_id) || blank($provider->client_secret)) {
+                    return false;
+                }
+
+                return ! ($provider->provider === 'apple'
+                    && $provider->secret_expires_at
+                    && $provider->secret_expires_at->isPast());
+            })
             ->keyBy('provider')
             ->all();
     }
@@ -33,6 +41,10 @@ class PlatformSsoService
 
         if (blank($settings->client_id) || blank($settings->client_secret)) {
             throw new RuntimeException(ucfirst($provider).' login is not fully configured.');
+        }
+
+        if ($provider === 'apple' && $settings->secret_expires_at?->isPast()) {
+            throw new RuntimeException('Apple login is temporarily unavailable because its client secret has expired.');
         }
 
         return $settings;
