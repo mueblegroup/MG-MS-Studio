@@ -16,6 +16,15 @@
             </div>
         </div>
 
+        @if(session('warning'))
+            <div class="rounded-3xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">{{ session('warning') }}</div>
+        @endif
+        @if(!$user->hasCompleteClientProfile())
+            <div class="rounded-3xl border border-red-200 bg-red-50 px-5 py-5 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100">
+                <p class="font-black">Client portal access is restricted</p>
+                <p class="mt-1 text-sm font-semibold">Complete the required fields below. Missing: {{ collect($user->missingClientProfileFields())->map(fn($field) => str_replace('_', ' ', $field))->implode(', ') }}.</p>
+            </div>
+        @endif
         @if (session('status') === 'profile-updated')
             <div class="rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200">Profile updated successfully.</div>
         @endif
@@ -26,11 +35,7 @@
         <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
             <div class="space-y-6">
                 <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div class="mb-6">
-                        <h2 class="text-xl font-black text-slate-950 dark:text-white">Profile Information</h2>
-                        <p class="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">Update the name and email address for the client owner account.</p>
-                    </div>
-                    <div class="max-w-2xl">@include('profile.partials.update-profile-information-form')</div>
+                    <div class="max-w-3xl">@include('profile.partials.update-profile-information-form')</div>
                 </section>
 
                 <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -47,6 +52,16 @@
             </div>
 
             <aside class="space-y-6">
+                <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <h3 class="text-lg font-black text-slate-950 dark:text-white">Profile Status</h3>
+                    <div class="mt-4 rounded-2xl {{ $user->hasCompleteClientProfile() ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900' }} p-4 text-sm font-bold">
+                        {{ $user->hasCompleteClientProfile() ? 'Complete — portal access enabled' : 'Incomplete — portal access locked' }}
+                    </div>
+                    <div class="mt-3 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600 dark:bg-slate-950/50 dark:text-slate-300">
+                        Phone: {{ $user->phone_verified_at ? 'Verified' : 'Not verified yet' }}
+                    </div>
+                </div>
+
                 <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                     <h3 class="text-lg font-black text-slate-950 dark:text-white">Portal Boundary</h3>
                     <div class="mt-5 space-y-4 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">
