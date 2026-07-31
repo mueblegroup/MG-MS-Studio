@@ -65,10 +65,12 @@ class ClientSocialAuthController extends Controller
             $email = strtolower(trim((string) $socialUser->getEmail()));
 
             if ($providerId === '' || $email === '') {
-                throw new \RuntimeException('The identity provider did not return a verified email address.');
+                throw new \RuntimeException('The identity provider did not return a usable email address.');
             }
 
-            $user = DB::transaction(function () use ($provider, $providerId, $email, $socialUser): User {
+            $created = false;
+
+            $user = DB::transaction(function () use ($provider, $providerId, $email, $socialUser, &$created): User {
                 $account = SocialAccount::query()
                     ->where('provider', $provider)
                     ->where('provider_user_id', $providerId)
@@ -95,8 +97,8 @@ class ClientSocialAuthController extends Controller
                         'email' => $email,
                         'role' => 'admin',
                         'password' => Hash::make(Str::random(64)),
-                        'email_verified_at' => now(),
                     ]);
+                    $created = true;
                 }
 
                 if (! $user->email_verified_at) {
@@ -118,11 +120,15 @@ class ClientSocialAuthController extends Controller
             Auth::login($user, true);
             request()->session()->regenerate();
 
-            return redirect()->route('customer.dashboard');
+            return $created
+                ? redirect()->route('customer.account', ['complete' => 1])
+                : redirect()->route('customer.dashboard');
         } catch (Throwable $exception) {
             report($exception);
 
-            return redirect()->route('login')->with('error', 'Social login failed: '.$exception->getMessage());
+            return redirect()->route('login')->withErrors([
+                'email' => 'Social login failed: '.$exception->getMessage(),
+            ]);
         }
     }
 }
