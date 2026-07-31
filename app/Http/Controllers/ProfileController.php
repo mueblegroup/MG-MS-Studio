@@ -30,23 +30,34 @@ class ProfileController extends Controller
 
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $originalPhone = $user->phone_number;
+        $user->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        if ($originalPhone !== $user->phone_number) {
+            $user->phone_verified_at = null;
+        }
+
+        $user->save();
+
+        if ($user->role === 'admin' && ! $user->studio_id && $user->hasCompleteClientProfile()) {
+            $user->forceFill(['profile_completed_at' => now()])->save();
+
+            return redirect()
+                ->route('customer.dashboard')
+                ->with('success', 'Your profile is complete. Client portal access is now enabled.');
+        }
 
         return Redirect::back()->with('status', 'profile-updated');
     }
 
     public function destroy(Request $request): RedirectResponse
     {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
-
+        $request->validateWithBag('userDeletion', ['password' => ['required', 'current_password']]);
         $user = $request->user();
         Auth::logout();
         $user->delete();
