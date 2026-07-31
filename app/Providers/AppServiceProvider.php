@@ -14,8 +14,8 @@ use App\Models\ClassModel;
 use App\Models\StudioSubscription;
 use App\Observers\ClassModelObserver;
 use App\Observers\StudioSubscriptionObserver;
+use App\Services\FinalSessionAwareSubscriptionClassService;
 use App\Services\PlatformStripeBillingService;
-use App\Services\ReliableSubscriptionClassService;
 use App\Services\SubscriptionClassService;
 use App\Services\TrialAwarePlatformStripeBillingService;
 use App\Support\TenantManager;
@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->bind(PlatformStripeBillingService::class, TrialAwarePlatformStripeBillingService::class);
-        $this->app->bind(SubscriptionClassService::class, ReliableSubscriptionClassService::class);
+        $this->app->bind(SubscriptionClassService::class, FinalSessionAwareSubscriptionClassService::class);
         $this->app->bind(ShopController::class, GroupedShopController::class);
         $this->app->bind(ClassController::class, FilteredClassController::class);
         $this->app->bind(StudioOnboardingController::class, ValidatedStudioOnboardingController::class);
