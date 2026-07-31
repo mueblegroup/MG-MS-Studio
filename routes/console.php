@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Studio;
+use App\Models\StudioSubscription;
 use App\Services\HitPayService;
 use App\Services\PlatformSubscriptionDateSyncService;
 use App\Services\SubscriptionClassService;
@@ -36,6 +37,31 @@ Artisan::command('subscriptions:recover-stripe-invoice {invoice}', function (str
     $this->warn('No renewal order was created. The invoice may be the initial payment, already processed, unmatched, or the class may have no remaining session.');
 })->purpose('Recover a paid Stripe class-subscription invoice that missed webhook processing');
 
+Artisan::command('subscriptions:sync-stripe-end-dates', function (SubscriptionClassService $subscriptions) {
+    if (! method_exists($subscriptions, 'scheduleStripeCancellationAfterFinalSession')) {
+        $this->error('The active subscription billing service does not support final-session cancellation.');
+        return 1;
+    }
+
+    $processed = 0;
+
+    StudioSubscription::query()
+        ->where('provider', 'stripe')
+        ->whereNotNull('provider_subscription_id')
+        ->whereIn('status', ['pending', 'active', 'trialing', 'past_due'])
+        ->orderBy('id')
+        ->chunkById(50, function ($studioSubscriptions) use ($subscriptions, &$processed): void {
+            foreach ($studioSubscriptions as $studioSubscription) {
+                $subscriptions->scheduleStripeCancellationAfterFinalSession($studioSubscription);
+                $processed++;
+            }
+        });
+
+    $this->info("Reconciled {$processed} Stripe class subscription end date(s).");
+
+    return 0;
+})->purpose('Schedule Stripe class subscriptions to stop after their final class session');
+
 Artisan::command('platform-subscriptions:sync-dates', function (PlatformSubscriptionDateSyncService $sync) {
     $count = 0;
 
@@ -54,6 +80,11 @@ Artisan::command('platform-subscriptions:sync-dates', function (PlatformSubscrip
 
 Schedule::command('subscriptions:bill-due-hitpay')
     ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('subscriptions:sync-stripe-end-dates')
+    ->dailyAt('02:00')
     ->withoutOverlapping()
     ->onOneServer();
 
