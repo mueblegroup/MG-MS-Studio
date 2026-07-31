@@ -45,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/stripe',
             'webhooks/hitpay',
             'webhooks/platform-stripe',
+            'auth/apple/callback',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
