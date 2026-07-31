@@ -10,7 +10,10 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.3",
+        "laravel/socialite": "^5.29",
         "laravel/tinker": "^2.10.1",
+        "socialiteproviders/apple": "^5.10",
+        "socialiteproviders/microsoft": "^4.10",
         "stripe/stripe-php": "^19.1"
     },
     "require-dev": {
