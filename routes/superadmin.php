@@ -4,6 +4,7 @@ use App\Http\Controllers\PlatformMessageController;
 use App\Http\Controllers\Superadmin\AuditLogController;
 use App\Http\Controllers\Superadmin\DomainController;
 use App\Http\Controllers\Superadmin\PlanTrialController;
+use App\Http\Controllers\Superadmin\PlatformSettingsController;
 use App\Http\Controllers\Superadmin\SsoSettingsController;
 use App\Http\Controllers\Superadmin\SuperadminController;
 use Illuminate\Support\Facades\Route;
@@ -29,8 +30,9 @@ Route::middleware(['auth', 'central', 'role:superadmin'])
 
         Route::get('/platform-payments', [SuperadminController::class, 'platformPayments'])->name('platform-payments.index');
 
-        Route::get('/sso', [SsoSettingsController::class, 'index'])->name('sso.index');
-        Route::patch('/sso/{provider}', [SsoSettingsController::class, 'update'])
+        Route::get('/settings', [PlatformSettingsController::class, 'index'])->name('settings.index');
+        Route::get('/settings/sso', [SsoSettingsController::class, 'index'])->name('sso.index');
+        Route::patch('/settings/sso/{provider}', [SsoSettingsController::class, 'update'])
             ->whereIn('provider', ['google', 'microsoft', 'apple'])
             ->name('sso.update');
 
