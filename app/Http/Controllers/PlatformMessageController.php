@@ -7,6 +7,7 @@ use App\Models\Studio;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class PlatformMessageController extends Controller
@@ -14,6 +15,7 @@ class PlatformMessageController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
+        $messagingAvailable = $this->messagingAvailable($user);
 
         $messages = PlatformMessage::query()
             ->with(['sender:id,name,role', 'recipient:id,name,role', 'studio:id,name,slug'])
@@ -27,14 +29,22 @@ class PlatformMessageController extends Controller
 
         return view($this->viewFor($user, 'index'), [
             'messages' => $messages,
-            'recipients' => $this->availableRecipients($user),
+            'recipients' => $messagingAvailable ? $this->availableRecipients($user) : collect(),
             'unreadCount' => PlatformMessage::where('recipient_id', $user->id)->whereNull('read_at')->count(),
+            'messagingAvailable' => $messagingAvailable,
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
+
+        if (! $this->messagingAvailable($user)) {
+            return redirect()
+                ->route('customer.messages.index')
+                ->with('error', 'Platform messaging becomes available after you create your first studio.');
+        }
+
         $validated = $request->validate([
             'recipient_id' => ['required', 'integer', 'exists:users,id'],
             'subject' => ['required', 'string', 'max:255'],
@@ -114,7 +124,7 @@ class PlatformMessageController extends Controller
         return back()->with('success', 'All platform messages marked as read.');
     }
 
-    private function availableRecipients(User $user)
+    private function availableRecipients(User $user): Collection
     {
         if ($user->role === 'superadmin') {
             return User::query()
@@ -125,12 +135,24 @@ class PlatformMessageController extends Controller
                 ->get();
         }
 
-        abort_unless($user->role === 'admin' && Studio::where('owner_user_id', $user->id)->exists(), 403);
+        if ($user->role !== 'admin' || ! Studio::where('owner_user_id', $user->id)->exists()) {
+            return collect();
+        }
 
         return User::query()
             ->where('role', 'superadmin')
             ->orderBy('name')
             ->get();
+    }
+
+    private function messagingAvailable(User $user): bool
+    {
+        if ($user->role === 'superadmin') {
+            return true;
+        }
+
+        return $user->role === 'admin'
+            && Studio::query()->where('owner_user_id', $user->id)->exists();
     }
 
     private function authorizeRecipient(User $sender, User $recipient): ?Studio
