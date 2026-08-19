@@ -19,11 +19,13 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')->group(base_path('routes/customer.php'));
             Route::middleware('web')->group(base_path('routes/superadmin.php'));
             Route::middleware('web')->group(base_path('routes/subscription-classes.php'));
+            Route::middleware('web')->group(base_path('routes/studio-payment-gateways.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(prepend: [
             \App\Http\Middleware\ResolveStudioTenant::class,
+            \App\Http\Middleware\ApplyStudioPaymentGatewayConfig::class,
         ]);
 
         $middleware->web(append: [
