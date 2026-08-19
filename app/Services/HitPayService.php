@@ -6,20 +6,25 @@ use Illuminate\Support\Facades\Http;
 
 class HitPayService
 {
+    public function __construct(protected StudioPaymentGatewayService $gateways)
+    {
+    }
+
     public function createPaymentRequest(array $payload): array
     {
-        $baseUrl = rtrim(config('services.hitpay.base_url'), '/');
-        $apiKey  = config('services.hitpay.api_key');
+        $config = $this->gateways->hitpay();
+        $baseUrl = rtrim((string) ($config['base_url'] ?? ''), '/');
+        $apiKey = (string) ($config['api_key'] ?? '');
 
-        if (!$apiKey) {
-            throw new \RuntimeException('Missing HITPAY_API_KEY');
+        if ($apiKey === '') {
+            throw new \RuntimeException('HitPay API key is not configured for this studio.');
         }
 
         $res = Http::withHeaders([
                 'X-BUSINESS-API-KEY' => $apiKey,
                 'Accept' => 'application/json',
             ])
-            ->asForm() // HitPay accepts form-data; safer for x-www-form-urlencoded
+            ->asForm()
             ->post($baseUrl . '/payment-requests', $payload);
 
         if (!$res->successful()) {
@@ -30,22 +35,22 @@ class HitPayService
     }
 
     /**
-     * Validates HitPay webhook HMAC using event_webhook_salt_key OR normal salt.
+     * Validates a legacy HitPay form webhook with the current studio's secret.
      */
     public function validateWebhook(array $data): bool
     {
         $received = (string)($data['hmac'] ?? '');
         if ($received === '') return false;
 
-        $eventSalt  = config('services.hitpay.event_webhook_salt_key');
-        $normalSalt = config('services.hitpay.salt');
-
-        $secrets = array_values(array_filter([$eventSalt, $normalSalt]));
+        $config = $this->gateways->hitpay();
+        $secrets = array_values(array_filter([
+            $config['event_webhook_salt_key'] ?? null,
+            $config['salt'] ?? null,
+        ]));
         if (empty($secrets)) return false;
 
         $copy = $data;
         unset($copy['hmac']);
-
         ksort($copy);
 
         $sigStr = '';
@@ -54,7 +59,7 @@ class HitPayService
         }
 
         foreach ($secrets as $secret) {
-            $calc = hash_hmac('sha256', $sigStr, $secret);
+            $calc = hash_hmac('sha256', $sigStr, (string) $secret);
             if (hash_equals($received, $calc)) {
                 return true;
             }
