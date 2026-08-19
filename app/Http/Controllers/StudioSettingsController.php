@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\StudioPaymentGateway;
 use App\Services\StudioSettingsService;
+use App\Support\TenantManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -82,6 +84,13 @@ class StudioSettingsController extends Controller
             'mail_ehlo_domain' => $validated['mail_ehlo_domain'] ?? '',
         ]);
 
+        $provider = (string) $validated['default_payment_provider'];
+        if (! $this->gatewayReady($provider)) {
+            return redirect()
+                ->route('settings.payment-gateways.index', ['provider' => $provider])
+                ->with('gateway_setup_notice', ucfirst($provider).' is selected as your payment gateway. Complete and enable its studio credentials before accepting payments.');
+        }
+
         return back()->with('success', 'Studio settings updated.');
     }
 
@@ -132,10 +141,6 @@ class StudioSettingsController extends Controller
     {
         $issues = [];
 
-        $this->pushMissing($issues, 'APP_KEY', config('app.key'), 'Required for Laravel encryption, sessions, and secure app operation.');
-        $this->pushMissing($issues, 'APP_URL', config('app.url'), 'Required for correct checkout redirect URLs, webhook URLs, receipts, and links.');
-        $this->pushMissing($issues, 'APP_NAME', config('app.name'), 'Used as the fallback studio/app name.');
-
         if (blank($data['studio_name'] ?? null)) {
             $issues[] = [
                 'type' => 'Studio Setting',
@@ -163,24 +168,14 @@ class StudioSettingsController extends Controller
             ];
         }
 
-        if (($data['default_payment_provider'] ?? 'stripe') === 'stripe') {
-            $this->pushMissing($issues, 'STRIPE_SECRET', config('services.stripe.secret'), 'Stripe is selected, but the secret key is missing.');
-            $this->pushMissing($issues, 'STRIPE_PUBLISHABLE_KEY', config('services.stripe.key'), 'Stripe is selected, but the publishable key is missing.');
-            $this->pushMissing($issues, 'STRIPE_WEBHOOK_SECRET', config('services.stripe.webhook_secret'), 'Stripe webhook verification needs this key. Webhook URL: ' . route('webhooks.stripe'));
-        }
-
-        if (($data['default_payment_provider'] ?? 'stripe') === 'hitpay') {
-            $this->pushMissing($issues, 'HITPAY_API_KEY', config('services.hitpay.api_key'), 'HitPay is selected, but the API key is missing.');
-            $this->pushMissing($issues, 'HITPAY_BASE_URL', config('services.hitpay.base_url'), 'HitPay is selected, but the base URL is missing.');
-
-            if (blank(config('services.hitpay.event_webhook_salt_key')) && blank(config('services.hitpay.salt'))) {
-                $issues[] = [
-                    'type' => '.env',
-                    'key' => 'HITPAY_EVENT_WEBHOOK_SALT_KEY or HITPAY_SALT',
-                    'message' => 'HitPay webhook validation needs at least one salt key. Webhook URL: ' . route('webhooks.hitpay'),
-                    'link' => route('webhooks.hitpay'),
-                ];
-            }
+        $provider = strtolower((string) ($data['default_payment_provider'] ?? 'stripe'));
+        if (in_array($provider, ['stripe', 'hitpay'], true) && ! $this->gatewayReady($provider)) {
+            $issues[] = [
+                'type' => 'Payment Gateway',
+                'key' => ucfirst($provider),
+                'message' => ucfirst($provider).' is selected for this studio but its own credentials are not fully configured and enabled. Configure the studio gateway before accepting student payments.',
+                'link' => route('settings.payment-gateways.index', ['provider' => $provider]),
+            ];
         }
 
         if (!empty($data['mail_enabled'])) {
@@ -204,17 +199,35 @@ class StudioSettingsController extends Controller
         return $issues;
     }
 
-    private function pushMissing(array &$issues, string $key, mixed $value, string $message): void
+    private function gatewayReady(string $provider): bool
     {
-        if (!blank($value)) {
-            return;
+        $studio = app(TenantManager::class)->current();
+        if (! $studio) {
+            return false;
         }
 
-        $issues[] = [
-            'type' => '.env',
-            'key' => $key,
-            'message' => $message,
-            'link' => route('settings.studio'),
-        ];
+        $gateway = StudioPaymentGateway::query()
+            ->where('studio_id', $studio->id)
+            ->where('provider', $provider)
+            ->first();
+
+        if (! $gateway || ! $gateway->enabled) {
+            return false;
+        }
+
+        $credentials = (array) ($gateway->credentials ?? []);
+
+        if ($provider === 'stripe') {
+            return filled($credentials['publishable_key'] ?? null)
+                && filled($credentials['secret_key'] ?? null)
+                && filled($gateway->webhook_secret);
+        }
+
+        if ($provider === 'hitpay') {
+            return filled($credentials['api_key'] ?? null)
+                && (filled($credentials['salt'] ?? null) || filled($gateway->webhook_secret));
+        }
+
+        return false;
     }
 }
