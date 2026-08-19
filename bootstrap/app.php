@@ -25,10 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(prepend: [
             \App\Http\Middleware\ResolveStudioTenant::class,
-            \App\Http\Middleware\ApplyStudioPaymentGatewayConfig::class,
         ]);
 
         $middleware->web(append: [
+            \App\Http\Middleware\ApplyStudioPaymentGatewayConfig::class,
             \App\Http\Middleware\ProcessStripeClassRenewalWebhook::class,
             \App\Http\Middleware\RestrictStaffShopPurchases::class,
             \App\Http\Middleware\ReconcileStripeCheckoutReturn::class,
