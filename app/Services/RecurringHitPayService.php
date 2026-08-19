@@ -46,9 +46,10 @@ class RecurringHitPayService extends HitPayService
             return false;
         }
 
+        $config = $this->gateways->hitpay();
         $salts = array_values(array_filter([
-            config('services.hitpay.event_webhook_salt_key'),
-            config('services.hitpay.salt'),
+            $config['event_webhook_salt_key'] ?? null,
+            $config['salt'] ?? null,
         ]));
 
         foreach ($salts as $salt) {
@@ -63,9 +64,10 @@ class RecurringHitPayService extends HitPayService
 
     private function request(): PendingRequest
     {
-        $apiKey = (string) config('services.hitpay.api_key');
+        $config = $this->gateways->hitpay();
+        $apiKey = (string) ($config['api_key'] ?? '');
         if ($apiKey === '') {
-            throw new RuntimeException('Missing HITPAY_API_KEY');
+            throw new RuntimeException('HitPay API key is not configured for this studio.');
         }
 
         return Http::withHeaders([
@@ -78,6 +80,7 @@ class RecurringHitPayService extends HitPayService
 
     private function baseUrl(): string
     {
-        return rtrim((string) config('services.hitpay.base_url'), '/');
+        $config = $this->gateways->hitpay();
+        return rtrim((string) ($config['base_url'] ?? ''), '/');
     }
 }
