@@ -16,8 +16,8 @@ Artisan::command('inspire', function () {
 Artisan::command('subscriptions:bill-due-hitpay', function (SubscriptionClassService $subscriptions, HitPayService $hitpay) {
     $count = $subscriptions->createDueHitpayRenewalOrders($hitpay);
 
-    $this->info("Processed {$count} due HitPay subscription renewal item(s).");
-})->purpose('Process due HitPay subscription renewals');
+    $this->info("Processed {$count} legacy HitPay subscription renewal item(s).");
+})->purpose('Manually process legacy HitPay subscriptions that predate recurring billing');
 
 Artisan::command('subscriptions:recover-stripe-invoice {invoice}', function (string $invoice, SubscriptionClassService $subscriptions) {
     \Stripe\Stripe::setApiKey((string) config('services.stripe.secret'));
@@ -78,10 +78,9 @@ Artisan::command('platform-subscriptions:sync-dates', function (PlatformSubscrip
     $this->info("Refreshed {$count} platform subscription(s) from Stripe.");
 })->purpose('Refresh studio subscription renewal and trial dates from Stripe');
 
-Schedule::command('subscriptions:bill-due-hitpay')
-    ->dailyAt('08:00')
-    ->withoutOverlapping()
-    ->onOneServer();
+// HitPay now owns the recurring schedule for new subscription classes.
+// Do not schedule subscriptions:bill-due-hitpay automatically or the legacy
+// payment-request flow could race with HitPay's own recurring charge.
 
 Schedule::command('subscriptions:sync-stripe-end-dates')
     ->dailyAt('02:00')
