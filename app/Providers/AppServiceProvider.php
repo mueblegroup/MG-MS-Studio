@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\FilteredClassController;
 use App\Http\Controllers\GroupedShopController;
+use App\Http\Controllers\RecurringHitPayCheckoutController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\StudioSettingsController;
 use App\Http\Controllers\TimezoneStudioSettingsController;
@@ -14,8 +16,10 @@ use App\Models\ClassModel;
 use App\Models\StudioSubscription;
 use App\Observers\ClassModelObserver;
 use App\Observers\StudioSubscriptionObserver;
-use App\Services\FinalSessionAwareSubscriptionClassService;
+use App\Services\HitPayRecurringSubscriptionClassService;
+use App\Services\HitPayService;
 use App\Services\PlatformStripeBillingService;
+use App\Services\RecurringHitPayService;
 use App\Services\SubscriptionClassService;
 use App\Services\TrialAwarePlatformStripeBillingService;
 use App\Support\TenantManager;
@@ -35,7 +39,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->bind(PlatformStripeBillingService::class, TrialAwarePlatformStripeBillingService::class);
-        $this->app->bind(SubscriptionClassService::class, FinalSessionAwareSubscriptionClassService::class);
+        $this->app->bind(HitPayService::class, RecurringHitPayService::class);
+        $this->app->bind(SubscriptionClassService::class, HitPayRecurringSubscriptionClassService::class);
+        $this->app->bind(CheckoutController::class, RecurringHitPayCheckoutController::class);
         $this->app->bind(ShopController::class, GroupedShopController::class);
         $this->app->bind(ClassController::class, FilteredClassController::class);
         $this->app->bind(StudioOnboardingController::class, ValidatedStudioOnboardingController::class);
