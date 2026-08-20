@@ -57,8 +57,8 @@
         }
     @endphp
 
-    <div class="min-h-screen w-full overflow-x-hidden md:flex">
-        <aside class="hidden shrink-0 border-r {{ $isSuperadmin ? 'border-gray-800 bg-[#111827] text-white' : 'border-[#eadfce] bg-white text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100' }} transition-all duration-300 md:sticky md:top-0 md:flex md:h-screen md:flex-col"
+    <div class="min-h-screen w-full overflow-x-hidden">
+        <aside class="hidden border-r {{ $isSuperadmin ? 'border-gray-800 bg-[#111827] text-white' : 'border-[#eadfce] bg-white text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100' }} transition-all duration-300 md:fixed md:inset-y-0 md:left-0 md:z-40 md:flex md:h-screen md:flex-col"
                :class="collapsed ? 'md:w-20' : 'md:w-64'">
             @include($sidebarView)
         </aside>
@@ -78,7 +78,7 @@
             <button type="button" class="min-w-0 flex-1 bg-black/50" aria-label="Close sidebar" @click="sidebarOpen = false"></button>
         </div>
 
-        <div class="min-w-0 flex-1">
+        <div class="min-w-0 transition-[margin] duration-300" :class="collapsed ? 'md:ml-20' : 'md:ml-64'">
             <header class="sticky top-0 z-30 flex items-center justify-between border-b border-[#eadfce] bg-white/95 p-4 shadow-sm backdrop-blur md:hidden dark:border-gray-800 dark:bg-gray-900/95">
                 <button @click="sidebarOpen = !sidebarOpen"
                         class="rounded-xl p-2 text-[#31261d] transition hover:bg-[#fff3df] focus:outline-none focus:ring-2 focus:ring-[#d97706] dark:text-gray-200 dark:hover:bg-gray-800"
