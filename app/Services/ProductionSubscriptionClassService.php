@@ -2,7 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\ClassSession;
+use App\Models\Order;
 use App\Models\StudioSubscription;
+use Illuminate\Support\Carbon;
+use RuntimeException;
 
 class ProductionSubscriptionClassService extends HitPayRecurringSubscriptionClassService
 {
@@ -44,6 +48,104 @@ class ProductionSubscriptionClassService extends HitPayRecurringSubscriptionClas
         return 'You already have an active subscription for this class.';
     }
 
+    public function expectedUpcomingBilling(StudioSubscription $subscription): array
+    {
+        $subscription->loadMissing(['classModel', 'user']);
+        $session = $this->nextBillableSessionForInspection($subscription);
+
+        if (! $session) {
+            return [
+                'session' => null,
+                'target_charge_at' => null,
+                'hitpay_start_date_sgt' => null,
+            ];
+        }
+
+        $target = Carbon::parse($session->start_time)->subDay();
+
+        return [
+            'session' => $session,
+            'target_charge_at' => $target,
+            'hitpay_start_date_sgt' => $target->copy()->timezone('Asia/Singapore')->toDateString(),
+        ];
+    }
+
+    public function repairHitPayUpcomingBilling(StudioSubscription $subscription): array
+    {
+        if (strtolower((string) $subscription->provider) !== 'hitpay') {
+            throw new RuntimeException('Only HitPay subscriptions can be repaired by this method.');
+        }
+
+        if (! $subscription->provider_subscription_id) {
+            throw new RuntimeException('This HitPay subscription does not have a recurring billing ID.');
+        }
+
+        $subscription->loadMissing(['classModel', 'user']);
+        $expected = $this->expectedUpcomingBilling($subscription);
+        /** @var ClassSession|null $session */
+        $session = $expected['session'];
+
+        if (! $session) {
+            return [
+                'repaired' => false,
+                'reason' => 'no_remaining_session',
+                'expected' => $expected,
+            ];
+        }
+
+        $startDate = (string) $expected['hitpay_start_date_sgt'];
+        $todaySgt = Carbon::now('Asia/Singapore')->toDateString();
+        if ($startDate < $todaySgt) {
+            $startDate = $todaySgt;
+        }
+
+        [$cycle, $repeat, $frequency] = $this->productionHitPayCycle($subscription->billing_interval ?: 'month');
+
+        $payload = [
+            'plan_id' => null,
+            'name' => (string) ($subscription->classModel?->name ?? 'Subscription Class'),
+            'description' => 'Recurring class subscription',
+            'payment_methods' => ['card'],
+            'cycle' => $cycle,
+            'customer_email' => (string) $subscription->user?->email,
+            'customer_name' => (string) $subscription->user?->name,
+            'start_date' => $startDate,
+            'reference' => (string) ($subscription->meta['hitpay_reference'] ?? ('SUB:'.$subscription->id)),
+            'amount' => (float) $subscription->amount,
+            'send_email' => 'true',
+        ];
+
+        if ($cycle === 'custom') {
+            $payload['cycle_repeat'] = $repeat;
+            $payload['cycle_frequency'] = $frequency;
+        }
+
+        $response = app(RecurringHitPayService::class)->updateRecurringBilling(
+            (string) $subscription->provider_subscription_id,
+            $payload
+        );
+
+        $providerDate = Carbon::parse($startDate, 'Asia/Singapore')->startOfDay();
+        $subscription->updateQuietly([
+            'next_billing_at' => $providerDate,
+            'current_period_end' => $providerDate,
+            'meta' => array_merge((array) $subscription->meta, [
+                'hitpay_next_charge_date_sgt' => $startDate,
+                'target_next_charge_at' => $expected['target_charge_at']?->toIso8601String(),
+                'next_class_session_id' => $session->id,
+                'hitpay_timing_precision' => 'date_only_sgt',
+                'billing_schedule_repaired_at' => now()->toIso8601String(),
+            ]),
+        ]);
+
+        return [
+            'repaired' => true,
+            'expected' => $expected,
+            'provider_start_date_sgt' => $startDate,
+            'provider_response' => $response,
+        ];
+    }
+
     public function handleStripeInvoiceFailure(object $invoice): void
     {
         parent::handleStripeInvoiceFailure($invoice);
@@ -79,5 +181,47 @@ class ProductionSubscriptionClassService extends HitPayRecurringSubscriptionClas
                 'payment_grace_unit' => $subscription->classModel->subscriptionGraceUnit(),
             ]),
         ]);
+    }
+
+    private function nextBillableSessionForInspection(StudioSubscription $subscription): ?ClassSession
+    {
+        $session = $this->nextUnfulfilledSession($subscription);
+        $initialSessionId = (int) ($subscription->meta['initial_class_session_id'] ?? $subscription->current_class_session_id);
+
+        if (! $session) {
+            return null;
+        }
+
+        if ((int) $session->id !== $initialSessionId) {
+            return $session;
+        }
+
+        $initialOrderPaid = Order::query()
+            ->where('studio_subscription_id', $subscription->id)
+            ->where('billing_reason', 'subscription_initial')
+            ->where('status', 'paid')
+            ->exists();
+
+        if (! $initialOrderPaid) {
+            return $session;
+        }
+
+        return ClassSession::query()
+            ->where('class_id', $subscription->class_id)
+            ->where('status', '!=', 'cancelled')
+            ->where('start_time', '>', $session->start_time)
+            ->orderBy('start_time')
+            ->first();
+    }
+
+    private function productionHitPayCycle(string $interval): array
+    {
+        return match (strtolower($interval)) {
+            'week', 'weekly' => ['weekly', null, null],
+            'month', 'monthly' => ['monthly', null, null],
+            'year', 'yearly', 'annual', 'annually' => ['yearly', null, null],
+            'day', 'daily' => ['custom', 1, 'day'],
+            default => ['monthly', null, null],
+        };
     }
 }
