@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckUserRole::class,
             'central' => \App\Http\Middleware\EnsureCentralDomain::class,
+            'owner.timezone' => \App\Http\Middleware\ApplyOwnerStudioTimezone::class,
             'client.profile.complete' => \App\Http\Middleware\EnsureClientProfileComplete::class,
             'api.ability' => \App\Http\Middleware\EnsureApiTokenCan::class,
             'api.log' => \App\Http\Middleware\LogApiRequest::class,
