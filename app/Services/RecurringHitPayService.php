@@ -13,6 +13,17 @@ class RecurringHitPayService extends HitPayService
         return $this->request()->post($this->baseUrl().'/recurring-billing', $payload)->throw()->json();
     }
 
+    public function getRecurringBilling(string $id): array
+    {
+        $response = $this->request()->get($this->baseUrl().'/recurring-billing/'.$id);
+
+        if (! $response->successful()) {
+            throw new RuntimeException('HitPay recurring billing lookup failed: '.$response->status().' '.$response->body());
+        }
+
+        return $response->json() ?: [];
+    }
+
     public function updateRecurringBilling(string $id, array $payload): array
     {
         return $this->request()->put($this->baseUrl().'/recurring-billing/'.$id, $payload)->throw()->json();
