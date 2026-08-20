@@ -7,11 +7,114 @@ use App\Models\Payment;
 use App\Models\StudioSubscription;
 use App\Services\HitPayService;
 use App\Services\RecurringHitPayService;
+use App\Services\StudioSettingsService;
+use App\Services\SubscriptionClassService;
+use App\Support\TenantManager;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use RuntimeException;
 
 class ProductionRecurringHitPayCheckoutController extends RecurringHitPayCheckoutController
 {
+    public function retrySubscriptionStart(
+        Request $request,
+        StudioSubscription $subscription,
+        StudioSettingsService $settings,
+        HitPayService $hitpay,
+        SubscriptionClassService $subscriptions
+    ) {
+        $studioId = app(TenantManager::class)->id();
+
+        abort_unless(
+            $studioId
+            && (int) $subscription->studio_id === (int) $studioId
+            && (int) $subscription->user_id === (int) auth()->id(),
+            404
+        );
+
+        if (! in_array(strtolower((string) $subscription->status), ['pending', 'past_due'], true)) {
+            return redirect()->route('student.subscriptions.index')
+                ->with('error', 'This subscription no longer needs an initial payment retry.');
+        }
+
+        $order = Order::query()
+            ->whereKey($subscription->initial_order_id)
+            ->where('studio_subscription_id', $subscription->id)
+            ->where('billing_reason', 'subscription_initial')
+            ->where('user_id', auth()->id())
+            ->where('studio_id', $studioId)
+            ->first();
+
+        if (! $order || $order->status === 'paid') {
+            return redirect()->route('student.subscriptions.index')
+                ->with('error', 'The original subscription payment is not retryable.');
+        }
+
+        $payment = Payment::query()
+            ->where('order_id', $order->id)
+            ->where('user_id', auth()->id())
+            ->latest('id')
+            ->first();
+
+        if (! $payment || $payment->status === 'paid') {
+            return redirect()->route('student.subscriptions.index')
+                ->with('error', 'The original subscription payment is not retryable.');
+        }
+
+        $provider = strtolower((string) $settings->get('default_payment_provider', 'stripe'));
+        if (! in_array($provider, ['stripe', 'hitpay'], true)) {
+            return redirect()->route('student.subscriptions.index')
+                ->with('error', 'The studio has no valid payment gateway selected.');
+        }
+
+        // If HitPay already created a recurring checkout and the customer only
+        // abandoned the external page, reuse it instead of creating another
+        // recurring agreement.
+        $existingCheckoutUrl = (string) (($payment->payload['checkout_url'] ?? '') ?: '');
+        if ($provider === 'hitpay'
+            && ($payment->provider ?: $payment->method) === 'hitpay'
+            && $existingCheckoutUrl !== ''
+            && $subscription->provider_subscription_id) {
+            return redirect()->away($existingCheckoutUrl);
+        }
+
+        $order->update([
+            'status' => 'pending',
+            'payment_provider' => $provider,
+            'provider_reference' => null,
+        ]);
+
+        $payment->update([
+            'status' => 'pending',
+            'provider' => $provider,
+            'method' => $provider,
+            'provider_reference' => null,
+            'payload' => array_merge((array) $payment->payload, [
+                'retried_at' => now()->toIso8601String(),
+                'retry_provider' => $provider,
+            ]),
+        ]);
+
+        $subscription->updateQuietly([
+            'provider' => $provider,
+            'provider_subscription_id' => null,
+            'provider_customer_id' => null,
+            'status' => 'pending',
+            'cancelled_at' => null,
+        ]);
+
+        if ($provider === 'stripe') {
+            return $this->paySubscriptionWithStripe(
+                $order->fresh('items'),
+                $payment->fresh(),
+                $subscription->fresh(),
+                $subscriptions
+            );
+        }
+
+        return $this->payWithHitpay($order->fresh(), $payment->fresh(), $hitpay);
+    }
+
     protected function payWithHitpay(Order $order, Payment $payment, HitPayService $hitpay)
     {
         if ($order->billing_reason !== 'subscription_initial' || ! $order->studio_subscription_id) {
@@ -48,10 +151,6 @@ class ProductionRecurringHitPayCheckoutController extends RecurringHitPayCheckou
         [$cycle, $cycleRepeat, $cycleFrequency] = $this->productionHitPayCycle($subscription->billing_interval ?: 'month');
         $reference = 'SUB:'.$subscription->id.':ORDER:'.$order->id;
 
-        // HitPay accepts only a billing DATE in Singapore time. We therefore
-        // anchor the provider to the date containing our standard target of
-        // 24 hours before the first class. Exact charge time is controlled by
-        // HitPay and must not be represented as an exact timestamp.
         $singaporeToday = Carbon::now('Asia/Singapore')->startOfDay();
         $targetChargeAt = Carbon::parse($sessions->first()->start_time)
             ->timezone('Asia/Singapore')
