@@ -42,17 +42,20 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
     public function syncHitPayRecurringBilling(StudioSubscription $subscription, array $billing): StudioSubscription
     {
         $status = strtolower((string) ($billing['status'] ?? ''));
+        $finalEndsAt = $this->finalSessionEndsAt($subscription);
         $updates = [
             'status' => $this->localHitPayStatus($status),
             'meta' => array_merge((array) $subscription->meta, [
                 'hitpay_recurring_status' => $status,
                 'hitpay_times_to_be_charged' => $billing['times_to_be_charged'] ?? null,
                 'hitpay_times_charged' => $billing['times_charged'] ?? null,
+                'final_class_session_ends_at' => $finalEndsAt?->toIso8601String(),
             ]),
         ];
 
         if (in_array($status, ['canceled', 'cancelled', 'inactive', 'expired'], true)) {
             $updates['next_billing_at'] = null;
+            $updates['current_period_end'] = $finalEndsAt ?: $subscription->current_period_end;
             $updates['cancelled_at'] = $subscription->cancelled_at ?: now();
         } else {
             $nextBilling = $this->hitPayNextBillingAt($billing, $subscription);
@@ -114,7 +117,7 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
 
             $subscription->updateQuietly(['status' => 'active', 'started_at' => $subscription->started_at ?: now()]);
             FulfillOrderJob::dispatch($initialOrder->id);
-            $this->completeHitPayIfFinalCharge($subscription, $charge);
+            $this->markHitPayBillingCompleteIfNeeded($subscription, $charge);
 
             return $initialOrder->fresh();
         }
@@ -146,14 +149,26 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
             'next_billing_at' => $this->nextBillingAt($subscription->billing_interval ?: 'month'),
         ]);
 
-        $this->completeHitPayIfFinalCharge($subscription, $charge);
+        $this->markHitPayBillingCompleteIfNeeded($subscription, $charge);
 
         return $order;
     }
 
     public function handleHitPayRecurringFailure(StudioSubscription $subscription, array $payload): void
     {
-        $subscription->updateQuietly(['status' => 'past_due']);
+        $subscription->loadMissing('classModel');
+        $graceUntil = $subscription->classModel?->subscriptionGraceUntil(now()) ?? now();
+        $graceValue = $subscription->classModel?->subscriptionGraceValue() ?? 0;
+        $graceUnit = $subscription->classModel?->subscriptionGraceUnit() ?? 'day';
+
+        $subscription->updateQuietly([
+            'status' => 'past_due',
+            'meta' => array_merge((array) $subscription->meta, [
+                'payment_grace_until' => $graceUntil->toIso8601String(),
+                'payment_grace_value' => $graceValue,
+                'payment_grace_unit' => $graceUnit,
+            ]),
+        ]);
 
         $nextSession = $this->nextUnfulfilledSession($subscription);
         if ($nextSession) {
@@ -168,20 +183,26 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
                 $order->updateQuietly(['status' => 'past_due']);
                 Payment::query()->where('order_id', $order->id)->update([
                     'status' => 'past_due',
-                    'payload' => $payload,
+                    'payload' => array_merge($payload, [
+                        'payment_grace_until' => $graceUntil->toIso8601String(),
+                    ]),
                 ]);
             }
         }
 
+        $unitLabel = $graceUnit === 'hour' ? 'hour(s)' : 'day(s)';
         AppNotification::create([
             'studio_id' => $subscription->studio_id,
             'user_id' => $subscription->user_id,
             'created_by' => null,
             'title' => 'Subscription payment failed',
-            'message' => 'Your HitPay recurring payment failed. HitPay may retry the charge or ask you to update your payment method. Access to the next class remains pending until payment succeeds.',
+            'message' => 'Your HitPay recurring payment failed. Your configured recovery window is '.$graceValue.' '.$unitLabel.'. Access to the next class remains pending until payment succeeds.',
             'type' => 'subscription_payment_failed',
             'action_url' => route('student.payments.index'),
-            'data' => ['studio_subscription_id' => $subscription->id],
+            'data' => [
+                'studio_subscription_id' => $subscription->id,
+                'payment_grace_until' => $graceUntil->toIso8601String(),
+            ],
         ]);
     }
 
@@ -193,14 +214,17 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
 
         try {
             app(RecurringHitPayService::class)->cancelRecurringBilling($subscription->provider_subscription_id);
+            $finalEndsAt = $this->finalSessionEndsAt($subscription);
+
             $subscription->updateQuietly([
                 'status' => 'completed',
                 'next_billing_at' => null,
-                'current_period_end' => now(),
+                'current_period_end' => $finalEndsAt ?: now(),
                 'cancelled_at' => now(),
                 'meta' => array_merge((array) $subscription->meta, [
                     'hitpay_cancel_reason' => $reason,
                     'hitpay_cancelled_at' => now()->toIso8601String(),
+                    'final_class_session_ends_at' => $finalEndsAt?->toIso8601String(),
                 ]),
             ]);
         } catch (Throwable $exception) {
@@ -228,14 +252,37 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
         return $legacy ? parent::createDueHitpayRenewalOrders($hitpay) : 0;
     }
 
-    private function completeHitPayIfFinalCharge(StudioSubscription $subscription, array $charge): void
+    private function markHitPayBillingCompleteIfNeeded(StudioSubscription $subscription, array $charge): void
     {
         $timesCharged = (int) ($charge['times_charged'] ?? 0);
-        $timesToCharge = (int) ($charge['times_to_be_charged'] ?? 0);
+        $timesToCharge = (int) ($charge['times_to_be_charged'] ?? ($subscription->meta['hitpay_times_to_be_charged'] ?? 0));
 
-        if (($timesToCharge > 0 && $timesCharged >= $timesToCharge) || ! $this->nextUnfulfilledSession($subscription)) {
-            $this->cancelHitPayRecurringBilling($subscription, 'final_class_charge_completed');
+        if ($timesToCharge > 0 && $timesCharged >= $timesToCharge) {
+            $finalEndsAt = $this->finalSessionEndsAt($subscription);
+            $subscription->updateQuietly([
+                'next_billing_at' => null,
+                'current_period_end' => $finalEndsAt ?: $subscription->current_period_end,
+                'meta' => array_merge((array) $subscription->meta, [
+                    'hitpay_all_charges_completed' => true,
+                    'final_class_session_ends_at' => $finalEndsAt?->toIso8601String(),
+                ]),
+            ]);
         }
+    }
+
+    private function finalSessionEndsAt(StudioSubscription $subscription): ?Carbon
+    {
+        $session = ClassSession::query()
+            ->where('class_id', $subscription->class_id)
+            ->where('status', '!=', 'cancelled')
+            ->orderByDesc('start_time')
+            ->first();
+
+        if (! $session) {
+            return null;
+        }
+
+        return Carbon::parse($session->end_time ?: $session->start_time);
     }
 
     private function localHitPayStatus(string $status): string
@@ -255,7 +302,7 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
         foreach (['next_charge_date', 'next_billing_date', 'start_date'] as $field) {
             if (! empty($billing[$field])) {
                 try {
-                    return Carbon::parse($billing[$field]);
+                    return Carbon::parse($billing[$field], 'Asia/Singapore');
                 } catch (Throwable) {
                 }
             }
