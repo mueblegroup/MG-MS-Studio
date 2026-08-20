@@ -76,6 +76,13 @@
             min-height: 0;
             overflow: visible;
         }
+
+        /* Desktop studio shell should render at its final width immediately.
+           This prevents the sidebar/content offset from animating on every page load. */
+        body:not(.marketing-page) > div:first-of-type > aside:first-of-type,
+        body:not(.marketing-page) > div:first-of-type > div:last-of-type {
+            transition: none !important;
+        }
     }
 }
 
