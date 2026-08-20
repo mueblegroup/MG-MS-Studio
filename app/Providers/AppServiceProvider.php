@@ -16,9 +16,9 @@ use App\Models\ClassModel;
 use App\Models\StudioSubscription;
 use App\Observers\ClassModelObserver;
 use App\Observers\StudioSubscriptionObserver;
-use App\Services\HitPayRecurringSubscriptionClassService;
 use App\Services\HitPayService;
 use App\Services\PlatformStripeBillingService;
+use App\Services\ProductionSubscriptionClassService;
 use App\Services\RecurringHitPayService;
 use App\Services\SubscriptionClassService;
 use App\Services\TrialAwarePlatformStripeBillingService;
@@ -40,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(PlatformStripeBillingService::class, TrialAwarePlatformStripeBillingService::class);
         $this->app->bind(HitPayService::class, RecurringHitPayService::class);
-        $this->app->bind(SubscriptionClassService::class, HitPayRecurringSubscriptionClassService::class);
+        $this->app->bind(SubscriptionClassService::class, ProductionSubscriptionClassService::class);
         $this->app->bind(CheckoutController::class, ProductionRecurringHitPayCheckoutController::class);
         $this->app->bind(ShopController::class, GroupedShopController::class);
         $this->app->bind(ClassController::class, FilteredClassController::class);
