@@ -28,7 +28,15 @@ class StudentSubscriptionController extends Controller
 
         $stripeService = app(SubscriptionClassService::class);
 
-        $subscriptions->each(function (StudioSubscription $subscription) use ($stripeService) {
+        $initialPayments = Payment::query()
+            ->where('user_id', Auth::id())
+            ->whereIn('order_id', $subscriptions->pluck('initial_order_id')->filter())
+            ->orderByDesc('id')
+            ->get()
+            ->unique('order_id')
+            ->keyBy('order_id');
+
+        $subscriptions->each(function (StudioSubscription $subscription) use ($stripeService, $initialPayments) {
             $subscription->setAttribute('stripe_sync_error', null);
 
             if ($subscription->provider === 'stripe' && $subscription->provider_subscription_id) {
@@ -56,6 +64,15 @@ class StudentSubscriptionController extends Controller
             );
             $subscription->setAttribute('class_billing_interval', $classInterval);
             $subscription->setAttribute('provider_billing_interval', $providerInterval);
+
+            $initialPayment = $initialPayments->get($subscription->initial_order_id);
+            $subscription->setAttribute('initial_subscription_payment', $initialPayment);
+            $subscription->setAttribute(
+                'can_retry_initial_payment',
+                in_array(strtolower((string) $subscription->status), ['pending', 'past_due'], true)
+                && $initialPayment
+                && ! in_array(strtolower((string) $initialPayment->status), ['paid', 'success', 'completed', 'complete'], true)
+            );
         });
 
         $subscriptionIds = $subscriptions->pluck('id');
