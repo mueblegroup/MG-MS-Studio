@@ -6,6 +6,44 @@ use App\Models\StudioSubscription;
 
 class ProductionSubscriptionClassService extends HitPayRecurringSubscriptionClassService
 {
+    public function validateSubscriptionCart($cartModel): ?string
+    {
+        $subscriptionItems = $cartModel->items->filter(function ($item) {
+            return class_basename($item->purchasable_type) === 'ClassSession'
+                && ($item->purchasable?->classModel?->type === 'subscription');
+        });
+
+        if ($subscriptionItems->isEmpty()) {
+            return null;
+        }
+
+        if ($cartModel->items->count() > 1 || $subscriptionItems->count() > 1) {
+            return 'Subscription classes must be checked out alone. Please remove other items from the cart first.';
+        }
+
+        $session = $subscriptionItems->first()?->purchasable;
+        if (! $session || ! $session->classModel) {
+            return 'Subscription class is no longer available.';
+        }
+
+        $existing = StudioSubscription::query()
+            ->where('user_id', auth()->id())
+            ->where('class_id', $session->class_id)
+            ->whereIn('status', ['pending', 'active', 'trialing', 'past_due'])
+            ->latest('id')
+            ->first();
+
+        if (! $existing) {
+            return null;
+        }
+
+        if (in_array(strtolower((string) $existing->status), ['pending', 'past_due'], true)) {
+            return 'You already have an incomplete subscription for this class. Open My Subscriptions and use Retry payment to continue it.';
+        }
+
+        return 'You already have an active subscription for this class.';
+    }
+
     public function handleStripeInvoiceFailure(object $invoice): void
     {
         parent::handleStripeInvoiceFailure($invoice);
