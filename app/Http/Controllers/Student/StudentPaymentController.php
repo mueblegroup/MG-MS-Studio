@@ -8,6 +8,7 @@ use App\Models\StudioSubscription;
 use App\Services\ReliableSubscriptionClassService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -55,13 +56,35 @@ class StudentPaymentController extends Controller
             ->values();
 
         $upcomingSubscriptions = $activeSubscriptions
-            ->filter(fn (StudioSubscription $subscription) =>
-                $subscription->next_billing_at
-                && $subscription->next_billing_at->between(
+            ->filter(function (StudioSubscription $subscription): bool {
+                if (! $subscription->next_billing_at) {
+                    return false;
+                }
+
+                if (strtolower((string) $subscription->provider) === 'hitpay') {
+                    $providerDate = $subscription->meta['hitpay_next_charge_date_sgt']
+                        ?? $subscription->meta['hitpay_start_date_sgt']
+                        ?? $subscription->next_billing_at->copy()->timezone('Asia/Singapore')->toDateString();
+
+                    try {
+                        $dueDate = Carbon::parse($providerDate, 'Asia/Singapore')->startOfDay();
+                    } catch (\Throwable) {
+                        return false;
+                    }
+
+                    $today = Carbon::now('Asia/Singapore')->startOfDay();
+
+                    return $dueDate->betweenIncluded(
+                        $today,
+                        $today->copy()->addDays(3)
+                    );
+                }
+
+                return $subscription->next_billing_at->between(
                     now()->startOfMinute(),
                     now()->copy()->addDays(3)->endOfDay()
-                )
-            )
+                );
+            })
             ->values();
 
         return view('student.payments.index', compact(
