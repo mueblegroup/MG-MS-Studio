@@ -31,29 +31,25 @@ class StudioSubscriptionObserver
             return;
         }
 
-        $cancelAtDate = null;
+        // The real class-session timetable is authoritative. until_date is only
+        // a session-generation boundary and must not replace the actual final
+        // class end time (for example with an artificial 23:59:59 cancellation).
+        $lastSession = $class->sessions
+            ->where('status', '!=', 'cancelled')
+            ->sortByDesc('start_time')
+            ->first();
 
-        if ($class->until_date) {
-            $cancelAtDate = Carbon::parse($class->until_date, config('app.timezone'))->endOfDay();
-        } else {
-            $lastSessionEnd = $class->sessions
-                ->pluck('end_time')
-                ->filter()
-                ->map(fn ($endTime) => Carbon::parse($endTime, config('app.timezone')))
-                ->sortDesc()
-                ->first();
-
-            if ($lastSessionEnd) {
-                $cancelAtDate = $lastSessionEnd;
-            }
-        }
+        $cancelAtDate = $lastSession
+            ? Carbon::parse($lastSession->end_time ?: $lastSession->start_time)
+            : ($class->until_date
+                ? Carbon::parse($class->until_date, config('app.timezone'))->endOfDay()
+                : null);
 
         if (! $cancelAtDate || $cancelAtDate->timestamp <= now()->timestamp) {
             return;
         }
 
         $cancelAt = $cancelAtDate->timestamp;
-        $scheduledEndDate = $cancelAtDate->toDateString();
         $meta = $subscription->meta ?? [];
 
         if ((int) ($meta['stripe_cancel_at'] ?? 0) === $cancelAt) {
@@ -68,12 +64,14 @@ class StudioSubscriptionObserver
                 'metadata' => [
                     'studio_subscription_id' => (string) $subscription->id,
                     'class_id' => (string) $subscription->class_id,
-                    'scheduled_class_end_date' => $scheduledEndDate,
+                    'scheduled_final_session_id' => (string) ($lastSession?->id ?? ''),
+                    'scheduled_class_end_at' => $cancelAtDate->toIso8601String(),
                 ],
             ]);
 
             $meta['stripe_cancel_at'] = $cancelAt;
-            $meta['scheduled_class_end_date'] = $scheduledEndDate;
+            $meta['final_class_session_id'] = $lastSession?->id;
+            $meta['scheduled_class_end_at'] = $cancelAtDate->toIso8601String();
             $subscription->updateQuietly(['meta' => $meta]);
         } catch (\Throwable $exception) {
             Log::error('Unable to schedule Stripe class subscription cancellation.', [
