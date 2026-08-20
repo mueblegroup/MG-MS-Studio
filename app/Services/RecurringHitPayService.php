@@ -18,19 +18,18 @@ class RecurringHitPayService extends HitPayService
         $response = $this->request()->get($this->baseUrl().'/recurring-billing/'.$id);
 
         if ($response->successful()) {
-            return $response->json() ?: [];
+            $payload = $response->json() ?: [];
+            $billing = $this->findRecurringBillingInPayload($payload, $id);
+
+            return $billing ?: $payload;
         }
 
         if ($response->status() === 404 || $response->status() === 405) {
             $items = $this->listRecurringBillings();
-            $candidates = $items['data'] ?? $items;
+            $billing = $this->findRecurringBillingInPayload($items, $id);
 
-            if (is_array($candidates)) {
-                foreach ($candidates as $candidate) {
-                    if (is_array($candidate) && (string) ($candidate['id'] ?? '') === $id) {
-                        return $candidate;
-                    }
-                }
+            if ($billing) {
+                return $billing;
             }
         }
 
@@ -84,6 +83,37 @@ class RecurringHitPayService extends HitPayService
         }
 
         return false;
+    }
+
+    private function findRecurringBillingInPayload(array $payload, string $id): ?array
+    {
+        if ((string) ($payload['id'] ?? '') === $id) {
+            return $payload;
+        }
+
+        foreach (['data', 'recurring_billing', 'recurringBilling', 'billing', 'result', 'items'] as $key) {
+            if (! isset($payload[$key]) || ! is_array($payload[$key])) {
+                continue;
+            }
+
+            $candidate = $this->findRecurringBillingInPayload($payload[$key], $id);
+            if ($candidate) {
+                return $candidate;
+            }
+        }
+
+        foreach ($payload as $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+
+            $candidate = $this->findRecurringBillingInPayload($value, $id);
+            if ($candidate) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     private function request(): PendingRequest
