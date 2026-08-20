@@ -2,6 +2,8 @@
     @php
         $studioUrl = $studio ? (($studio->custom_domain ?: ($studio->subdomain . '.' . $rootDomain))) : null;
         $studentSelfRegistrationEnabled = $studio ? (bool) data_get($studio->settings, 'allow_student_self_registration', true) : false;
+        $timezoneOptions = \App\Support\StudioLocaleOptions::timezones();
+        $studioTimezone = $studio ? (string) data_get($studio->settings, 'timezone', config('app.timezone', 'UTC')) : 'UTC';
     @endphp
 
     <div class="space-y-6">
@@ -13,7 +15,7 @@
             <div>
                 <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-500">Client Portal</p>
                 <h1 class="mt-2 text-3xl font-black text-slate-950 dark:text-white">My Studio</h1>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">This page controls the SaaS-side identity of your studio. LMS operations are separated into the studio subdomain.</p>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">This page controls the SaaS-side identity and timezone of your studio. LMS operations are separated into the studio subdomain.</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('customer.dashboard') }}" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Back to Overview</a>
@@ -33,7 +35,7 @@
                         <div class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950"><dt class="text-xs font-bold uppercase tracking-wider text-slate-500">Studio Name</dt><dd class="mt-2 font-black">{{ $studio->name }}</dd></div>
                         <div class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950"><dt class="text-xs font-bold uppercase tracking-wider text-slate-500">Status</dt><dd class="mt-2 font-black">{{ ucfirst($studio->effectiveStatus()) }}</dd></div>
                         <div class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950 sm:col-span-2"><dt class="text-xs font-bold uppercase tracking-wider text-slate-500">Studio Admin URL</dt><dd class="mt-2 break-all font-black">https://{{ $studioUrl }}/admin/dashboard</dd></div>
-                        <div class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950"><dt class="text-xs font-bold uppercase tracking-wider text-slate-500">Timezone</dt><dd class="mt-2 font-black">{{ $studio->settings['timezone'] ?? config('app.timezone') }}</dd></div>
+                        <div class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950"><dt class="text-xs font-bold uppercase tracking-wider text-slate-500">Timezone</dt><dd class="mt-2 font-black">{{ $studioTimezone }}</dd></div>
                         <div class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950"><dt class="text-xs font-bold uppercase tracking-wider text-slate-500">Currency</dt><dd class="mt-2 font-black">{{ $studio->settings['currency'] ?? 'MYR' }}</dd></div>
                     </dl>
                 </section>
@@ -41,11 +43,34 @@
                 <section class="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl">
                     <h2 class="text-xl font-black">Portal boundaries</h2>
                     <div class="mt-5 space-y-4 text-sm leading-6 text-slate-300">
-                        <div class="rounded-2xl bg-white/10 p-4"><p class="font-black text-white">Client Portal</p><p class="mt-1">Subscription, invoices, billing, domain status, and ownership.</p></div>
+                        <div class="rounded-2xl bg-white/10 p-4"><p class="font-black text-white">Client Portal</p><p class="mt-1">Subscription, invoices, billing, domain status, ownership, and studio timezone.</p></div>
                         <div class="rounded-2xl bg-white/10 p-4"><p class="font-black text-white">Studio Admin</p><p class="mt-1">Teachers, classes, students, attendance, schedules, products, and payments.</p></div>
                     </div>
                 </section>
             </div>
+
+            <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="grid gap-6 lg:grid-cols-[1fr_1.2fr] lg:items-end">
+                    <div>
+                        <h2 class="text-xl font-black">Studio Timezone</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">This is the canonical timezone for the studio. Admins, teachers and students in the studio portal use this timezone for schedules, class times, payment deadlines, billing displays and reminders.</p>
+                    </div>
+                    <form method="POST" action="{{ route('customer.studio.timezone.update', $studio) }}" class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                        @csrf
+                        @method('PATCH')
+                        <div>
+                            <label class="mb-1.5 block text-sm font-black text-slate-700 dark:text-slate-300">Timezone</label>
+                            <select name="timezone" required class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                @foreach($timezoneOptions as $value => $label)
+                                    <option value="{{ $value }}" @selected(old('timezone', $studioTimezone) === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('timezone') <p class="mt-1 text-sm font-semibold text-red-500">{{ $message }}</p> @enderror
+                        </div>
+                        <button type="submit" class="rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-600">Save Timezone</button>
+                    </form>
+                </div>
+            </section>
 
             <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
