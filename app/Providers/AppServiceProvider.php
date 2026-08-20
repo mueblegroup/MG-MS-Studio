@@ -13,8 +13,10 @@ use App\Http\Controllers\TimezoneStudioSettingsController;
 use App\Http\Controllers\Customer\StudioOnboardingController;
 use App\Http\Controllers\Customer\ValidatedStudioOnboardingController;
 use App\Models\ClassModel;
+use App\Models\Studio;
 use App\Models\StudioSubscription;
 use App\Observers\ClassModelObserver;
+use App\Observers\StudioObserver;
 use App\Observers\StudioSubscriptionObserver;
 use App\Services\HitPayService;
 use App\Services\PlatformStripeBillingService;
@@ -51,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         ClassModel::observe(ClassModelObserver::class);
+        Studio::observe(StudioObserver::class);
         StudioSubscription::observe(StudioSubscriptionObserver::class);
 
         Event::listen(function (SocialiteWasCalled $event): void {
