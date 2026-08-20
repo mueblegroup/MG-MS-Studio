@@ -24,6 +24,42 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    const initializeStudioClock = () => {
+        const select = document.getElementById('studio-timezone-select');
+        const clock = document.getElementById('studio-current-time');
+        const zoneLabel = document.getElementById('studio-current-timezone');
+
+        if (!select || !clock || !zoneLabel) {
+            return;
+        }
+
+        const render = () => {
+            const timezone = select.value || 'Asia/Kuala_Lumpur';
+
+            try {
+                clock.textContent = new Intl.DateTimeFormat(undefined, {
+                    timeZone: timezone,
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                }).format(new Date());
+                zoneLabel.textContent = timezone;
+            } catch (error) {
+                zoneLabel.textContent = timezone;
+            }
+        };
+
+        select.addEventListener('change', render);
+        render();
+        window.setInterval(render, 1000);
+    };
+
+    initializeStudioClock();
+
     const headingRow = document.querySelector('.mb-6.flex.items-center.justify-between');
     if (headingRow && !document.getElementById('payment-gateway-settings-link')) {
         const link = document.createElement('a');
