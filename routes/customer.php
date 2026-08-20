@@ -46,7 +46,7 @@ Route::get('/', function () {
     return redirect()->route('customer.dashboard');
 })->middleware('central');
 
-Route::middleware(['auth', 'central'])
+Route::middleware(['auth', 'central', 'owner.timezone'])
     ->prefix('customer')
     ->name('customer.')
     ->group(function (): void {
