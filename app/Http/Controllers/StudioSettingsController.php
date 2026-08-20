@@ -13,11 +13,14 @@ class StudioSettingsController extends Controller
 {
     public function edit(StudioSettingsService $settings)
     {
+        $selectedProvider = strtolower((string) $settings->get('default_payment_provider', 'stripe'));
+        $selectedProvider = $this->resolveUsableDefaultGateway($selectedProvider, $settings);
+
         $data = [
             'studio_name' => $settings->get('studio_name', config('app.name')),
             'studio_display_name' => $settings->get('studio_display_name', config('app.name')),
             'currency' => $settings->get('currency', 'MYR'),
-            'default_payment_provider' => $settings->get('default_payment_provider', 'stripe'),
+            'default_payment_provider' => $selectedProvider,
             'shop_class_early_cutoff_days' => (int) $settings->get('shop_class_early_cutoff_days', (int) env('SHOP_CLASS_EARLY_CUTOFF_DAYS', 0)),
             'shop_plan_early_cutoff_days' => (int) $settings->get('shop_plan_early_cutoff_days', (int) env('SHOP_PLAN_EARLY_CUTOFF_DAYS', 0)),
 
@@ -197,6 +200,30 @@ class StudioSettingsController extends Controller
         }
 
         return $issues;
+    }
+
+    private function resolveUsableDefaultGateway(string $selectedProvider, StudioSettingsService $settings): string
+    {
+        $selectedProvider = in_array($selectedProvider, ['stripe', 'hitpay'], true)
+            ? $selectedProvider
+            : 'stripe';
+
+        if ($this->gatewayReady($selectedProvider)) {
+            return $selectedProvider;
+        }
+
+        $alternative = $selectedProvider === 'stripe' ? 'hitpay' : 'stripe';
+        if (! $this->gatewayReady($alternative)) {
+            return $selectedProvider;
+        }
+
+        // Repair stale/default legacy settings when the selected gateway is unusable
+        // but the studio already has the other provider fully configured and enabled.
+        $settings->setMany([
+            'default_payment_provider' => $alternative,
+        ]);
+
+        return $alternative;
     }
 
     private function gatewayReady(string $provider): bool
