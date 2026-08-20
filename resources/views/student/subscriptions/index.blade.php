@@ -6,6 +6,13 @@
                 <p class="mg-subtitle mt-1">View your subscription classes, generated sessions, attendance eligibility, and payment status.</p>
             </div>
 
+            @if(session('success'))
+                <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">{{ session('success') }}</div>
+            @endif
+            @if(session('error'))
+                <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">{{ session('error') }}</div>
+            @endif
+
             @forelse($subscriptions as $subscription)
                 @php
                     $subscriptionStatus = strtolower((string) $subscription->status);
@@ -30,6 +37,19 @@
                             </div>
                         </div>
 
+                        @if($subscription->can_retry_initial_payment)
+                            <div class="mt-4 flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <div class="font-extrabold">Subscription payment is incomplete</div>
+                                    <p class="mt-1 text-xs">Your subscription is reserved, but the first payment has not completed. Retry using the studio's currently active payment gateway.</p>
+                                </div>
+                                <form method="POST" action="{{ route('student.subscriptions.retry-payment', $subscription) }}" class="shrink-0">
+                                    @csrf
+                                    <button type="submit" class="mg-btn-primary w-full sm:w-auto">Retry payment</button>
+                                </form>
+                            </div>
+                        @endif
+
                         @if($subscription->billing_interval_mismatch)
                             <div class="mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
                                 <div class="font-extrabold">Billing configuration mismatch</div>
@@ -49,7 +69,7 @@
                                 <div class="mt-1 font-extrabold">{{ strtoupper($subscription->currency ?? 'MYR') }} {{ number_format((float) $subscription->amount, 2) }}</div>
                             </div>
                             <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
-                                <div class="text-xs font-bold uppercase text-[#9a8c7d]">Next Stripe billing</div>
+                                <div class="text-xs font-bold uppercase text-[#9a8c7d]">Next billing</div>
                                 <div class="mt-1 font-extrabold">{{ $subscription->next_billing_at?->format('d M Y, h:i A') ?? '—' }}</div>
                             </div>
                             <div class="rounded-xl bg-[#fffaf3] p-3 dark:bg-gray-800">
