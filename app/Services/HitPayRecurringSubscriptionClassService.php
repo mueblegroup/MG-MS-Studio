@@ -117,6 +117,12 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
 
             $subscription->updateQuietly(['status' => 'active', 'started_at' => $subscription->started_at ?: now()]);
             FulfillOrderJob::dispatch($initialOrder->id);
+
+            $initialSessionId = (int) ($subscription->meta['initial_class_session_id'] ?? $subscription->current_class_session_id);
+            $paidSession = ClassSession::query()->find($initialSessionId);
+            if ($paidSession) {
+                $this->alignHitPayNextChargeToFollowingSession($subscription, $paidSession);
+            }
             $this->markHitPayBillingCompleteIfNeeded($subscription, $charge);
 
             return $initialOrder->fresh();
@@ -145,10 +151,9 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
         $subscription->updateQuietly([
             'status' => 'active',
             'current_period_start' => now(),
-            'current_period_end' => $this->nextBillingAt($subscription->billing_interval ?: 'month'),
-            'next_billing_at' => $this->nextBillingAt($subscription->billing_interval ?: 'month'),
         ]);
 
+        $this->alignHitPayNextChargeToFollowingSession($subscription, $nextSession);
         $this->markHitPayBillingCompleteIfNeeded($subscription, $charge);
 
         return $order;
@@ -252,6 +257,85 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
         return $legacy ? parent::createDueHitpayRenewalOrders($hitpay) : 0;
     }
 
+    private function alignHitPayNextChargeToFollowingSession(StudioSubscription $subscription, ClassSession $paidSession): void
+    {
+        $following = ClassSession::query()
+            ->where('class_id', $subscription->class_id)
+            ->where('status', '!=', 'cancelled')
+            ->where('start_time', '>', $paidSession->start_time)
+            ->orderBy('start_time')
+            ->first();
+
+        if (! $following) {
+            $finalEndsAt = Carbon::parse($paidSession->end_time ?: $paidSession->start_time);
+            $subscription->updateQuietly([
+                'next_billing_at' => null,
+                'current_period_end' => $finalEndsAt,
+                'meta' => array_merge((array) $subscription->meta, [
+                    'final_class_session_id' => $paidSession->id,
+                    'final_class_session_ends_at' => $finalEndsAt->toIso8601String(),
+                ]),
+            ]);
+            return;
+        }
+
+        $targetChargeAt = Carbon::parse($following->start_time)->timezone('Asia/Singapore')->subDay();
+        $today = Carbon::now('Asia/Singapore')->startOfDay();
+        $startDate = $targetChargeAt->copy()->startOfDay()->lt($today)
+            ? $today->toDateString()
+            : $targetChargeAt->toDateString();
+
+        $subscription->loadMissing(['classModel', 'user']);
+        [$cycle, $repeat, $frequency] = $this->hitPayCycle($subscription->billing_interval ?: 'month');
+
+        $payload = [
+            'plan_id' => null,
+            'name' => (string) ($subscription->classModel?->name ?? 'Subscription Class'),
+            'description' => 'Recurring class subscription',
+            'payment_methods' => ['card'],
+            'cycle' => $cycle,
+            'customer_email' => (string) $subscription->user?->email,
+            'customer_name' => (string) $subscription->user?->name,
+            'start_date' => $startDate,
+            'reference' => (string) ($subscription->meta['hitpay_reference'] ?? ('SUB:'.$subscription->id)),
+            'amount' => (float) $subscription->amount,
+            'send_email' => 'true',
+        ];
+
+        if ($cycle === 'custom') {
+            $payload['cycle_repeat'] = $repeat;
+            $payload['cycle_frequency'] = $frequency;
+        }
+
+        try {
+            app(RecurringHitPayService::class)->updateRecurringBilling(
+                (string) $subscription->provider_subscription_id,
+                $payload
+            );
+
+            $providerDate = Carbon::parse($startDate, 'Asia/Singapore')->startOfDay();
+            $subscription->updateQuietly([
+                'next_billing_at' => $providerDate,
+                'current_period_end' => $providerDate,
+                'meta' => array_merge((array) $subscription->meta, [
+                    'hitpay_next_charge_date_sgt' => $startDate,
+                    'target_next_charge_at' => $targetChargeAt->toIso8601String(),
+                    'next_class_session_id' => $following->id,
+                    'hitpay_timing_precision' => 'date_only_sgt',
+                ]),
+            ]);
+        } catch (Throwable $exception) {
+            Log::error('Unable to align HitPay recurring charge with next class session.', [
+                'studio_subscription_id' => $subscription->id,
+                'hitpay_recurring_billing_id' => $subscription->provider_subscription_id,
+                'next_class_session_id' => $following->id,
+                'target_start_date_sgt' => $startDate,
+                'message' => $exception->getMessage(),
+            ]);
+            report($exception);
+        }
+    }
+
     private function markHitPayBillingCompleteIfNeeded(StudioSubscription $subscription, array $charge): void
     {
         $timesCharged = (int) ($charge['times_charged'] ?? 0);
@@ -283,6 +367,17 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
         }
 
         return Carbon::parse($session->end_time ?: $session->start_time);
+    }
+
+    private function hitPayCycle(string $interval): array
+    {
+        return match (strtolower($interval)) {
+            'week', 'weekly' => ['weekly', null, null],
+            'month', 'monthly' => ['monthly', null, null],
+            'year', 'yearly', 'annual', 'annually' => ['yearly', null, null],
+            'day', 'daily' => ['custom', 1, 'day'],
+            default => ['monthly', null, null],
+        };
     }
 
     private function localHitPayStatus(string $status): string
