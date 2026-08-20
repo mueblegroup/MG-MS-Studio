@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\StudioPaymentGateway;
+use App\Services\StudioSettingsService;
 use App\Support\TenantManager;
 use Closure;
 use Illuminate\Http\Request;
@@ -46,6 +47,39 @@ class ApplyStudioPaymentGatewayConfig
                 : 'https://api.sandbox.hit-pay.com/v1',
         ]);
 
+        // Keep the studio's selected provider aligned with an actually usable
+        // gateway. This repairs older tenants where HitPay/Stripe was enabled
+        // but default_payment_provider still pointed to the unavailable one.
+        $ready = [
+            'stripe' => $this->stripeReady($stripe, $stripeCredentials),
+            'hitpay' => $this->hitpayReady($hitpay, $hitpayCredentials),
+        ];
+
+        $settings = app(StudioSettingsService::class);
+        $selected = strtolower((string) $settings->get('default_payment_provider', 'stripe'));
+
+        if (! ($ready[$selected] ?? false)) {
+            $fallback = collect(['stripe', 'hitpay'])->first(fn (string $provider) => $ready[$provider]);
+            if ($fallback) {
+                $settings->setMany(['default_payment_provider' => $fallback]);
+            }
+        }
+
         return $next($request);
+    }
+
+    private function stripeReady(?StudioPaymentGateway $gateway, array $credentials): bool
+    {
+        return (bool) ($gateway?->enabled)
+            && filled($credentials['publishable_key'] ?? null)
+            && filled($credentials['secret_key'] ?? null)
+            && filled($gateway?->webhook_secret);
+    }
+
+    private function hitpayReady(?StudioPaymentGateway $gateway, array $credentials): bool
+    {
+        return (bool) ($gateway?->enabled)
+            && filled($credentials['api_key'] ?? null)
+            && (filled($credentials['salt'] ?? null) || filled($gateway?->webhook_secret));
     }
 }
