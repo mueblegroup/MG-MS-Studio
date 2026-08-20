@@ -38,7 +38,7 @@
                     <h2 class="flex items-center gap-2 text-base font-extrabold text-blue-950 dark:text-blue-100">
                         <i class="bx bx-calendar-check text-xl"></i> My active subscriptions
                     </h2>
-                    <p class="mt-1 text-xs font-semibold text-blue-800 dark:text-blue-300">Stripe renewal dates are refreshed from Stripe. Cancelling stops future billing and removes access to upcoming sessions.</p>
+                    <p class="mt-1 text-xs font-semibold text-blue-800 dark:text-blue-300">Stripe renewal timestamps are refreshed from Stripe. HitPay recurring billing is scheduled by billing date in Singapore time, and HitPay determines the processing time during that date. Cancelling stops future billing and removes access to upcoming sessions.</p>
                 </div>
 
                 <div class="divide-y divide-blue-200 dark:divide-blue-900/40">
@@ -49,7 +49,15 @@
                                 ? \Carbon\Carbon::parse($scheduledEndDate, 'UTC')->timezone($studioTimezone)->endOfDay()
                                 : null;
                             $isStripe = strtolower((string) $subscription->provider) === 'stripe';
+                            $isHitPay = strtolower((string) $subscription->provider) === 'hitpay';
                             $nextBillingAt = $subscription->next_billing_at?->copy()->timezone($studioTimezone);
+                            $hitPayBillingDate = $subscription->meta['hitpay_next_charge_date_sgt']
+                                ?? $subscription->meta['hitpay_start_date_sgt']
+                                ?? ($isHitPay && $nextBillingAt ? $nextBillingAt->copy()->timezone('Asia/Singapore')->toDateString() : null);
+                            $hitPayDate = $hitPayBillingDate
+                                ? \Carbon\Carbon::parse($hitPayBillingDate, 'Asia/Singapore')
+                                : null;
+                            $hitPayToday = \Carbon\Carbon::now('Asia/Singapore')->toDateString();
                         @endphp
 
                         <div class="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto_auto_minmax(260px,340px)] lg:items-start">
@@ -57,9 +65,21 @@
                                 <p class="truncate text-sm font-extrabold text-gray-950 dark:text-white">{{ $subscription->classModel?->name ?? 'Subscription class' }}</p>
                                 <p class="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{{ ucfirst($subscription->status) }} · {{ ucfirst($subscription->billing_interval ?? 'recurring') }} billing</p>
 
-                                @if($nextBillingAt)
+                                @if($isStripe && $nextBillingAt)
                                     <p class="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-300">
-                                        {{ $isStripe ? 'Next Stripe renewal' : 'Next payment request' }}: {{ $nextBillingAt->format('d M Y, h:i A') }}
+                                        Next Stripe renewal: {{ $nextBillingAt->format('d M Y, h:i A') }}
+                                    </p>
+                                @elseif($isHitPay && $hitPayDate)
+                                    <p class="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                        Next HitPay billing date: {{ $hitPayDate->format('d M Y') }}
+                                        @if($hitPayBillingDate === $hitPayToday)
+                                            <span class="font-bold">· Scheduled today</span>
+                                        @endif
+                                    </p>
+                                    <p class="mt-0.5 text-[11px] font-semibold text-blue-600/80 dark:text-blue-300/80">Processing time is determined by HitPay; 12:00 AM is not a guaranteed charge time.</p>
+                                @elseif($nextBillingAt)
+                                    <p class="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                        Next billing: {{ $nextBillingAt->format('d M Y, h:i A') }}
                                     </p>
                                 @endif
                             </div>
@@ -97,7 +117,7 @@
             <section class="mb-5 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20">
                 <div class="border-b border-amber-200 px-5 py-4 dark:border-amber-900/50">
                     <h2 class="flex items-center gap-2 text-base font-extrabold text-amber-950 dark:text-amber-100"><i class="bx bx-time-five text-xl"></i> Due within the next 3 days</h2>
-                    <p class="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-300">Stripe dates come from Stripe’s current billing period. HitPay dates indicate when a payment request is due.</p>
+                    <p class="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-300">Stripe shows its current renewal timestamp. HitPay shows the provider billing date only; HitPay controls the actual processing time on that date.</p>
                 </div>
 
                 <div class="divide-y divide-amber-200 dark:divide-amber-900/40">
@@ -105,18 +125,25 @@
                         @php
                             $dueAt = $subscription->next_billing_at?->copy()->timezone($studioTimezone);
                             $isStripe = strtolower((string) $subscription->provider) === 'stripe';
-                            $nowLocal = now()->timezone($studioTimezone);
-                            $dueLabel = $dueAt?->isToday()
+                            $isHitPay = strtolower((string) $subscription->provider) === 'hitpay';
+                            $hitPayBillingDate = $subscription->meta['hitpay_next_charge_date_sgt']
+                                ?? $subscription->meta['hitpay_start_date_sgt']
+                                ?? ($isHitPay && $dueAt ? $dueAt->copy()->timezone('Asia/Singapore')->toDateString() : null);
+                            $providerDueAt = $isHitPay && $hitPayBillingDate
+                                ? \Carbon\Carbon::parse($hitPayBillingDate, 'Asia/Singapore')
+                                : $dueAt;
+                            $nowForDue = $isHitPay ? \Carbon\Carbon::now('Asia/Singapore') : now()->timezone($studioTimezone);
+                            $dueLabel = $providerDueAt?->isToday()
                                 ? 'Due today'
-                                : ($dueAt?->isTomorrow()
+                                : ($providerDueAt?->isTomorrow()
                                     ? 'Due tomorrow'
-                                    : 'Due in '.$nowLocal->copy()->startOfDay()->diffInDays($dueAt->copy()->startOfDay()).' days');
+                                    : 'Due in '.$nowForDue->copy()->startOfDay()->diffInDays($providerDueAt->copy()->startOfDay()).' days');
                         @endphp
 
                         <div class="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-extrabold text-gray-950 dark:text-white">{{ $subscription->classModel?->name ?? 'Subscription class' }}</p>
-                                <p class="mt-1 text-xs font-semibold text-gray-500">{{ $isStripe ? 'Automatic Stripe renewal' : 'HitPay payment request' }} · {{ $subscription->billing_interval ?? 'subscription' }}</p>
+                                <p class="mt-1 text-xs font-semibold text-gray-500">{{ $isStripe ? 'Automatic Stripe renewal' : ($isHitPay ? 'HitPay recurring billing date' : 'Subscription billing') }} · {{ $subscription->billing_interval ?? 'subscription' }}</p>
                             </div>
                             <div class="text-left sm:text-right">
                                 <p class="text-sm font-extrabold">{{ strtoupper($subscription->currency ?? 'MYR') }} {{ number_format((float) $subscription->amount, 2) }}</p>
@@ -124,7 +151,7 @@
                             </div>
                             <div class="sm:text-right">
                                 <span class="inline-flex rounded-full bg-amber-200 px-3 py-1 text-xs font-extrabold text-amber-900">{{ $dueLabel }}</span>
-                                <p class="mt-1 text-xs font-semibold text-gray-500">{{ $dueAt?->format('d M Y, h:i A') ?? '—' }}</p>
+                                <p class="mt-1 text-xs font-semibold text-gray-500">{{ $isHitPay ? ($providerDueAt?->format('d M Y') ?? '—') : ($providerDueAt?->format('d M Y, h:i A') ?? '—') }}</p>
                             </div>
                         </div>
                     @endforeach
@@ -207,8 +234,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-10 text-center text-sm text-gray-500">No payments found.</td>
-                            </tr>
+                                <td colspan="6" class="px-4 py-10 text-center text-sm text-gray-500">No payments found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
