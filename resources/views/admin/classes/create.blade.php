@@ -36,7 +36,11 @@
                     <div><label class="text-xs font-semibold">First class date</label><input name="date" id="date" required value="{{ old('date') }}" class="mg-input mt-1" type="date"></div>
                     <div><label class="text-xs font-semibold">Start time</label><input name="start_time" required value="{{ old('start_time') }}" class="mg-input mt-1" type="time"></div>
                     <div><label class="text-xs font-semibold">End time</label><input name="end_time" required value="{{ old('end_time') }}" class="mg-input mt-1" type="time"></div>
-                    <div id="graceWrap" class="hidden"><label class="text-xs font-semibold">Payment grace days</label><input name="subscription_grace_days" value="{{ old('subscription_grace_days',3) }}" min="0" max="30" class="mg-input mt-1" type="number"></div>
+                    <div id="graceWrap" class="hidden">
+                        <label id="graceLabel" class="text-xs font-semibold">Payment grace days</label>
+                        <input name="subscription_grace_days" id="subscription_grace_days" value="{{ old('subscription_grace_days',3) }}" min="0" max="30" class="mg-input mt-1" type="number">
+                        <p id="graceHelp" class="mt-1 text-xs text-gray-500">Used after a failed renewal before access is considered overdue.</p>
+                    </div>
                 </div>
 
                 <div id="recurrencePanel" class="mt-6 hidden rounded-2xl bg-gray-50 p-5 dark:bg-gray-900/60">
@@ -67,6 +71,9 @@
                 const customWrap = document.getElementById('customDaysWrap');
                 const customOption = document.getElementById('customOption');
                 const graceWrap = document.getElementById('graceWrap');
+                const graceInput = document.getElementById('subscription_grace_days');
+                const graceLabel = document.getElementById('graceLabel');
+                const graceHelp = document.getElementById('graceHelp');
                 const summary = document.getElementById('setupSummary');
                 const billingPreview = document.getElementById('billingPreview');
                 const price = document.getElementById('price');
@@ -74,6 +81,27 @@
                 const typeHelp = document.getElementById('classTypeHelp');
                 const priceLabel = document.getElementById('priceLabel');
                 const labels = { everyday:'daily', '7days':'weekly', monthly:'monthly', yearly:'yearly', custom:'custom-day' };
+                let graceAutoValue = null;
+
+                function syncGrace(subscription) {
+                    if (!subscription) return;
+                    const daily = frequency.value === 'everyday';
+                    const desiredDefault = daily ? 6 : 3;
+                    const current = Number(graceInput.value || 0);
+
+                    if (graceAutoValue === null || current === graceAutoValue) {
+                        graceInput.value = desiredDefault;
+                        graceAutoValue = desiredDefault;
+                    }
+
+                    graceInput.max = daily ? 23 : 30;
+                    graceLabel.textContent = daily ? 'Payment grace hours' : 'Payment grace days';
+                    graceHelp.textContent = daily
+                        ? 'Daily billing uses hours so the recovery window stays shorter than the 24-hour billing cycle. Recommended: 6 hours.'
+                        : 'Recovery window after a failed renewal. It does not add another billing cycle.';
+                }
+
+                graceInput.addEventListener('input', () => { graceAutoValue = Number(graceInput.value || 0); });
 
                 function sync() {
                     const repeats = type.value !== 'single';
@@ -86,12 +114,14 @@
                     customOption.disabled = subscription;
                     if (subscription && frequency.value === 'custom') frequency.value = '7days';
                     customWrap.classList.toggle('hidden', !repeats || frequency.value !== 'custom');
-                    billingPreview.textContent = subscription ? `Stripe billing: ${labels[frequency.value]}. This cannot be set differently.` : '';
-                    typeHelp.textContent = subscription ? 'Fixed recurring course: one payment cycle purchases one session.' : (type.value === 'recurring' ? 'Generated sessions without automatic billing.' : 'One session and one payment.');
+                    syncGrace(subscription);
+                    billingPreview.textContent = subscription ? `Recurring billing: ${labels[frequency.value]}. Stripe and HitPay use this same interval.` : '';
+                    typeHelp.textContent = subscription ? 'Fixed recurring course: one successful billing cycle purchases one session.' : (type.value === 'recurring' ? 'Generated sessions without automatic billing.' : 'One session and one payment.');
                     priceLabel.textContent = subscription ? 'Recurring charge per session (RM)' : 'Price (RM)';
                     const amount = price.value ? `RM${Number(price.value).toFixed(2)}` : 'the entered amount';
+                    const graceUnit = frequency.value === 'everyday' ? 'hours' : 'days';
                     summary.textContent = subscription
-                        ? `Sessions repeat ${labels[frequency.value]} from ${date.value || 'the start date'} until ${until.value || 'the end date'}. Stripe charges ${amount} on the same ${labels[frequency.value]} interval, and each successful charge assigns one session.`
+                        ? `Sessions repeat ${labels[frequency.value]} from ${date.value || 'the start date'} until ${until.value || 'the end date'}. The selected gateway charges ${amount} on that interval, billing stops after the final scheduled session, and failed payments use a ${graceInput.value || 0}-${graceUnit} recovery window.`
                         : (repeats ? `Sessions repeat ${labels[frequency.value]} until ${until.value || 'the end date'}.` : `One class session will be created on ${date.value || 'the selected date'}.`);
                 }
 
