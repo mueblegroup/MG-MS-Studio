@@ -6,6 +6,7 @@ use App\Models\Concerns\AssignsStudio;
 use App\Models\User;
 use App\Models\ClassSession;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class ClassModel extends Model
 {
@@ -76,5 +77,37 @@ class ClassModel extends Model
     public function isSubscriptionClass(): bool
     {
         return $this->type === 'subscription';
+    }
+
+    /**
+     * The legacy column is named subscription_grace_days, but for daily
+     * subscriptions its numeric value is intentionally interpreted as HOURS.
+     * This preserves existing schema compatibility while keeping the grace
+     * window shorter than the billing cycle in production.
+     */
+    public function subscriptionGraceUnit(): string
+    {
+        return $this->billing_interval === 'day' ? 'hour' : 'day';
+    }
+
+    public function subscriptionGraceValue(): int
+    {
+        $configured = (int) ($this->subscription_grace_days ?? 0);
+
+        if ($configured > 0) {
+            return $configured;
+        }
+
+        return $this->billing_interval === 'day' ? 6 : 3;
+    }
+
+    public function subscriptionGraceUntil(?Carbon $from = null): Carbon
+    {
+        $from ??= now();
+        $value = $this->subscriptionGraceValue();
+
+        return $this->subscriptionGraceUnit() === 'hour'
+            ? $from->copy()->addHours($value)
+            : $from->copy()->addDays($value);
     }
 }
