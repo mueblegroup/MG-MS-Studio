@@ -6,7 +6,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\FilteredClassController;
 use App\Http\Controllers\GroupedShopController;
-use App\Http\Controllers\RecurringHitPayCheckoutController;
+use App\Http\Controllers\ProductionRecurringHitPayCheckoutController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\StudioSettingsController;
 use App\Http\Controllers\TimezoneStudioSettingsController;
@@ -41,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PlatformStripeBillingService::class, TrialAwarePlatformStripeBillingService::class);
         $this->app->bind(HitPayService::class, RecurringHitPayService::class);
         $this->app->bind(SubscriptionClassService::class, HitPayRecurringSubscriptionClassService::class);
-        $this->app->bind(CheckoutController::class, RecurringHitPayCheckoutController::class);
+        $this->app->bind(CheckoutController::class, ProductionRecurringHitPayCheckoutController::class);
         $this->app->bind(ShopController::class, GroupedShopController::class);
         $this->app->bind(ClassController::class, FilteredClassController::class);
         $this->app->bind(StudioOnboardingController::class, ValidatedStudioOnboardingController::class);
