@@ -52,12 +52,16 @@
                         <div class="mt-5 grid grid-cols-1 gap-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 md:grid-cols-2">
                             <div>
                                 <label class="text-xs font-semibold">Billing interval</label>
-                                <select name="billing_interval" class="mg-input mt-1" @disabled($hasActiveSubscriptions)>
+                                <select id="billing_interval" name="billing_interval" class="mg-input mt-1" @disabled($hasActiveSubscriptions)>
                                     @foreach(['day'=>'Daily','week'=>'Weekly','month'=>'Monthly','year'=>'Yearly'] as $value => $label)<option value="{{ $value }}" @selected($class->billing_interval === $value)>{{ $label }}</option>@endforeach
                                 </select>
                                 @if($hasActiveSubscriptions)<input type="hidden" name="billing_interval" value="{{ $class->billing_interval }}">@endif
                             </div>
-                            <div><label class="text-xs font-semibold">Payment Grace Days</label><input name="subscription_grace_days" value="{{ old('subscription_grace_days', $class->subscription_grace_days ?? 3) }}" min="0" max="30" class="mg-input mt-1" type="number"></div>
+                            <div>
+                                <label id="graceLabel" class="text-xs font-semibold">Payment Grace {{ $class->billing_interval === 'day' ? 'Hours' : 'Days' }}</label>
+                                <input id="subscription_grace_days" name="subscription_grace_days" value="{{ old('subscription_grace_days', $class->subscription_grace_days ?? ($class->billing_interval === 'day' ? 6 : 3)) }}" min="0" max="{{ $class->billing_interval === 'day' ? 23 : 30 }}" class="mg-input mt-1" type="number">
+                                <p id="graceHelp" class="mt-1 text-xs text-gray-600">{{ $class->billing_interval === 'day' ? 'Daily subscriptions use hours so grace remains shorter than the 24-hour billing cycle.' : 'Grace applies after a failed renewal and does not extend the billing cycle.' }}</p>
+                            </div>
                         </div>
                     @else
                         <input type="hidden" name="billing_interval" value="">
@@ -88,4 +92,37 @@
             </form>
         </div>
     </div>
+
+    @if($class->type === 'subscription' && ! $hasActiveSubscriptions)
+        @push('scripts')
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const interval = document.getElementById('billing_interval');
+                    const grace = document.getElementById('subscription_grace_days');
+                    const label = document.getElementById('graceLabel');
+                    const help = document.getElementById('graceHelp');
+                    if (!interval || !grace) return;
+
+                    let lastAuto = null;
+                    function syncGrace() {
+                        const daily = interval.value === 'day';
+                        const desired = daily ? 6 : 3;
+                        const current = Number(grace.value || 0);
+                        if (lastAuto === null || current === lastAuto) {
+                            grace.value = desired;
+                            lastAuto = desired;
+                        }
+                        grace.max = daily ? 23 : 30;
+                        label.textContent = daily ? 'Payment Grace Hours' : 'Payment Grace Days';
+                        help.textContent = daily
+                            ? 'Daily subscriptions use hours so grace remains shorter than the 24-hour billing cycle. Recommended: 6 hours.'
+                            : 'Grace applies after a failed renewal and does not extend the billing cycle.';
+                    }
+                    grace.addEventListener('input', () => { lastAuto = Number(grace.value || 0); });
+                    interval.addEventListener('change', syncGrace);
+                    syncGrace();
+                });
+            </script>
+        @endpush
+    @endif
 </x-app-layout>
