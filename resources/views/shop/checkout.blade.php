@@ -3,7 +3,7 @@
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Checkout</h1>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Confirm and choose a payment method.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Confirm your order and continue to secure payment.</p>
             </div>
 
             <a href="{{ route('shop.cart.index') }}"
@@ -18,7 +18,7 @@
             <div class="mb-5 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-800 dark:text-amber-100">
                 <div class="font-bold">Subscription checkout</div>
                 <div class="mt-1">
-                    This class starts recurring billing. Stripe subscriptions renew automatically. HitPay subscription renewals are generated as due payment requests and will appear in payment history.
+                    This class uses recurring billing. Your studio's configured payment gateway will manage the subscription and future eligible charges.
                 </div>
             </div>
         @endif
@@ -82,6 +82,7 @@
                     <div class="mt-5 space-y-2">
                             @php
                                 $enabled = $enabledProviders ?? ['stripe'];
+                                $ctaLabel = !empty($hasSubscriptionClass) ? 'Subscribe' : 'Pay';
                             @endphp
 
                             <form method="POST" action="{{ route('shop.checkout.pay') }}" class="space-y-2">
@@ -89,17 +90,19 @@
 
                                 @if(in_array('stripe', $enabled, true))
                                     <button name="provider" value="stripe"
+                                        aria-label="{{ $ctaLabel }}"
                                         class="w-full inline-flex justify-center items-center gap-2 px-4 py-3 rounded-xl
                                             text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow">
-                                        <i class="bx bxl-stripe"></i> {{ !empty($hasSubscriptionClass) ? 'Subscribe with Stripe' : 'Pay with Stripe' }}
+                                        <i class="bx bx-lock-alt"></i> {{ $ctaLabel }}
                                     </button>
                                 @endif
 
                                 @if(in_array('hitpay', $enabled, true))
                                     <button name="provider" value="hitpay"
+                                        aria-label="{{ $ctaLabel }}"
                                         class="w-full inline-flex justify-center items-center gap-2 px-4 py-3 rounded-xl
                                             text-sm font-semibold text-white bg-gray-800 hover:bg-gray-900 transition shadow">
-                                        <i class="bx bx-link"></i> {{ !empty($hasSubscriptionClass) ? 'Start with HitPay' : 'Pay with HitPay' }}
+                                        <i class="bx bx-lock-alt"></i> {{ $ctaLabel }}
                                     </button>
                                 @endif
                             </form>
