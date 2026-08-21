@@ -7,13 +7,14 @@ use App\Models\ClassSessionAssignment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class ClassAssignmentController extends Controller
 {
     public function index(Request $request)
     {
         $search = trim($request->query('q', ''));
-        $perPage = (int) $request->query('per_page', 10);
+        $perPage = max(10, min(100, (int) $request->query('per_page', 10)));
 
         $assignments = ClassSessionAssignment::query()
             ->with([
@@ -23,12 +24,14 @@ class ClassAssignmentController extends Controller
                 'session.classModel.teacher:id,name,email',
             ])
             ->when($search !== '', function ($query) use ($search) {
-                $query->whereHas('student', function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
-                })->orWhereHas('session.classModel', function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                $query->where(function ($searchQuery) use ($search) {
+                    $searchQuery->whereHas('student', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    })->orWhereHas('session.classModel', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('description', 'like', "%{$search}%");
+                    });
                 });
             })
             ->orderByDesc('created_at')
@@ -52,13 +55,21 @@ class ClassAssignmentController extends Controller
 
     public function store(Request $request)
     {
+        $studioId = (int) current_studio_id();
+        abort_if($studioId <= 0, 403, 'Studio context is required.');
+
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'class_session_id' => 'required|exists:class_sessions,id',
+            'user_id' => [
+                'required',
+                Rule::exists('users', 'id')->where(fn ($q) => $q->where('studio_id', $studioId)->where('role', 'student')->whereNull('deleted_at')),
+            ],
+            'class_session_id' => [
+                'required',
+                Rule::exists('class_sessions', 'id')->where(fn ($q) => $q->where('studio_id', $studioId)->whereNull('deleted_at')),
+            ],
             'notes' => 'nullable|string|max:5000',
         ]);
 
-        // Prevent duplicates (soft-deleted included)
         $existing = ClassSessionAssignment::withTrashed()
             ->where('user_id', $validated['user_id'])
             ->where('class_session_id', $validated['class_session_id'])
@@ -72,15 +83,11 @@ class ClassAssignmentController extends Controller
                 'status' => 'assigned',
             ]);
 
-            return redirect()
-                ->route('admin.class-assignments.index')
-                ->with('success', 'Assignment restored successfully.');
+            return redirect()->route('admin.class-assignments.index')->with('success', 'Assignment restored successfully.');
         }
 
         if ($existing) {
-            return back()
-                ->withErrors(['class_session_id' => 'This student is already assigned to that session.'])
-                ->withInput();
+            return back()->withErrors(['class_session_id' => 'This student is already assigned to that session.'])->withInput();
         }
 
         ClassSessionAssignment::create([
@@ -91,17 +98,13 @@ class ClassAssignmentController extends Controller
             'status' => 'assigned',
         ]);
 
-        return redirect()
-            ->route('admin.class-assignments.index')
-            ->with('success', 'Student assigned to class session successfully.');
+        return redirect()->route('admin.class-assignments.index')->with('success', 'Student assigned to class session successfully.');
     }
 
     public function destroy(ClassSessionAssignment $assignment)
     {
         $assignment->delete();
 
-        return redirect()
-            ->route('admin.class-assignments.index')
-            ->with('success', 'Assignment removed.');
+        return redirect()->route('admin.class-assignments.index')->with('success', 'Assignment removed.');
     }
 }
