@@ -28,6 +28,27 @@ class AppNotificationController extends Controller
         return view('admin.notifications.index', compact('notifications', 'users'));
     }
 
+    public function create()
+    {
+        return redirect()->route('admin.notifications.index');
+    }
+
+    public function show(AppNotification $notification)
+    {
+        $this->assertCurrentStudioNotification($notification);
+
+        return redirect()->route('admin.notifications.index')
+            ->with('success', 'Notification: '.$notification->title.' — '.$notification->message);
+    }
+
+    public function edit(AppNotification $notification)
+    {
+        $this->assertCurrentStudioNotification($notification);
+
+        return redirect()->route('admin.notifications.index')
+            ->with('status', 'Notification editing is available through the notification management list.');
+    }
+
     public function store(Request $request)
     {
         $studioId = $this->currentStudioId();
@@ -72,6 +93,35 @@ class AppNotificationController extends Controller
         return redirect()
             ->route('admin.notifications.index')
             ->with('success', count($rows) . ' notification(s) sent successfully.');
+    }
+
+    public function update(Request $request, AppNotification $notification)
+    {
+        $this->assertCurrentStudioNotification($notification);
+
+        $validated = $request->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'message' => ['sometimes', 'required', 'string', 'max:5000'],
+            'type' => ['nullable', 'string', 'max:60'],
+            'action_url' => ['nullable', 'string', 'max:2048'],
+        ]);
+
+        $notification->update($validated);
+
+        return redirect()->route('admin.notifications.index')->with('success', 'Notification updated.');
+    }
+
+    public function destroy(AppNotification $notification)
+    {
+        $this->assertCurrentStudioNotification($notification);
+        $notification->delete();
+
+        return redirect()->route('admin.notifications.index')->with('success', 'Notification deleted.');
+    }
+
+    private function assertCurrentStudioNotification(AppNotification $notification): void
+    {
+        abort_unless((int) $notification->studio_id === $this->currentStudioId(), 404);
     }
 
     private function currentStudioId(): int
