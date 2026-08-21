@@ -35,15 +35,14 @@ class AdminController extends Controller
 
     private function uniqueEmailRule(?int $ignoreUserId = null): mixed
     {
-        $rule = Rule::unique('users', 'email')
-            ->where(fn ($query) => $query->where('studio_id', $this->tenantId()));
+        // Users authenticate globally by email and the database has a global
+        // unique index. Validate the same rule here so duplicate emails fail
+        // cleanly with 422 instead of reaching a database unique-key error.
+        $rule = Rule::unique('users', 'email');
 
         return $ignoreUserId ? $rule->ignore($ignoreUserId) : $rule;
     }
 
-    /* ============================
-     * Show Dashboard
-     * ============================ */
     public function dashboard(StudioSettingsService $settings)
     {
         $year = (int) now()->year;
@@ -66,12 +65,9 @@ class AdminController extends Controller
 
         foreach ($paidPayments as $payment) {
             $date = $payment->paid_at ?: $payment->created_at;
-
-            if (!$date) {
-                continue;
+            if ($date) {
+                $monthlyRevenue[(int) $date->month] += (float) $payment->amount;
             }
-
-            $monthlyRevenue[(int) $date->month] += (float) $payment->amount;
         }
 
         $revenueData = array_values(array_map(
@@ -143,69 +139,58 @@ class AdminController extends Controller
     public function storeStudent(Request $request)
     {
         $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'email'         => ['required', 'email', $this->uniqueEmailRule()],
-            'phone_number'  => 'nullable|string|max:20',
-            'password'      => 'required|string|min:8|confirmed',
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', $this->uniqueEmailRule()],
+            'phone_number' => 'nullable|string|max:20',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         User::create([
-            'studio_id'    => $this->tenantId(),
-            'name'         => $validated['name'],
-            'email'        => $validated['email'],
+            'studio_id' => $this->tenantId(),
+            'name' => $validated['name'],
+            'email' => $validated['email'],
             'phone_number' => $validated['phone_number'] ?? null,
-            'password'     => Hash::make($validated['password']),
-            'role'         => 'student',
+            'password' => Hash::make($validated['password']),
+            'role' => 'student',
         ]);
 
-        return redirect()
-            ->route('admin.students')
-            ->with('success', 'Student created successfully');
+        return redirect()->route('admin.students')->with('success', 'Student created successfully');
     }
 
     public function editStudent($id)
     {
         $student = $this->usersForTenant('student')->findOrFail($id);
-
         return view('admin.edit-student', compact('student'));
     }
 
     public function updateStudent(Request $request, $id)
     {
         $student = $this->usersForTenant('student')->findOrFail($id);
-
         $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'email'         => ['required', 'email', $this->uniqueEmailRule($student->id)],
-            'phone_number'  => 'nullable|string|max:20',
-            'password'      => 'nullable|string|min:8|confirmed',
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', $this->uniqueEmailRule($student->id)],
+            'phone_number' => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:8|confirmed',
         ]);
 
         $student->update([
-            'name'         => $validated['name'],
-            'email'        => $validated['email'],
+            'name' => $validated['name'],
+            'email' => $validated['email'],
             'phone_number' => $validated['phone_number'] ?? $student->phone_number,
         ]);
 
         if (!empty($validated['password'])) {
-            $student->update([
-                'password' => Hash::make($validated['password']),
-            ]);
+            $student->update(['password' => Hash::make($validated['password'])]);
         }
 
-        return redirect()
-            ->route('admin.students')
-            ->with('success', 'Student updated successfully');
+        return redirect()->route('admin.students')->with('success', 'Student updated successfully');
     }
 
     public function destroyStudent($id)
     {
         $student = $this->usersForTenant('student')->findOrFail($id);
         $student->delete();
-
-        return redirect()
-            ->route('admin.students')
-            ->with('success', 'Student deleted successfully');
+        return redirect()->route('admin.students')->with('success', 'Student deleted successfully');
     }
 
     public function teachers()
@@ -222,69 +207,58 @@ class AdminController extends Controller
     public function storeTeacher(Request $request)
     {
         $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'email'         => ['required', 'email', $this->uniqueEmailRule()],
-            'phone_number'  => 'nullable|string|max:20',
-            'password'      => 'required|string|min:8|confirmed',
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', $this->uniqueEmailRule()],
+            'phone_number' => 'nullable|string|max:20',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         User::create([
-            'studio_id'    => $this->tenantId(),
-            'name'         => $validated['name'],
-            'email'        => $validated['email'],
+            'studio_id' => $this->tenantId(),
+            'name' => $validated['name'],
+            'email' => $validated['email'],
             'phone_number' => $validated['phone_number'] ?? null,
-            'password'     => Hash::make($validated['password']),
-            'role'         => 'teacher',
+            'password' => Hash::make($validated['password']),
+            'role' => 'teacher',
         ]);
 
-        return redirect()
-            ->route('admin.teachers')
-            ->with('success', 'Teacher created successfully');
+        return redirect()->route('admin.teachers')->with('success', 'Teacher created successfully');
     }
 
     public function editTeacher($id)
     {
         $teacher = $this->usersForTenant('teacher')->findOrFail($id);
-
         return view('admin.edit-teacher', compact('teacher'));
     }
 
     public function updateTeacher(Request $request, $id)
     {
         $teacher = $this->usersForTenant('teacher')->findOrFail($id);
-
         $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'email'         => ['required', 'email', $this->uniqueEmailRule($teacher->id)],
-            'phone_number'  => 'nullable|string|max:20',
-            'password'      => 'nullable|string|min:8|confirmed',
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', $this->uniqueEmailRule($teacher->id)],
+            'phone_number' => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:8|confirmed',
         ]);
 
         $teacher->update([
-            'name'         => $validated['name'],
-            'email'        => $validated['email'],
+            'name' => $validated['name'],
+            'email' => $validated['email'],
             'phone_number' => $validated['phone_number'] ?? $teacher->phone_number,
         ]);
 
         if (!empty($validated['password'])) {
-            $teacher->update([
-                'password' => Hash::make($validated['password']),
-            ]);
+            $teacher->update(['password' => Hash::make($validated['password'])]);
         }
 
-        return redirect()
-            ->route('admin.teachers')
-            ->with('success', 'Teacher updated successfully');
+        return redirect()->route('admin.teachers')->with('success', 'Teacher updated successfully');
     }
 
     public function destroyTeacher($id)
     {
         $teacher = $this->usersForTenant('teacher')->findOrFail($id);
         $teacher->delete();
-
-        return redirect()
-            ->route('admin.teachers')
-            ->with('success', 'Teacher deleted successfully');
+        return redirect()->route('admin.teachers')->with('success', 'Teacher deleted successfully');
     }
 
     public function admins()
@@ -300,10 +274,19 @@ class AdminController extends Controller
 
     public function updateStudioSettings(Request $request)
     {
+        // Legacy compatibility endpoint. Only permit the harmless presentation
+        // fields that this old form was intended to edit; subscription/domain/
+        // ownership fields are managed by dedicated production controllers.
+        $validated = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+        ]);
+
         $studio = Studio::where('id', $this->tenantId())->firstOrFail();
-        $studio->update($request->all());
-        session()->flash('success', 'Studio settings updated successfully');
-        return redirect()->route('admin.studio-settings');
+        if ($validated !== []) {
+            $studio->update($validated);
+        }
+
+        return redirect()->route('admin.studio-settings')->with('success', 'Studio settings updated successfully');
     }
 
     public function create()
@@ -311,71 +294,72 @@ class AdminController extends Controller
         return view('admin.create-admin');
     }
 
+    // Compatibility with the named /admin/admins/create route.
+    public function createAdmin()
+    {
+        return $this->create();
+    }
+
     public function storeAdmin(Request $request)
     {
         $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'email'         => ['required', 'email', $this->uniqueEmailRule()],
-            'phone_number'  => 'nullable|string|max:20',
-            'password'      => 'required|string|min:8|confirmed',
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', $this->uniqueEmailRule()],
+            'phone_number' => 'nullable|string|max:20',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         User::create([
-            'studio_id'    => $this->tenantId(),
-            'name'         => $validated['name'],
-            'email'        => $validated['email'],
+            'studio_id' => $this->tenantId(),
+            'name' => $validated['name'],
+            'email' => $validated['email'],
             'phone_number' => $validated['phone_number'] ?? null,
-            'password'     => Hash::make($validated['password']),
-            'role'         => 'admin',
+            'password' => Hash::make($validated['password']),
+            'role' => 'admin',
         ]);
 
-        return redirect()
-            ->route('admin.admins')
-            ->with('success', 'Admin created successfully');
+        return redirect()->route('admin.admins')->with('success', 'Admin created successfully');
+    }
+
+    // Compatibility with the legacy /admin/users/store route.
+    public function store(Request $request)
+    {
+        return $this->storeAdmin($request);
     }
 
     public function edit($id)
     {
         $admin = $this->usersForTenant('admin')->findOrFail($id);
-
         return view('admin.edit-admin', compact('admin'));
     }
 
     public function update(Request $request, $id)
     {
         $admin = $this->usersForTenant('admin')->findOrFail($id);
-
         $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'email'         => ['required', 'email', $this->uniqueEmailRule($admin->id)],
-            'phone_number'  => 'nullable|string|max:20',
-            'password'      => 'nullable|string|min:8|confirmed',
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', $this->uniqueEmailRule($admin->id)],
+            'phone_number' => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:8|confirmed',
         ]);
 
         $admin->update([
-            'name'         => $validated['name'],
-            'email'        => $validated['email'],
+            'name' => $validated['name'],
+            'email' => $validated['email'],
             'phone_number' => $validated['phone_number'] ?? $admin->phone_number,
         ]);
 
         if (!empty($validated['password'])) {
-            $admin->update([
-                'password' => Hash::make($validated['password']),
-            ]);
+            $admin->update(['password' => Hash::make($validated['password'])]);
         }
 
-        return redirect()
-            ->route('admin.admins')
-            ->with('success', 'Admin updated successfully');
+        return redirect()->route('admin.admins')->with('success', 'Admin updated successfully');
     }
 
     public function destroy($id)
     {
         $admin = $this->usersForTenant('admin')->findOrFail($id);
         $admin->delete();
-
-        return redirect()
-            ->route('admin.admins')
-            ->with('success', 'Admin deleted successfully');
+        return redirect()->route('admin.admins')->with('success', 'Admin deleted successfully');
     }
 }
