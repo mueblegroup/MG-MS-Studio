@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsStudio;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class UserClassCard extends Model
 {
-    use SoftDeletes;
+    use AssignsStudio, SoftDeletes;
 
     protected $fillable = [
         'studio_id',
@@ -41,7 +42,6 @@ class UserClassCard extends Model
 
     public function usages()
     {
-        // return $this->hasMany(ClassCardUsage::class);
         return $this->hasMany(\App\Models\ClassCardUsage::class, 'user_class_card_id');
     }
 }
