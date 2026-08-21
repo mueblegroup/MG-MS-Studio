@@ -3,30 +3,49 @@
 namespace App\Http\Middleware;
 
 use App\Models\Studio;
+use App\Models\User;
 use App\Support\TenantManager;
 use Closure;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 class ResolveApiStudioTenant
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $user = $request->user();
+        // This middleware is prepended to Laravel's API middleware group, so it
+        // intentionally resolves the Sanctum bearer token itself before
+        // SubstituteBindings can route-model-bind an unscoped tenant model.
+        $plainToken = (string) $request->bearerToken();
+        $accessToken = $plainToken !== '' ? PersonalAccessToken::findToken($plainToken) : null;
+        $user = $accessToken?->tokenable;
 
-        if (! $user || $user->role !== 'admin') {
+        if (! $accessToken || ! $user instanceof User) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        if ($user->role !== 'admin') {
             return response()->json([
                 'success' => false,
                 'message' => 'A studio administrator API token is required.',
             ], 403);
         }
 
-        $studioId = $this->studioIdFromToken($user->currentAccessToken()?->abilities ?? []);
+        $studioId = $this->studioIdFromToken((array) $accessToken->abilities);
 
+        // Compatibility for existing staff-admin tokens created before explicit
+        // studio binding was introduced.
         if (! $studioId && $user->studio_id) {
             $studioId = (int) $user->studio_id;
         }
 
+        // Owner accounts can also keep an old token only when ownership is
+        // unambiguous. Owners of multiple studios must recreate a studio-bound
+        // token from the intended workspace.
         if (! $studioId) {
             $ownedStudioIds = Studio::query()
                 ->where('owner_user_id', $user->id)
