@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(prepend: [
             \App\Http\Middleware\ResolveStudioTenant::class,
             \App\Http\Middleware\ApplyStudioTimezone::class,
+            \App\Http\Middleware\ApplyStudioMailConfig::class,
             \App\Http\Middleware\ApplyStudioPaymentGatewayConfig::class,
         ]);
 
