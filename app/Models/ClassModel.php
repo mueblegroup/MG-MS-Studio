@@ -92,10 +92,10 @@ class ClassModel extends Model
 
     public function subscriptionGraceValue(): int
     {
-        $configured = (int) ($this->subscription_grace_days ?? 0);
-
-        if ($configured > 0) {
-            return $configured;
+        // An explicit zero is a valid production choice meaning no LMS grace.
+        // Only a missing/null value falls back to the interval default.
+        if ($this->subscription_grace_days !== null) {
+            return max(0, (int) $this->subscription_grace_days);
         }
 
         return $this->billing_interval === 'day' ? 6 : 3;
