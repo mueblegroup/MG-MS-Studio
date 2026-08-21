@@ -13,11 +13,163 @@ use App\Support\TenantManager;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('subscriptions:sync-hitpay-recurring {--studio= : Limit reconciliation to one studio ID} {--subscription= : Limit reconciliation to one local subscription ID}', function (
+    ProductionSubscriptionClassService $subscriptions,
+    RecurringHitPayService $hitpay,
+    TenantManager $tenants
+) {
+    $studioFilter = (int) ($this->option('studio') ?: 0);
+    $subscriptionFilter = (int) ($this->option('subscription') ?: 0);
+    $originalTimezone = (string) config('app.timezone', 'Asia/Kuala_Lumpur');
+
+    $items = StudioSubscription::query()
+        ->with(['classModel', 'user'])
+        ->where('provider', 'hitpay')
+        ->whereNotNull('provider_subscription_id')
+        ->whereIn('status', ['pending', 'active', 'trialing', 'past_due'])
+        ->when($studioFilter > 0, fn ($query) => $query->where('studio_id', $studioFilter))
+        ->when($subscriptionFilter > 0, fn ($query) => $query->whereKey($subscriptionFilter))
+        ->orderBy('studio_id')
+        ->orderBy('id')
+        ->get();
+
+    if ($items->isEmpty()) {
+        $this->info('No active HitPay recurring subscriptions require reconciliation.');
+        return 0;
+    }
+
+    $synced = 0;
+    $realigned = 0;
+    $attention = 0;
+    $skipped = 0;
+    $errors = 0;
+    $rows = [];
+
+    foreach ($items as $subscription) {
+        $studio = Studio::query()->find($subscription->studio_id);
+        if (! $studio) {
+            $rows[] = [$subscription->id, $subscription->studio_id, '—', '—', 'ERROR', 'Studio missing'];
+            $errors++;
+            continue;
+        }
+
+        $gateway = StudioPaymentGateway::query()
+            ->where('studio_id', $studio->id)
+            ->where('provider', 'hitpay')
+            ->where('enabled', true)
+            ->first();
+
+        $credentials = (array) ($gateway?->credentials ?? []);
+        if (! $gateway || empty($credentials['api_key'])) {
+            $rows[] = [$subscription->id, $studio->id, '—', '—', 'SKIPPED', 'HitPay gateway/API key unavailable'];
+            $skipped++;
+            continue;
+        }
+
+        $tenants->set($studio);
+
+        try {
+            $studioTimezone = (string) app(StudioSettingsService::class)->get(
+                'timezone',
+                data_get($studio->settings, 'timezone', $originalTimezone)
+            );
+            if ($studioTimezone === '') {
+                $studioTimezone = $originalTimezone;
+            }
+
+            config(['app.timezone' => $studioTimezone]);
+            date_default_timezone_set($studioTimezone);
+
+            $live = $hitpay->getRecurringBilling((string) $subscription->provider_subscription_id);
+            $subscription = $subscriptions->syncHitPayRecurringBilling($subscription, $live);
+            $synced++;
+
+            $expected = $subscriptions->expectedUpcomingBilling($subscription);
+            $expectedDate = $expected['hitpay_start_date_sgt'] ?? null;
+            $providerDate = null;
+
+            foreach (['next_charge_date', 'next_billing_date', 'start_date'] as $field) {
+                if (! empty($live[$field])) {
+                    $providerDate = Carbon::parse((string) $live[$field], 'Asia/Singapore')->toDateString();
+                    break;
+                }
+            }
+
+            $todaySgt = Carbon::now('Asia/Singapore')->toDateString();
+            $result = 'SYNCED';
+            $note = 'Provider state refreshed';
+
+            if ($expectedDate && $providerDate && $expectedDate !== $providerDate) {
+                // Only auto-realign when the class-policy billing date is still
+                // safely in the future. When the target is today or already
+                // passed, changing an active recurring plan could cause an
+                // unexpected immediate collection or conflict with a charge
+                // HitPay is already processing.
+                if ($expectedDate > $todaySgt) {
+                    $subscriptions->repairHitPayUpcomingBilling($subscription);
+                    $realigned++;
+                    $result = 'REALIGNED';
+                    $note = $providerDate.' → '.$expectedDate;
+                } else {
+                    $attention++;
+                    $result = 'ATTENTION';
+                    $note = 'Expected '.$expectedDate.'; provider '.$providerDate.'; billing target is today/past';
+
+                    Log::warning('HitPay recurring billing requires manual attention because the expected class billing date is no longer safely in the future.', [
+                        'studio_subscription_id' => $subscription->id,
+                        'studio_id' => $studio->id,
+                        'hitpay_recurring_billing_id' => $subscription->provider_subscription_id,
+                        'expected_billing_date_sgt' => $expectedDate,
+                        'provider_billing_date_sgt' => $providerDate,
+                    ]);
+                }
+            } elseif ($expectedDate && ! $providerDate) {
+                $attention++;
+                $result = 'ATTENTION';
+                $note = 'Provider did not expose a next billing date';
+            }
+
+            $rows[] = [
+                $subscription->id,
+                $studio->id,
+                $expectedDate ?: '—',
+                $providerDate ?: 'unknown',
+                $result,
+                $note,
+            ];
+        } catch (Throwable $exception) {
+            $errors++;
+            $rows[] = [$subscription->id, $studio->id, '—', '—', 'ERROR', $exception->getMessage()];
+
+            Log::error('HitPay recurring subscription reconciliation failed.', [
+                'studio_subscription_id' => $subscription->id,
+                'studio_id' => $studio->id,
+                'hitpay_recurring_billing_id' => $subscription->provider_subscription_id,
+                'message' => $exception->getMessage(),
+            ]);
+        } finally {
+            $tenants->clear();
+            config(['app.timezone' => $originalTimezone]);
+            date_default_timezone_set($originalTimezone);
+        }
+    }
+
+    $this->table(
+        ['Sub ID', 'Studio', 'Expected SGT', 'Provider SGT', 'Result', 'Note'],
+        $rows
+    );
+
+    $this->info("HitPay reconciliation: synced {$synced}; realigned {$realigned}; attention {$attention}; skipped {$skipped}; errors {$errors}.");
+
+    return $errors > 0 ? 2 : 0;
+})->purpose('Reconcile tenant HitPay recurring subscriptions with provider state and safely re-align future class billing dates');
 
 Artisan::command('subscriptions:upcoming-billings {--subscription= : Inspect one local studio subscription ID} {--studio= : Limit to one studio ID} {--provider= : Limit to stripe or hitpay} {--days=14 : Only show expected charge targets within this many days} {--repair : Re-align mismatched HitPay recurring billing dates to the class schedule}', function (
     ProductionSubscriptionClassService $subscriptions,
@@ -308,5 +460,10 @@ Schedule::command('subscriptions:sync-stripe-end-dates')
 
 Schedule::command('platform-subscriptions:sync-dates')
     ->hourly()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('subscriptions:sync-hitpay-recurring')
+    ->hourlyAt(15)
     ->withoutOverlapping()
     ->onOneServer();
