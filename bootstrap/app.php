@@ -29,6 +29,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ApplyStudioPaymentGatewayConfig::class,
         ]);
 
+        // API tenant context must exist before Laravel's SubstituteBindings
+        // middleware resolves route-bound tenant models.
+        $middleware->api(prepend: [
+            \App\Http\Middleware\ResolveApiStudioTenant::class,
+        ]);
+
         $middleware->web(append: [
             \App\Http\Middleware\ProcessStripeClassRenewalWebhook::class,
             \App\Http\Middleware\RestrictStaffShopPurchases::class,
