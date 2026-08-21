@@ -74,14 +74,10 @@ class RegisteredUserController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'string',
-                'lowercase',
-                'email',
-                'max:255',
-                Rule::unique('users', 'email')->where(fn ($query) => $query->where('studio_id', $studio->id)),
-            ],
+            // Authentication uses one global user identity and users.email has a
+            // global unique index, so validate globally rather than allowing a
+            // cross-studio duplicate to fail later as a database exception.
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
             'phone_number' => ['required', 'string', 'max:40'],
             'date_of_birth' => ['required', 'date', 'before:today', 'after:1900-01-01'],
             'gender' => ['nullable', Rule::in(['female', 'male', 'non_binary', 'prefer_not_to_say', 'other'])],
