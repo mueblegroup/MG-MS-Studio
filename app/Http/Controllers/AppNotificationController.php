@@ -48,4 +48,34 @@ class AppNotificationController extends Controller
 
         return back()->with('success', 'All notifications marked as read.');
     }
+
+    /**
+     * Legacy teacher/student routes used to point at mutation methods on this
+     * read-only controller. Keep them fail-closed so stale bookmarks cannot
+     * produce a 500 or accidentally grow notification-authoring privileges.
+     */
+    public function create()
+    {
+        abort(403, 'Only studio administrators can create notifications.');
+    }
+
+    public function store(Request $request)
+    {
+        abort(403, 'Only studio administrators can create notifications.');
+    }
+
+    public function edit(AppNotification $notification)
+    {
+        abort(403, 'Only studio administrators can edit notifications.');
+    }
+
+    public function update(Request $request, AppNotification $notification)
+    {
+        abort(403, 'Only studio administrators can edit notifications.');
+    }
+
+    public function destroy(AppNotification $notification)
+    {
+        abort(403, 'Only studio administrators can delete notifications.');
+    }
 }
