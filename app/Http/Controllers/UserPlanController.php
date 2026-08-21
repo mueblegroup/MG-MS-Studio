@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\User;
 use App\Models\UserPlan;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class UserPlanController extends Controller
 {
@@ -21,11 +22,13 @@ class UserPlanController extends Controller
                 'user:id,name,email',
             ])
             ->when($search !== '', function ($q) use ($search) {
-                $q->whereHas('user', function ($u) use ($search) {
-                    $u->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
-                })->orWhereHas('plan', function ($p) use ($search) {
-                    $p->where('name', 'like', "%{$search}%");
+                $q->where(function ($searchQuery) use ($search) {
+                    $searchQuery->whereHas('user', function ($u) use ($search) {
+                        $u->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    })->orWhereHas('plan', function ($p) use ($search) {
+                        $p->where('name', 'like', "%{$search}%");
+                    });
                 });
             })
             ->orderByDesc('id')
@@ -49,9 +52,18 @@ class UserPlanController extends Controller
 
     public function store(Request $request)
     {
+        $studioId = (int) current_studio_id();
+        abort_if($studioId <= 0, 403, 'Studio context is required.');
+
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'plan_id' => 'required|exists:plans,id',
+            'user_id' => [
+                'required',
+                Rule::exists('users', 'id')->where(fn ($q) => $q->where('studio_id', $studioId)->where('role', 'student')->whereNull('deleted_at')),
+            ],
+            'plan_id' => [
+                'required',
+                Rule::exists('plans', 'id')->where(fn ($q) => $q->where('studio_id', $studioId)->whereNull('deleted_at')),
+            ],
             'starts_on' => 'nullable|date',
             'ends_on' => 'nullable|date|after_or_equal:starts_on',
             'is_active' => 'required|in:0,1',
