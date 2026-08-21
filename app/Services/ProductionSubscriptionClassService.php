@@ -150,15 +150,7 @@ class ProductionSubscriptionClassService extends HitPayRecurringSubscriptionClas
     {
         parent::handleStripeInvoiceFailure($invoice);
 
-        $providerSubscriptionId = null;
-        $subscriptionValue = $invoice->subscription ?? null;
-
-        if (is_string($subscriptionValue) && $subscriptionValue !== '') {
-            $providerSubscriptionId = $subscriptionValue;
-        } elseif (is_object($subscriptionValue) && ! empty($subscriptionValue->id)) {
-            $providerSubscriptionId = (string) $subscriptionValue->id;
-        }
-
+        $providerSubscriptionId = $this->stripeSubscriptionIdFromFailureInvoice($invoice);
         if (! $providerSubscriptionId) {
             return;
         }
@@ -181,6 +173,25 @@ class ProductionSubscriptionClassService extends HitPayRecurringSubscriptionClas
                 'payment_grace_unit' => $subscription->classModel->subscriptionGraceUnit(),
             ]),
         ]);
+    }
+
+    private function stripeSubscriptionIdFromFailureInvoice(object $invoice): ?string
+    {
+        foreach ([
+            $invoice->subscription ?? null,
+            $invoice->parent->subscription_details->subscription ?? null,
+            $invoice->lines->data[0]->parent->subscription_item_details->subscription ?? null,
+        ] as $subscription) {
+            if (is_string($subscription) && $subscription !== '') {
+                return $subscription;
+            }
+
+            if (is_object($subscription) && ! empty($subscription->id)) {
+                return (string) $subscription->id;
+            }
+        }
+
+        return null;
     }
 
     private function nextBillableSessionForInspection(StudioSubscription $subscription): ?ClassSession
