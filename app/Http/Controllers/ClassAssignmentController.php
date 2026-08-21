@@ -65,7 +65,7 @@ class ClassAssignmentController extends Controller
             ],
             'class_session_id' => [
                 'required',
-                Rule::exists('class_sessions', 'id')->where(fn ($q) => $q->where('studio_id', $studioId)->whereNull('deleted_at')),
+                Rule::exists('class_sessions', 'id')->where(fn ($q) => $q->where('studio_id', $studioId)),
             ],
             'notes' => 'nullable|string|max:5000',
         ]);
