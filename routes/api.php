@@ -10,10 +10,11 @@ use App\Http\Controllers\Api\V1\PlanApiController;
 use App\Http\Controllers\Api\V1\SettingsApiController;
 use App\Http\Controllers\Api\V1\SystemApiController;
 use App\Http\Controllers\Api\V1\UserApiController;
+use App\Http\Middleware\ResolveApiStudioTenant;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
-    ->middleware(['auth:sanctum', 'api.log', 'throttle:api'])
+    ->middleware(['auth:sanctum', ResolveApiStudioTenant::class, 'api.log', 'throttle:api'])
     ->group(function () {
         Route::get('me', [SystemApiController::class, 'me']);
 
