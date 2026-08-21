@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ApiRequestLog;
 use App\Support\ApiAbilities;
+use App\Support\TenantManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -44,6 +45,9 @@ class ApiTokenController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $studio = app(TenantManager::class)->current();
+        abort_unless($studio, 404);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'abilities' => ['required', 'array', 'min:1'],
@@ -67,6 +71,11 @@ class ApiTokenController extends Controller
                 ->withInput();
         }
 
+        // Keep the tenant binding as an internal Sanctum ability so the API
+        // can resolve the exact studio before route model binding/controllers.
+        $abilities[] = 'studio:'.$studio->id;
+        $abilities = array_values(array_unique($abilities));
+
         $expiresAt = !empty($validated['expires_at'])
             ? Carbon::parse($validated['expires_at'])
             : null;
@@ -80,7 +89,7 @@ class ApiTokenController extends Controller
         return redirect()
             ->route('admin.api-tokens.index')
             ->with('plain_text_token', $newToken->plainTextToken)
-            ->with('status', 'API token created successfully. Copy it now because it will not be shown again.');
+            ->with('status', 'API token created successfully for this studio. Copy it now because it will not be shown again.');
     }
 
     public function destroy(Request $request, PersonalAccessToken $apiToken): RedirectResponse
