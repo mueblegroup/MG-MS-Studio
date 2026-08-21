@@ -5,10 +5,13 @@ namespace App\Services;
 use App\Models\StudioSetting;
 use App\Support\TenantManager;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
+use Throwable;
 
 class StudioSettingsService
 {
     private const TTL = 3600;
+    private const ENCRYPTED_PREFIX = 'enc:';
 
     public function all(): array
     {
@@ -25,10 +28,16 @@ class StudioSettingsService
                 $query->whereNull('studio_id');
             }
 
-            return $query
+            $values = $query
                 ->orderByRaw('studio_id is null desc')
                 ->pluck('value', 'key')
                 ->toArray();
+
+            if (array_key_exists('mail_password', $values)) {
+                $values['mail_password'] = $this->decryptSensitiveValue((string) $values['mail_password']);
+            }
+
+            return $values;
         });
     }
 
@@ -46,13 +55,19 @@ class StudioSettingsService
         $studioId = $this->studioId();
 
         foreach ($keyValue as $key => $value) {
+            $storedValue = is_array($value) ? json_encode($value) : (string) $value;
+
+            if ($key === 'mail_password' && $storedValue !== '') {
+                $storedValue = self::ENCRYPTED_PREFIX . Crypt::encryptString($storedValue);
+            }
+
             StudioSetting::updateOrCreate(
                 [
                     'studio_id' => $studioId,
                     'key' => $key,
                 ],
                 [
-                    'value' => is_array($value) ? json_encode($value) : (string) $value,
+                    'value' => $storedValue,
                 ]
             );
         }
@@ -80,6 +95,22 @@ class StudioSettingsService
         return $studioId
             ? 'studio_settings_all:' . $studioId
             : 'studio_settings_all:global';
+    }
+
+    private function decryptSensitiveValue(string $value): string
+    {
+        if (! str_starts_with($value, self::ENCRYPTED_PREFIX)) {
+            // Backward compatibility for credentials saved before encryption
+            // was introduced. They are encrypted the next time settings save.
+            return $value;
+        }
+
+        try {
+            return Crypt::decryptString(substr($value, strlen(self::ENCRYPTED_PREFIX)));
+        } catch (Throwable $exception) {
+            report($exception);
+            return '';
+        }
     }
 
     private function castValue(?string $value)
