@@ -15,6 +15,9 @@ class ResolveStudioTenant
     {
         app(TenantManager::class)->clear();
 
+        // The platform billing webhook uses central/platform Stripe credentials.
+        // Studio Stripe/HitPay webhooks must continue through host resolution so
+        // the studio's own gateway credentials are loaded by later middleware.
         if ($this->isPlatformWebhookPath($request)) {
             return $next($request);
         }
@@ -27,7 +30,10 @@ class ResolveStudioTenant
         $userStudio = $this->resolveFromAuthenticatedUser($request);
 
         if ($hostStudio) {
-            if (! $hostStudio->isActive()) {
+            // Payment providers can deliver a delayed webhook after a studio's
+            // SaaS status changes. Keep accepting signed tenant payment events
+            // so local financial/subscription state cannot become stale.
+            if (! $hostStudio->isActive() && ! $this->isTenantPaymentWebhookPath($request)) {
                 return response()->view('errors.studio-inactive', [
                     'studio' => $hostStudio,
                     'billingUrl' => $this->centralUrl('/customer/billing'),
@@ -142,7 +148,12 @@ class ResolveStudioTenant
 
     private function isPlatformWebhookPath(Request $request): bool
     {
-        return $request->is('webhooks/platform-stripe') || $request->is('webhooks/stripe') || $request->is('webhooks/hitpay');
+        return $request->is('webhooks/platform-stripe');
+    }
+
+    private function isTenantPaymentWebhookPath(Request $request): bool
+    {
+        return $request->is('webhooks/stripe') || $request->is('webhooks/hitpay');
     }
 
     private function isCentralPlatformPath(Request $request): bool
