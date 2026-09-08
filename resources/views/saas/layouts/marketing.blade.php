@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="{{ $metaDescription ?? 'Mueble Studio is a complete institute and studio management platform for students, teachers, classes, attendance, subscriptions and payments.' }}">
-    <title>{{ $title ?? 'Mueble Studio' }}</title>
+    <meta name="description" content="{{ $metaDescription ?? 'ClassM8 is a complete institute and studio management platform for students, teachers, classes, attendance, subscriptions and payments.' }}">
+    <title>{{ $title ?? 'ClassM8' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         :root{--ink:#101828;--muted:#667085;--line:rgba(16,24,40,.11);--blue:#2563eb;--cyan:#06b6d4;--purple:#7c3aed;--pink:#ec4899;--orange:#f97316;--green:#10b981;--soft:#f8fbff;--shadow:0 24px 70px rgba(15,23,42,.10)}
@@ -16,7 +16,7 @@
 <body class="marketing-page">
 <div class="page">
     <header class="wrap nav">
-        <a href="{{ url('/') }}" class="brand"><span class="brand-mark"></span><span>Mueble Studio</span></a>
+        <a href="{{ url('/') }}" class="brand"><span class="brand-mark"></span><span>ClassM8</span></a>
         <nav class="nav-links" aria-label="Main navigation">
             <a href="{{ route('marketing.features') }}">Features</a>
             <a href="{{ route('marketing.solutions') }}">Who it’s for</a>
@@ -42,7 +42,7 @@
 
     <footer class="wrap footer">
         <div class="footer-inner">
-            <div><strong style="color:#101828">Mueble Studio</strong><br>Institute, academy and studio management in one platform.</div>
+            <div><strong style="color:#101828">ClassM8</strong><br>Institute, academy and studio management by Mueble Group.</div>
             <div class="footer-links">
                 <a href="{{ route('marketing.features') }}">Features</a><a href="{{ route('marketing.solutions') }}">Solutions</a><a href="{{ route('marketing.security') }}">Security</a><a href="{{ route('marketing.pricing') }}">Pricing</a><a href="{{ route('login') }}">Login</a>
             </div>
