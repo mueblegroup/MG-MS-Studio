@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - {{ $studio?->name ?? 'Mueble Studio' }}</title>
+    <title>Register - {{ $studio?->name ?? 'ClassM8' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased bg-slate-100 text-slate-900 transition-colors duration-500 dark:bg-gray-950 dark:text-gray-100">
@@ -18,7 +18,7 @@
                     </div>
                     <div class="relative">
                         <div class="mb-8 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-xl font-black shadow-lg ring-1 ring-white/20">
-                            {{ strtoupper(substr($studio?->name ?? 'Mueble Studio', 0, 1)) }}
+                            {{ strtoupper(substr($studio?->name ?? 'ClassM8', 0, 1)) }}
                         </div>
                         <p class="mb-3 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] ring-1 ring-white/20">
                             {{ $studio ? 'Student Registration' : 'Client Admin Registration' }}
