@@ -22,7 +22,7 @@ class AuthenticatedSessionController extends Controller
             'portalType' => $studio ? 'studio' : 'central',
             'studentSelfRegistrationEnabled' => ! $studio
                 || (bool) data_get($studio->settings, 'allow_student_self_registration', true),
-            'loginTitle' => $studio ? $studio->name.' Studio Login' : 'Mueble Studio Client Portal',
+            'loginTitle' => $studio ? $studio->name.' Studio Login' : 'ClassM8 Client Portal',
             'loginSubtitle' => $studio
                 ? 'Login to manage this studio, its teachers, students, classes, attendance and payments.'
                 : 'Login to register studios, manage your studio portals, subdomains and platform setup.',
