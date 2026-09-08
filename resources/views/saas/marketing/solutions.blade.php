@@ -1,4 +1,4 @@
-@extends('saas.layouts.marketing', ['title' => 'Who It’s For — Mueble Studio'])
+@extends('saas.layouts.marketing', ['title' => 'Who It’s For — ClassM8'])
 @section('content')
 <main class="wrap">
     <header class="page-head">
