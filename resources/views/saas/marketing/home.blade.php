@@ -1,5 +1,5 @@
 @extends('saas.layouts.marketing', [
-    'title' => 'Mueble Studio — Complete Institute Management Platform',
+    'title' => 'ClassM8 — Complete Institute Management Platform',
     'metaDescription' => 'Manage students, teachers, classes, attendance, subscriptions, payments and studio operations from one connected platform.'
 ])
 
@@ -10,7 +10,7 @@
             <div>
                 <div class="eyebrow"><span class="dot"></span>Built for academies, institutes and studios</div>
                 <h1>A complete <span class="gradient">operating system</span> for modern learning businesses.</h1>
-                <p class="lead">Mueble Studio connects student management, teachers, scheduling, attendance, memberships, class cards, recurring billing, notifications and reporting in one professional platform.</p>
+                <p class="lead">ClassM8 connects student management, teachers, scheduling, attendance, memberships, class cards, recurring billing, notifications and reporting in one professional platform.</p>
                 <div class="actions">
                     <a class="btn btn-primary" href="{{ route('register') }}">Start your studio</a>
                     <a class="btn btn-soft" href="{{ route('marketing.platform') }}">See how it works</a>
@@ -54,7 +54,7 @@
             <div class="band">
                 <div class="kicker" style="color:#bfdbfe">Built for real operations</div>
                 <h2 style="margin:10px 0 12px;font-size:42px">Not only an LMS. A complete institute management system.</h2>
-                <p>Traditional LMS products focus mainly on course content. Mueble Studio focuses on the daily business around learning: enrolment, capacity, staff, sessions, attendance, packages, checkout, renewals and administration.</p>
+                <p>Traditional LMS products focus mainly on course content. ClassM8 focuses on the daily business around learning: enrolment, capacity, staff, sessions, attendance, packages, checkout, renewals and administration.</p>
             </div>
             <div class="steps">
                 <div class="step"><div class="step-no">01</div><div><h3>Create your studio</h3><p>Choose a plan, reserve your subdomain and launch a dedicated workspace.</p></div></div>
