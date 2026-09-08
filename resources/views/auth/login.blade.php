@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $studio?->name ?? 'Mueble Studio' }} - Login</title>
+    <title>{{ $studio?->name ?? 'ClassM8' }} - Login</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
@@ -29,7 +29,7 @@
 
                     <div class="relative">
                         <div class="mb-8 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-xl font-black shadow-lg ring-1 ring-white/20">
-                            {{ strtoupper(substr($studio?->name ?? 'Mueble Studio', 0, 1)) }}
+                            {{ strtoupper(substr($studio?->name ?? 'ClassM8', 0, 1)) }}
                         </div>
 
                         <p class="mb-3 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] ring-1 ring-white/20">
@@ -37,7 +37,7 @@
                         </p>
 
                         <h1 class="text-4xl font-extrabold leading-tight tracking-tight">
-                            {{ $loginTitle ?? ($studio ? $studio->name.' Studio Login' : 'Mueble Studio Client Portal') }}
+                            {{ $loginTitle ?? ($studio ? $studio->name.' Studio Login' : 'ClassM8 Client Portal') }}
                         </h1>
                         <p class="mt-4 text-sm leading-6 text-blue-50/90">
                             {{ $loginSubtitle ?? ($studio ? 'Login to manage this studio.' : 'Login to register and manage your studio portals.') }}
