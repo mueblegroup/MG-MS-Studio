@@ -48,8 +48,8 @@ class TwoFactorAuthenticationService
 
     public function provisioningUri(string $secret, string $email): string
     {
-        $issuer = rawurlencode((string) config('app.name', 'Mueble Studio'));
-        $label = rawurlencode(config('app.name', 'Mueble Studio').':'.$email);
+        $issuer = rawurlencode((string) config('app.name', 'ClassM8'));
+        $label = rawurlencode(config('app.name', 'ClassM8').':'.$email);
 
         return "otpauth://totp/{$label}?secret={$secret}&issuer={$issuer}&digits=6&period=30";
     }
