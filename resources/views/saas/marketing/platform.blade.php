@@ -1,10 +1,10 @@
-@extends('saas.layouts.marketing', ['title' => 'How It Works — Mueble Studio'])
+@extends('saas.layouts.marketing', ['title' => 'How It Works — ClassM8'])
 @section('content')
 <main class="wrap">
     <header class="page-head">
         <div class="kicker">How the platform works</div>
         <h1>From studio creation to daily operations.</h1>
-        <p class="section-copy">Mueble Studio is organised around a clear flow so an institute can launch, configure services, enrol users, collect payments and run attendance without rebuilding its process every day.</p>
+        <p class="section-copy">ClassM8 is organised around a clear flow so an institute can launch, configure services, enrol users, collect payments and run attendance without rebuilding its process every day.</p>
     </header>
 
     <section class="section">
