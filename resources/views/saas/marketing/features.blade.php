@@ -1,10 +1,10 @@
-@extends('saas.layouts.marketing', ['title' => 'Features — Mueble Studio'])
+@extends('saas.layouts.marketing', ['title' => 'Features — ClassM8'])
 @section('content')
 <main class="wrap">
     <header class="page-head">
         <div class="kicker">Complete feature set</div>
         <h1>Everything needed to operate a modern institute.</h1>
-        <p class="section-copy">Mueble Studio combines academic operations, student self-service, staff workflows and payment management so your team can work from one source of truth.</p>
+        <p class="section-copy">ClassM8 combines academic operations, student self-service, staff workflows and payment management so your team can work from one source of truth.</p>
     </header>
 
     <section class="section">
