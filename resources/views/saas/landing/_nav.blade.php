@@ -1,1 +1,1 @@
-<header class="wrap nav reveal"><div class="brand">Mueble Studio</div><nav><a class="link" href="#features">Features</a><a class="link" href="#workflow">Workflow</a><a class="btn" href="/login">Login</a></nav></header>
+<header class="wrap nav reveal"><div class="brand">ClassM8</div><nav><a class="link" href="#features">Features</a><a class="link" href="#workflow">Workflow</a><a class="btn" href="/login">Login</a></nav></header>
