@@ -183,6 +183,7 @@ class SuperadminController extends Controller
         }
 
         $validated = $this->validatePlan($request);
+        $validated['sort_order'] = $request->integer('sort_order');
         $plan->update($validated);
 
         return redirect()
@@ -244,7 +245,7 @@ class SuperadminController extends Controller
 
     private function validatePlan(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'price' => ['required', 'numeric', 'min:0', 'max:999999.99'],
@@ -253,9 +254,14 @@ class SuperadminController extends Controller
             'max_students' => ['nullable', 'integer', 'min:0'],
             'max_teachers' => ['nullable', 'integer', 'min:0'],
             'max_admins' => ['nullable', 'integer', 'min:0'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'sort_order' => ['required', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
-        ]) + ['is_active' => false, 'sort_order' => 0];
+        ]);
+
+        $validated['is_active'] = $request->boolean('is_active');
+        $validated['sort_order'] = (int) $validated['sort_order'];
+
+        return $validated;
     }
 
     private function uniquePlanSlug(string $name): string
