@@ -16,6 +16,9 @@ class StudioSettingsController extends Controller
         $selectedProvider = strtolower((string) $settings->get('default_payment_provider', 'stripe'));
         $selectedProvider = $this->resolveUsableDefaultGateway($selectedProvider, $settings);
 
+        $storedMailUsername = (string) $settings->get('mail_username', '');
+        $storedMailPassword = (string) $settings->get('mail_password', '');
+
         $data = [
             'studio_name' => $settings->get('studio_name', config('app.name')),
             'studio_display_name' => $settings->get('studio_display_name', config('app.name')),
@@ -28,8 +31,12 @@ class StudioSettingsController extends Controller
             'mail_mailer' => $settings->get('mail_mailer', env('MAIL_MAILER', 'smtp')),
             'mail_host' => $settings->get('mail_host', env('MAIL_HOST', '')),
             'mail_port' => $settings->get('mail_port', env('MAIL_PORT', 587)),
-            'mail_username' => $settings->get('mail_username', env('MAIL_USERNAME', '')),
-            'mail_password' => $settings->get('mail_password', env('MAIL_PASSWORD', '')),
+            // Credentials are intentionally write-only in the client portal.
+            // Never send saved values, including server .env fallbacks, to the frontend.
+            'mail_username' => '',
+            'mail_password' => '',
+            'mail_username_configured' => $storedMailUsername !== '',
+            'mail_password_configured' => $storedMailPassword !== '',
             'mail_encryption' => $settings->get('mail_encryption', env('MAIL_ENCRYPTION', 'tls')),
             'mail_from_address' => $settings->get('mail_from_address', env('MAIL_FROM_ADDRESS', '')),
             'mail_from_name' => $settings->get('mail_from_name', env('MAIL_FROM_NAME', config('app.name'))),
@@ -64,7 +71,9 @@ class StudioSettingsController extends Controller
             'mail_ehlo_domain' => 'nullable|string|max:255',
         ]);
 
-        $existingPassword = (string) $settings->get('mail_password', env('MAIL_PASSWORD', ''));
+        $existingUsername = (string) $settings->get('mail_username', '');
+        $existingPassword = (string) $settings->get('mail_password', '');
+        $newUsername = $request->filled('mail_username') ? (string) $validated['mail_username'] : $existingUsername;
         $newPassword = $request->filled('mail_password') ? (string) $validated['mail_password'] : $existingPassword;
 
         $settings->setMany([
@@ -79,7 +88,7 @@ class StudioSettingsController extends Controller
             'mail_mailer' => $validated['mail_mailer'],
             'mail_host' => $validated['mail_host'] ?? '',
             'mail_port' => (int) ($validated['mail_port'] ?? 587),
-            'mail_username' => $validated['mail_username'] ?? '',
+            'mail_username' => $newUsername,
             'mail_password' => $newPassword,
             'mail_encryption' => ($validated['mail_encryption'] ?? 'tls') === 'none' ? '' : ($validated['mail_encryption'] ?? 'tls'),
             'mail_from_address' => $validated['mail_from_address'] ?? '',
