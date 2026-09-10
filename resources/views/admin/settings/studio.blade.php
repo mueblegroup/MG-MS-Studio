@@ -199,15 +199,22 @@
 
                     <div>
                         <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">SMTP Username</label>
-                        <input name="mail_username" value="{{ old('mail_username', $data['mail_username']) }}" autocomplete="off"
+                        <input name="mail_username" value="{{ old('mail_username', '') }}" autocomplete="off"
+                               placeholder="{{ !empty($data['mail_username_configured']) ? 'Configured — enter a new username to change' : 'Enter SMTP username' }}"
                                class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {{ !empty($data['mail_username_configured']) ? 'A username is already saved. Leave this blank to keep it unchanged.' : 'No SMTP username is currently saved.' }}
+                        </div>
                     </div>
 
                     <div>
                         <label class="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-300">SMTP Password</label>
-                        <input type="password" name="mail_password" value="{{ old('mail_password', $data['mail_password']) }}" autocomplete="new-password"
+                        <input type="password" name="mail_password" value="" autocomplete="new-password"
+                               placeholder="{{ !empty($data['mail_password_configured']) ? 'Configured — enter a new password to change' : 'Enter SMTP password' }}"
                                class="w-full rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Stored in studio settings. Use an app password where possible.</div>
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {{ !empty($data['mail_password_configured']) ? 'A password is already saved securely. Leave this blank to keep it unchanged.' : 'No SMTP password is currently saved. Use an app password where possible.' }}
+                        </div>
                     </div>
 
                     <div>
