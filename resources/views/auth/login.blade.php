@@ -105,6 +105,13 @@
                             </p>
                         </div>
 
+                        @if (session('warning'))
+                            <div role="alert"
+                                class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/40 dark:text-amber-200">
+                                {{ session('warning') }}
+                            </div>
+                        @endif
+
                         <form action="{{ url('/login') }}" method="POST" class="space-y-5">
                             @csrf
 
