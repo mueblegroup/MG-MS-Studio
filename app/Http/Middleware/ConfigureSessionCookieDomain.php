@@ -13,7 +13,7 @@ class ConfigureSessionCookieDomain
         $host = strtolower($request->getHost());
         $rootDomain = strtolower((string) config('saas.root_domain'));
         $centralDomains = array_map('strtolower', (array) config('saas.central_domains', []));
-        $configuredDomain = env('SESSION_DOMAIN');
+        $configuredDomain = config('session.domain');
 
         $isPlatformHost = in_array($host, $centralDomains, true)
             || ($rootDomain !== '' && ($host === $rootDomain || str_ends_with($host, '.'.$rootDomain)));
