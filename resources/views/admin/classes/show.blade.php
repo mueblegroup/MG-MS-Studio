@@ -83,14 +83,24 @@
                                     </div>
                                 @endif
                             </div>
-                            <div class="grid gap-2 sm:flex">
-                                <a href="{{ route('admin.classes.edit', $session->id) }}" class="mg-btn-secondary"><i class="bx bx-edit"></i> Edit</a>
-                                <a href="{{ route('admin.classes.attendance', $session->id) }}" class="mg-btn-secondary"><i class="bx bx-check-square"></i> Attendance</a>
+                            <div class="w-full space-y-3 md:w-80">
+                                <div class="grid grid-cols-2 gap-2 md:flex md:justify-end">
+                                    <a href="{{ route('admin.classes.edit', $session->id) }}"
+                                        class="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-amber-700 dark:hover:bg-amber-950/30 dark:hover:text-amber-200">
+                                        <i class="bx bx-edit text-sm"></i>
+                                        <span>Edit</span>
+                                    </a>
+                                    <a href="{{ route('admin.classes.attendance', $session->id) }}"
+                                        class="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/50">
+                                        <i class="bx bx-check-square text-sm"></i>
+                                        <span>Attendance</span>
+                                    </a>
+                                </div>
                                 @if(($session->status ?? 'scheduled') !== 'cancelled')
-                                    <form method="POST" action="{{ route('admin.classes.destroy', $session->id) }}" class="grid gap-2 rounded-xl border border-red-200 bg-red-50 p-3" onsubmit="return confirm('This is a dangerous action. Cancel this session?')">
+                                    <form method="POST" action="{{ route('admin.classes.destroy', $session->id) }}" class="grid gap-2 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/70 dark:bg-red-950/20" onsubmit="return confirm('This is a dangerous action. Cancel this session?')">
                                         @csrf @method('DELETE')
                                         <textarea name="change_reason" rows="2" minlength="10" required placeholder="Reason for cancelling this session" class="mg-input"></textarea>
-                                        <label class="flex items-center gap-2 text-xs font-bold text-red-800"><input type="checkbox" name="confirm_danger" value="1" required> I understand subscribers may skip to the next session.</label>
+                                        <label class="flex items-center gap-2 text-xs font-bold text-red-800 dark:text-red-300"><input type="checkbox" name="confirm_danger" value="1" required> I understand subscribers may skip to the next session.</label>
                                         <button class="mg-btn-danger"><i class="bx bx-x-circle"></i> Cancel Session</button>
                                     </form>
                                 @endif
