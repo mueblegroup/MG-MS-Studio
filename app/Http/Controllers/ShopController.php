@@ -71,11 +71,14 @@ class ShopController extends Controller
 
         $plans = Plan::query()
             ->where('studio_id', $studioId)
-            ->with(['sessions' => function ($s) use ($now) {
-                $s->whereNotNull('start_time')
-                ->where('start_time', '>=', $now)
-                ->orderBy('start_time');
-            }])
+            ->with([
+                'teacher:id,name,email',
+                'sessions' => function ($s) use ($now) {
+                    $s->whereNotNull('start_time')
+                        ->where('start_time', '>=', $now)
+                        ->orderBy('start_time');
+                },
+            ])
             ->when($q !== '', fn($query) => $query->where('name', 'like', "%{$q}%"))
             // ✅ apply early cutoff only if until_date exists
             ->where(function ($query) use ($planMinUntilDate) {
