@@ -30,6 +30,17 @@ class ProductionSubscriptionClassService extends HitPayRecurringSubscriptionClas
             return 'Subscription class is no longer available.';
         }
 
+        StudioSubscription::query()
+            ->where('user_id', auth()->id())
+            ->where('class_id', $session->class_id)
+            ->where('status', 'pending')
+            ->whereHas('initialOrder', fn ($query) => $query->whereIn('status', ['cancelled', 'canceled']))
+            ->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'next_billing_at' => null,
+            ]);
+
         $existing = StudioSubscription::query()
             ->where('user_id', auth()->id())
             ->where('class_id', $session->class_id)
