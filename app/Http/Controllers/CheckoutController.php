@@ -140,6 +140,13 @@ class CheckoutController extends Controller
             return redirect()->route('student.payments.index')->with('error', 'This payment is not payable anymore.');
         }
 
+        if (in_array($order->billing_reason, ['subscription_initial', 'subscription_cycle'], true)) {
+            return redirect()->route('student.payments.index')->with(
+                'error',
+                'Subscription charges are processed automatically by the payment provider on their scheduled billing date.'
+            );
+        }
+
         if (($payment->provider ?: $payment->method) !== 'hitpay') {
             return redirect()->route('student.payments.index')->with('error', 'This payment cannot be retried through HitPay.');
         }
