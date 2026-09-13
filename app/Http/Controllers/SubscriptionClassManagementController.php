@@ -6,8 +6,12 @@ use App\Models\AppNotification;
 use App\Models\ClassModel;
 use App\Models\ClassSessionAssignment;
 use App\Models\StudioSubscription;
+use App\Services\RecurringHitPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
+use Throwable;
 
 class SubscriptionClassManagementController extends Controller
 {
@@ -74,7 +78,11 @@ class SubscriptionClassManagementController extends Controller
         return back()->with('success', 'Notification sent to the student.');
     }
 
-    public function cancelStudentSubscription(Request $request, StudioSubscription $subscription)
+    public function cancelStudentSubscription(
+        Request $request,
+        StudioSubscription $subscription,
+        RecurringHitPayService $hitpay
+    )
     {
         abort_unless((int) $subscription->user_id === (int) auth()->id(), 404);
 
@@ -82,6 +90,33 @@ class SubscriptionClassManagementController extends Controller
             'cancellation_reason' => 'required|string|min:5|max:1000',
             'confirm_cancel' => 'accepted',
         ]);
+
+        if ($subscription->provider === 'hitpay' && $subscription->provider_subscription_id) {
+            try {
+                $cancelled = $hitpay->cancelRecurringBilling(
+                    (string) $subscription->provider_subscription_id
+                );
+                $providerStatus = strtolower((string) ($cancelled['status'] ?? 'canceled'));
+
+                if (! in_array($providerStatus, ['canceled', 'cancelled', 'inactive'], true)) {
+                    throw new RuntimeException(
+                        'HitPay returned an unexpected cancellation status: '.$providerStatus
+                    );
+                }
+            } catch (Throwable $exception) {
+                Log::error('Student HitPay subscription cancellation failed.', [
+                    'studio_subscription_id' => $subscription->id,
+                    'hitpay_recurring_billing_id' => $subscription->provider_subscription_id,
+                    'message' => $exception->getMessage(),
+                ]);
+                report($exception);
+
+                return back()->with(
+                    'error',
+                    'HitPay could not confirm the cancellation. The subscription remains active; please try again or contact the studio.'
+                );
+            }
+        }
 
         DB::transaction(function () use ($subscription, $validated) {
             $subscription->loadMissing('classModel');
