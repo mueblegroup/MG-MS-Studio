@@ -151,13 +151,7 @@ class ProductionRecurringHitPayCheckoutController extends RecurringHitPayCheckou
         [$cycle, $cycleRepeat, $cycleFrequency] = $this->productionHitPayCycle($subscription->billing_interval ?: 'month');
         $reference = 'SUB:'.$subscription->id.':ORDER:'.$order->id;
 
-        $singaporeToday = Carbon::now('Asia/Singapore')->startOfDay();
-        $targetChargeAt = Carbon::parse($sessions->first()->start_time)
-            ->timezone('Asia/Singapore')
-            ->subDay();
-        $hitPayStartDate = $targetChargeAt->copy()->startOfDay()->lt($singaporeToday)
-            ? $singaporeToday->toDateString()
-            : $targetChargeAt->toDateString();
+        $initialChargeAt = Carbon::now('Asia/Singapore');
 
         $finalSession = $sessions->last();
         $finalEndsAt = Carbon::parse($finalSession->end_time ?: $finalSession->start_time);
@@ -171,14 +165,14 @@ class ProductionRecurringHitPayCheckoutController extends RecurringHitPayCheckou
             'amount' => (float) $order->total,
             'currency' => strtoupper((string) ($order->currency ?? 'MYR')),
             'cycle' => $cycle,
-            'start_date' => $hitPayStartDate,
+            'start_date_method' => 'sign_up_date',
             'redirect_url' => route('shop.checkout.success', [], true).'?order='.$order->id,
             'reference' => $reference,
             'payment_methods' => ['card'],
             'send_email' => 'true',
             'times_to_be_charged' => $timesToCharge,
             'save_card' => 'false',
-            'save_payment_method' => 'false',
+            'save_payment_method' => 'true',
         ];
 
         if ($cycle === 'custom') {
@@ -203,11 +197,11 @@ class ProductionRecurringHitPayCheckoutController extends RecurringHitPayCheckou
                 'hitpay_reference' => $reference,
                 'hitpay_recurring_url' => $checkoutUrl,
                 'hitpay_times_to_be_charged' => $timesToCharge,
-                'hitpay_start_date_sgt' => $hitPayStartDate,
-                'target_first_charge_at' => $targetChargeAt->toIso8601String(),
+                'hitpay_initial_charge_method' => 'sign_up_date',
+                'target_first_charge_at' => $initialChargeAt->toIso8601String(),
                 'final_class_session_id' => $finalSession->id,
                 'final_class_session_ends_at' => $finalEndsAt->toIso8601String(),
-                'hitpay_timing_precision' => 'date_only_sgt',
+                'hitpay_timing_precision' => 'signup_immediate_then_date_only_sgt',
             ]),
         ]);
 
@@ -220,8 +214,8 @@ class ProductionRecurringHitPayCheckoutController extends RecurringHitPayCheckou
             'payload' => array_merge((array) $payment->payload, $billing, [
                 'checkout_url' => $checkoutUrl,
                 'hitpay_recurring_billing' => true,
-                'hitpay_start_date_sgt' => $hitPayStartDate,
-                'target_first_charge_at' => $targetChargeAt->toIso8601String(),
+                'hitpay_initial_charge_method' => 'sign_up_date',
+                'target_first_charge_at' => $initialChargeAt->toIso8601String(),
                 'final_class_session_ends_at' => $finalEndsAt->toIso8601String(),
             ]),
         ]);
