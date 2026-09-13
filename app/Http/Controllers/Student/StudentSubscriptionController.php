@@ -20,6 +20,7 @@ class StudentSubscriptionController extends Controller
             ->with([
                 'classModel.teacher:id,name,email',
                 'classModel.sessions' => fn ($query) => $query->orderBy('start_time'),
+                'initialOrder:id,status',
             ])
             ->where('user_id', Auth::id())
             ->orderByRaw("FIELD(status, 'past_due', 'active', 'trialing', 'pending', 'cancelled', 'completed')")
@@ -38,6 +39,20 @@ class StudentSubscriptionController extends Controller
 
         $subscriptions->each(function (StudioSubscription $subscription) use ($stripeService, $initialPayments) {
             $subscription->setAttribute('stripe_sync_error', null);
+
+            if (
+                strtolower((string) $subscription->status) === 'pending'
+                && in_array(strtolower((string) $subscription->initialOrder?->status), ['cancelled', 'canceled'], true)
+            ) {
+                $subscription->updateQuietly([
+                    'status' => 'cancelled',
+                    'cancelled_at' => $subscription->cancelled_at ?: now(),
+                    'next_billing_at' => null,
+                    'meta' => array_merge((array) $subscription->meta, [
+                        'reconciled_from_cancelled_initial_order_at' => now()->toIso8601String(),
+                    ]),
+                ]);
+            }
 
             if ($subscription->provider === 'stripe' && $subscription->provider_subscription_id) {
                 try {
