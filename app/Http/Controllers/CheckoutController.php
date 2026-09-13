@@ -6,6 +6,7 @@ use App\Jobs\FulfillOrderJob;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Models\StudioSubscription;
 use App\Services\CartService;
 use App\Services\StudioSettingsService;
 use App\Services\HitPayService;
@@ -448,6 +449,24 @@ class CheckoutController extends Controller
             Payment::where('order_id', $orderId)
                 ->whereIn('status', ['pending', 'past_due'])
                 ->update(['status' => 'cancelled']);
+
+            if ($order->billing_reason === 'subscription_initial' && $order->studio_subscription_id) {
+                $subscription = StudioSubscription::query()
+                    ->whereKey($order->studio_subscription_id)
+                    ->where('status', 'pending')
+                    ->first();
+
+                if ($subscription) {
+                    $subscription->updateQuietly([
+                        'status' => 'cancelled',
+                        'cancelled_at' => now(),
+                        'next_billing_at' => null,
+                        'meta' => array_merge((array) $subscription->meta, [
+                            'initial_checkout_cancelled_at' => now()->toIso8601String(),
+                        ]),
+                    ]);
+                }
+            }
         });
     }
 
