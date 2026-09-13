@@ -7,14 +7,16 @@ use App\Models\ClassSession;
 use App\Models\ClassSessionAssignment;
 use App\Models\Payment;
 use App\Models\StudioSubscription;
+use App\Services\RecurringHitPayService;
 use App\Services\SubscriptionClassService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class StudentSubscriptionController extends Controller
 {
-    public function index()
+    public function index(RecurringHitPayService $hitpay)
     {
         $subscriptions = StudioSubscription::query()
             ->with([
@@ -37,8 +39,52 @@ class StudentSubscriptionController extends Controller
             ->unique('order_id')
             ->keyBy('order_id');
 
-        $subscriptions->each(function (StudioSubscription $subscription) use ($stripeService, $initialPayments) {
+        $subscriptions->each(function (StudioSubscription $subscription) use ($stripeService, $hitpay, $initialPayments) {
             $subscription->setAttribute('stripe_sync_error', null);
+
+            if (
+                strtolower((string) $subscription->status) === 'pending'
+                && strtolower((string) $subscription->provider) === 'hitpay'
+                && $subscription->provider_subscription_id
+            ) {
+                try {
+                    $billing = $hitpay->getRecurringBilling(
+                        (string) $subscription->provider_subscription_id
+                    );
+                    $providerStatus = strtolower((string) ($billing['status'] ?? ''));
+
+                    if (in_array($providerStatus, ['canceled', 'cancelled', 'inactive', 'expired'], true)) {
+                        DB::transaction(function () use ($subscription, $providerStatus): void {
+                            $subscription->updateQuietly([
+                                'status' => 'cancelled',
+                                'cancelled_at' => $subscription->cancelled_at ?: now(),
+                                'next_billing_at' => null,
+                                'meta' => array_merge((array) $subscription->meta, [
+                                    'hitpay_recurring_status' => $providerStatus,
+                                    'reconciled_from_hitpay_at' => now()->toIso8601String(),
+                                ]),
+                            ]);
+
+                            if ($subscription->initial_order_id) {
+                                $subscription->initialOrder()
+                                    ->whereIn('status', ['pending', 'past_due'])
+                                    ->update(['status' => 'cancelled']);
+
+                                Payment::query()
+                                    ->where('order_id', $subscription->initial_order_id)
+                                    ->whereIn('status', ['pending', 'past_due'])
+                                    ->update(['status' => 'cancelled']);
+                            }
+                        });
+                    }
+                } catch (\Throwable $exception) {
+                    Log::warning('Unable to reconcile pending HitPay subscription for student view.', [
+                        'studio_subscription_id' => $subscription->id,
+                        'hitpay_recurring_billing_id' => $subscription->provider_subscription_id,
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
+            }
 
             if (
                 strtolower((string) $subscription->status) === 'pending'
