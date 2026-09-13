@@ -17,6 +17,10 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
 {
     public function activateFromHitPayRecurringBilling(StudioSubscription $subscription, array $billing): StudioSubscription
     {
+        if ($this->isTerminalSubscription($subscription)) {
+            return $subscription->fresh(['classModel']);
+        }
+
         $status = strtolower((string) ($billing['status'] ?? 'scheduled'));
         $providerId = (string) ($billing['id'] ?? $subscription->provider_subscription_id ?? '');
         $nextBilling = $this->hitPayNextBillingAt($billing, $subscription);
@@ -41,6 +45,10 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
 
     public function syncHitPayRecurringBilling(StudioSubscription $subscription, array $billing): StudioSubscription
     {
+        if ($this->isTerminalSubscription($subscription)) {
+            return $subscription->fresh(['classModel']);
+        }
+
         $status = strtolower((string) ($billing['status'] ?? ''));
         $finalEndsAt = $this->finalSessionEndsAt($subscription);
         $updates = [
@@ -72,6 +80,10 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
 
     public function handleHitPayRecurringCharge(StudioSubscription $subscription, array $charge): ?Order
     {
+        if ($this->isTerminalSubscription($subscription)) {
+            return null;
+        }
+
         $status = strtolower((string) ($charge['status'] ?? ''));
         if (! in_array($status, ['completed', 'paid', 'succeeded', 'success'], true)) {
             $this->handleHitPayRecurringFailure($subscription, $charge);
@@ -161,6 +173,10 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
 
     public function handleHitPayRecurringFailure(StudioSubscription $subscription, array $payload): void
     {
+        if ($this->isTerminalSubscription($subscription)) {
+            return;
+        }
+
         $subscription->loadMissing('classModel');
         $graceUntil = $subscription->classModel?->subscriptionGraceUntil(now()) ?? now();
         $graceValue = $subscription->classModel?->subscriptionGraceValue() ?? 0;
@@ -378,6 +394,12 @@ class HitPayRecurringSubscriptionClassService extends FinalSessionAwareSubscript
             'day', 'daily' => ['custom', 1, 'day'],
             default => ['monthly', null, null],
         };
+    }
+
+    private function isTerminalSubscription(StudioSubscription $subscription): bool
+    {
+        return $subscription->cancelled_at !== null
+            || in_array(strtolower((string) $subscription->status), ['cancelled', 'canceled', 'completed'], true);
     }
 
     private function localHitPayStatus(string $status): string
