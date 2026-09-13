@@ -78,17 +78,17 @@ class ClientSocialAuthController extends Controller
                     ->first();
 
                 if ($account) {
-                    abort_unless($account->user?->role === 'admin' && ! $account->user?->studio_id, 403, 'This identity is not linked to a client portal account.');
+                    abort_unless($account->user?->isClientPortalAccount(), 403, 'This identity is not linked to a client portal account.');
+
                     return $account->user;
                 }
 
                 $user = User::query()
-                    ->whereNull('studio_id')
                     ->whereRaw('LOWER(email) = ?', [$email])
                     ->first();
 
                 if ($user) {
-                    abort_unless($user->role === 'admin', 403, 'This email belongs to a non-client account.');
+                    abort_unless($user->isClientPortalAccount(), 403, 'This email belongs to a non-client account.');
                 } else {
                     $name = trim((string) $socialUser->getName());
                     $user = User::create([
