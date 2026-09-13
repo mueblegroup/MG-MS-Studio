@@ -238,7 +238,8 @@
                         $canDownload = in_array($st, ['paid', 'success', 'completed', 'complete'], true);
                         $canPay = in_array($st, ['pending', 'past_due'], true)
                             && in_array($orderStatus, ['pending', 'past_due'], true)
-                            && $provider === 'hitpay';
+                            && $provider === 'hitpay'
+                            && ! in_array($p->billing_reason, ['subscription_initial', 'subscription_cycle'], true);
                         $displayDate = $p->paid_at ?: $p->created_at;
                         $formattedDate = $displayDate ? \Carbon\Carbon::parse($displayDate, 'UTC')->timezone($studioTimezone)->format('d M Y, h:i A') : '—';
                         $paymentReference = $p->reference ?? ('PAY-'.$p->id);
@@ -316,7 +317,10 @@
                                         ? 'bg-red-50 text-red-700'
                                         : (in_array($st, ['pending', 'past_due'], true) ? 'bg-yellow-50 text-yellow-700' : 'bg-gray-100 text-gray-700'));
                                 $canDownload = in_array($st, ['paid', 'success', 'completed', 'complete'], true);
-                                $canPay = in_array($st, ['pending', 'past_due'], true) && in_array($orderStatus, ['pending', 'past_due'], true) && $provider === 'hitpay';
+                                $canPay = in_array($st, ['pending', 'past_due'], true)
+                                    && in_array($orderStatus, ['pending', 'past_due'], true)
+                                    && $provider === 'hitpay'
+                                    && ! in_array($p->billing_reason, ['subscription_initial', 'subscription_cycle'], true);
                                 $displayDate = $p->paid_at ?: $p->created_at;
                                 $formattedDate = $displayDate ? \Carbon\Carbon::parse($displayDate, 'UTC')->timezone($studioTimezone)->format('Y-m-d H:i') : '—';
                                 $billingLabel = $p->billing_reason === 'subscription_cycle' ? 'Subscription renewal' : ($p->billing_reason === 'subscription_initial' ? 'Subscription start' : 'Payment');
