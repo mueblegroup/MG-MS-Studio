@@ -152,6 +152,7 @@ class ProductionRecurringHitPayCheckoutController extends RecurringHitPayCheckou
         $reference = 'SUB:'.$subscription->id.':ORDER:'.$order->id;
 
         $initialChargeAt = Carbon::now('Asia/Singapore');
+        $hitPayStartDate = $initialChargeAt->toDateString();
 
         $finalSession = $sessions->last();
         $finalEndsAt = Carbon::parse($finalSession->end_time ?: $finalSession->start_time);
@@ -165,14 +166,14 @@ class ProductionRecurringHitPayCheckoutController extends RecurringHitPayCheckou
             'amount' => (float) $order->total,
             'currency' => strtoupper((string) ($order->currency ?? 'MYR')),
             'cycle' => $cycle,
-            'start_date_method' => 'sign_up_date',
+            'start_date' => $hitPayStartDate,
             'redirect_url' => route('shop.checkout.success', [], true).'?order='.$order->id,
             'reference' => $reference,
             'payment_methods' => ['card'],
             'send_email' => 'true',
             'times_to_be_charged' => $timesToCharge,
             'save_card' => 'false',
-            'save_payment_method' => 'true',
+            'save_payment_method' => 'false',
         ];
 
         if ($cycle === 'custom') {
