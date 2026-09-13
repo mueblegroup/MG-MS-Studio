@@ -81,6 +81,12 @@ class User extends Authenticatable
         return filled($this->two_factor_secret) && $this->two_factor_confirmed_at !== null;
     }
 
+    public function isClientPortalAccount(): bool
+    {
+        return $this->role === 'admin'
+            && (! $this->studio_id || $this->ownedStudios()->exists());
+    }
+
     public function studio() { return $this->belongsTo(Studio::class); }
     public function ownedStudios() { return $this->hasMany(Studio::class, 'owner_user_id'); }
     public function classSessionBookings() { return $this->hasMany(\App\Models\ClassSessionBooking::class, 'student_id'); }
