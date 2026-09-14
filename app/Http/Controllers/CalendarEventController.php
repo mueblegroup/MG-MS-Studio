@@ -87,7 +87,7 @@ class CalendarEventController extends Controller
             });
         }
 
-        $classEvents = $classSessions
+        $classRows = $classSessions
             ->orderBy('sessions.start_time')
             ->get([
                 'sessions.id',
@@ -98,22 +98,57 @@ class CalendarEventController extends Controller
                 'classes.description',
                 'classes.type',
                 'teachers.name as teacher_name',
-            ])
-            ->map(fn ($session) => [
+            ]);
+
+        $confirmedSubscriptionSessionIds = collect();
+        if ($user->role === 'student') {
+            $confirmedSubscriptionSessionIds = DB::table('class_session_assignments')
+                ->where('user_id', $user->id)
+                ->whereIn('class_session_id', $classRows->pluck('id'))
+                ->whereNull('deleted_at')
+                ->where(function ($status) {
+                    $status->whereNull('status')
+                        ->orWhereNotIn('status', ['cancelled', 'inactive']);
+                })
+                ->pluck('class_session_id')
+                ->map(fn ($id) => (int) $id);
+        }
+
+        $classEvents = $classRows->map(function ($session) use ($user, $confirmedSubscriptionSessionIds) {
+            $isSubscription = $session->type === 'subscription';
+            $isConfirmed = ! $isSubscription
+                || $user->role !== 'student'
+                || $confirmedSubscriptionSessionIds->contains((int) $session->id);
+
+            $billingStatus = null;
+            $billingMessage = null;
+            if ($isSubscription && $user->role === 'student') {
+                $billingStatus = $isConfirmed ? 'confirmed' : 'awaiting_charge';
+                $billingMessage = $isConfirmed
+                    ? 'Confirmed — payment received and this session is available for attendance.'
+                    : 'Awaiting recurring charge — this session will be confirmed after its payment succeeds.';
+            }
+
+            return [
                 'id' => 'class-'.$session->id,
                 'title' => $session->name.($session->venue_name ? ' • '.$session->venue_name : ''),
                 'start' => $session->start_time,
                 'end' => $session->end_time,
-                'backgroundColor' => $session->type === 'subscription' ? '#7c3aed' : '#4f46e5',
+                'backgroundColor' => $isSubscription
+                    ? ($isConfirmed ? '#7c3aed' : '#d97706')
+                    : '#4f46e5',
                 'borderColor' => 'transparent',
                 'extendedProps' => [
-                    'kind' => $session->type === 'subscription' ? 'subscription' : 'class',
+                    'kind' => $isSubscription ? 'subscription' : 'class',
                     'name' => $session->name,
                     'description' => $session->description,
                     'teacher' => $session->teacher_name,
                     'venue' => $session->venue_name,
+                    'billingStatus' => $billingStatus,
+                    'billingMessage' => $billingMessage,
                 ],
-            ]);
+            ];
+        });
 
         $planEvents = $planSessions
             ->orderBy('sessions.start_time')
