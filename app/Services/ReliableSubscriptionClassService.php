@@ -37,6 +37,24 @@ class ReliableSubscriptionClassService extends SubscriptionClassService
     public function createStripeCheckoutSession(Order $order, Payment $payment, StudioSubscription $subscription): \Stripe\Checkout\Session
     {
         $subscription->loadMissing('classModel');
+
+        $initialSession = ClassSession::query()
+            ->whereKey($subscription->current_class_session_id)
+            ->where('class_id', $subscription->class_id)
+            ->first();
+
+        if (
+            ! $initialSession
+            || ! $initialSession->start_time
+            || ! $initialSession->start_time->isFuture()
+            || strtolower((string) $initialSession->status) === 'cancelled'
+        ) {
+            throw new \RuntimeException(
+                'This subscription checkout contains an expired or unavailable starting session. '
+                .'Please remove it from the cart and select the class again.'
+            );
+        }
+
         $interval = $this->intendedBillingInterval($subscription->classModel);
 
         if ($subscription->billing_interval !== $interval) {
