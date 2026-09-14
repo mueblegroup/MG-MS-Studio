@@ -50,5 +50,25 @@
                 </form>
             </div>
         </div>
+
+        <div class="rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm dark:border-red-900/60 dark:bg-red-950/30">
+            <h2 class="text-lg font-extrabold text-red-900 dark:text-red-200">Archive Studio</h2>
+            <p class="mt-2 max-w-3xl text-sm leading-6 text-red-800 dark:text-red-300">Archiving immediately blocks tenant access, signs out studio users, disables verified domains, and schedules active Stripe platform billing to end. Users, financial records, classes, and attendance are preserved for restoration.</p>
+            <form method="POST" action="{{ route('superadmin.studios.archive', $studio) }}" class="mt-5 grid gap-4 md:grid-cols-2" onsubmit="return confirm('Archive this studio and revoke access now?');">
+                @csrf
+                @method('DELETE')
+                <label class="space-y-2 md:col-span-2">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-red-700 dark:text-red-300">Reason</span>
+                    <textarea name="archive_reason" rows="3" required minlength="5" maxlength="1000" class="w-full rounded-2xl border-red-200 bg-white text-sm font-bold text-gray-900 focus:border-red-500 focus:ring-red-500 dark:border-red-900 dark:bg-gray-950 dark:text-white">{{ old('archive_reason') }}</textarea>
+                </label>
+                <label class="space-y-2">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-red-700 dark:text-red-300">Type “{{ $studio->name }}” to confirm</span>
+                    <input name="studio_name_confirmation" required autocomplete="off" class="w-full rounded-2xl border-red-200 bg-white text-sm font-bold text-gray-900 focus:border-red-500 focus:ring-red-500 dark:border-red-900 dark:bg-gray-950 dark:text-white">
+                </label>
+                <div class="flex items-end justify-end">
+                    <button class="rounded-2xl bg-red-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm hover:bg-red-700">Archive Studio</button>
+                </div>
+            </form>
+        </div>
     </div>
 </x-app-layout>
