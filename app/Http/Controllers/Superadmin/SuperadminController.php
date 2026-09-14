@@ -106,6 +106,11 @@ class SuperadminController extends Controller
         StudioProvisioningService $provisioning,
         AuditLogService $audit
     ): RedirectResponse {
+        $request->merge([
+            'owner_email' => Str::lower(trim((string) $request->input('owner_email'))),
+            'subdomain' => Str::lower(trim((string) $request->input('subdomain'))),
+        ]);
+
         $reserved = config('saas.reserved_subdomains', []);
 
         $validated = $request->validate([
@@ -117,9 +122,6 @@ class SuperadminController extends Controller
                 'required', 'string', 'min:3', 'max:40', 'alpha_dash:ascii',
                 Rule::notIn($reserved),
                 Rule::unique('studios', 'subdomain'),
-                Rule::unique('studio_domains', 'domain')->where(
-                    fn ($query) => $query->where('domain', strtolower((string) $request->input('subdomain')).'.'.strtolower((string) config('saas.root_domain'))
-                ),
             ],
             'platform_subscription_plan_id' => ['required', 'integer', Rule::exists('platform_subscription_plans', 'id')->where('is_active', true)],
             'status' => ['required', Rule::in(['active', 'trial', 'inactive'])],
