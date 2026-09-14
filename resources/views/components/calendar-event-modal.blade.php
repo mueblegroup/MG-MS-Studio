@@ -31,6 +31,16 @@
             </div>
         </div>
 
+        <div id="calendar-event-billing-wrap" class="hidden rounded-2xl border p-4">
+            <div class="flex items-start gap-3">
+                <i id="calendar-event-billing-icon" class="bx mt-0.5 text-xl"></i>
+                <div>
+                    <div id="calendar-event-billing-title" class="text-sm font-extrabold"></div>
+                    <p id="calendar-event-billing-message" class="mt-1 text-xs leading-5"></p>
+                </div>
+            </div>
+        </div>
+
         <div id="calendar-event-description-wrap" class="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
             <div class="text-[10px] font-extrabold uppercase tracking-wide text-gray-400">Details</div>
             <p id="calendar-event-description" class="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300"></p>
@@ -67,6 +77,29 @@
                     details.teacher || 'Not assigned';
                 document.getElementById('calendar-event-venue').textContent =
                     details.venue || 'Not specified';
+
+                const billingWrap = document.getElementById('calendar-event-billing-wrap');
+                const billingStatus = details.billingStatus || '';
+                const isConfirmed = billingStatus === 'confirmed';
+                billingWrap.classList.toggle('hidden', !billingStatus);
+                billingWrap.classList.toggle('border-emerald-200', isConfirmed);
+                billingWrap.classList.toggle('bg-emerald-50', isConfirmed);
+                billingWrap.classList.toggle('text-emerald-800', isConfirmed);
+                billingWrap.classList.toggle('dark:border-emerald-900/60', isConfirmed);
+                billingWrap.classList.toggle('dark:bg-emerald-950/30', isConfirmed);
+                billingWrap.classList.toggle('dark:text-emerald-200', isConfirmed);
+                billingWrap.classList.toggle('border-amber-200', billingStatus && !isConfirmed);
+                billingWrap.classList.toggle('bg-amber-50', billingStatus && !isConfirmed);
+                billingWrap.classList.toggle('text-amber-800', billingStatus && !isConfirmed);
+                billingWrap.classList.toggle('dark:border-amber-900/60', billingStatus && !isConfirmed);
+                billingWrap.classList.toggle('dark:bg-amber-950/30', billingStatus && !isConfirmed);
+                billingWrap.classList.toggle('dark:text-amber-200', billingStatus && !isConfirmed);
+                document.getElementById('calendar-event-billing-icon').className =
+                    'bx mt-0.5 text-xl ' + (isConfirmed ? 'bx-check-circle' : 'bx-time-five');
+                document.getElementById('calendar-event-billing-title').textContent =
+                    isConfirmed ? 'Session confirmed' : 'Confirmation pending';
+                document.getElementById('calendar-event-billing-message').textContent =
+                    details.billingMessage || '';
 
                 const description = (details.description || '').trim();
                 document.getElementById('calendar-event-description-wrap').classList.toggle('hidden', !description);
