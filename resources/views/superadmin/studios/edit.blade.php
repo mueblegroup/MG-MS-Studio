@@ -6,6 +6,13 @@
             <p class="mt-1 max-w-3xl text-sm font-medium text-[#6b5f52] dark:text-gray-400">Assign the platform plan, control access and manage renewal or expiry dates. Stripe-backed billing dates are synchronized automatically and cannot be manually overridden.</p>
         </div>
 
+        @if(session('success'))
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">{{ session('error') }}</div>
+        @endif
+
         @if($errors->any())
             <div class="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">{{ $errors->first() }}</div>
         @endif
