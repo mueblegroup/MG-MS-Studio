@@ -112,12 +112,18 @@
                     @endif
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h3 class="font-bold text-gray-800 dark:text-white mb-4">Class Schedule</h3>
-                    <div id="calendar" class="modern-calendar text-xs"></div>
+            </div>
+
+            <div class="lg:col-span-12 bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div class="mb-4">
+                    <h3 class="font-bold text-gray-800 dark:text-white">Class Schedule</h3>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Select an event to view its complete schedule and details.</p>
                 </div>
+                <div id="calendar" class="modern-calendar text-sm"></div>
             </div>
         </div>
+
+        <x-calendar-event-modal />
     </div>
 
     <style>
@@ -125,6 +131,8 @@
         .fc .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; }
         .fc .fc-daygrid-day-number { font-size: 0.75rem; color: #9ca3af; }
         .fc .fc-button-primary:hover { background-color: #4338ca; }
+        .fc .fc-daygrid-event { cursor: pointer; border-radius: 8px; padding: 3px 6px; }
+        @media (min-width: 640px) { .fc .fc-daygrid-day-frame { min-height: 92px; } }
     </style>
 
     @push('scripts')
@@ -163,7 +171,8 @@
                     initialView: 'dayGridMonth',
                     headerToolbar: { left: 'prev', center: 'title', right: 'next' },
                     height: 'auto',
-                    events: @json(route('calendar.events'))
+                    events: @json(route('calendar.events')),
+                    eventClick: window.openCalendarEventDetails
                 });
                 calendar.render();
             });
