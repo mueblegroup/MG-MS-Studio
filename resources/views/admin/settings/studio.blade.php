@@ -1,9 +1,16 @@
 <x-app-layout>
     <div class="min-h-screen bg-gray-50/60 p-6 dark:bg-gray-900 sm:p-8">
 
-        <div class="mb-6">
-            <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Studio Settings</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Configure studio defaults, checkout settings, and mail server settings.</p>
+        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Studio Settings</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Configure studio defaults, checkout settings, and mail server settings.</p>
+            </div>
+            <a href="{{ route('settings.payment-gateways.index') }}"
+               class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#d97706] px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#b45309] focus:outline-none focus:ring-2 focus:ring-[#d97706] focus:ring-offset-2 dark:focus:ring-offset-gray-900">
+                <i class="bx bx-credit-card"></i>
+                Payment Gateways
+            </a>
         </div>
 
         @if(session('success'))
