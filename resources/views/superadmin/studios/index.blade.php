@@ -14,6 +14,9 @@
         @if(session('success'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">{{ session('success') }}</div>
         @endif
+        @if(session('error'))
+            <div class="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">{{ session('error') }}</div>
+        @endif
 
         <div class="rounded-3xl border border-[#eadfce] bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="overflow-x-auto">
@@ -36,7 +39,7 @@
                                     ? 'Trial ends'
                                     : ($studio->cancel_at_period_end ? 'Access ends' : 'Next renewal');
                             @endphp
-                            <tr class="text-[#31261d] dark:text-gray-200">
+                            <tr class="text-[#31261d] dark:text-gray-200 {{ $studio->trashed() ? 'opacity-70' : '' }}">
                                 <td class="py-4 pr-4">
                                     <div class="font-extrabold">{{ $studio->name ?? 'Untitled Studio' }}</div>
                                     <div class="text-xs font-bold text-[#9a8c7d] dark:text-gray-500">{{ $studio->subdomain ?? $studio->custom_domain ?? $studio->slug }}</div>
@@ -48,8 +51,18 @@
                                     <div class="text-[10px] font-extrabold uppercase tracking-wide text-[#9a8c7d] dark:text-gray-500">{{ $billingDateLabel }}</div>
                                     <div class="mt-1 font-bold">{{ optional($studio->status === 'trial' ? $studio->trial_ends_at : $studio->subscription_ends_at)->format('d M Y, H:i') ?? '-' }}</div>
                                 </td>
-                                <td class="py-4 pr-4"><span class="rounded-full bg-[#fff3df] px-3 py-1 text-xs font-extrabold uppercase text-[#9a4f00] dark:bg-amber-950/30 dark:text-amber-200">{{ $studio->status ?? 'unknown' }}</span></td>
-                                <td class="py-4 text-right"><a href="{{ route('superadmin.studios.edit', $studio) }}" class="rounded-xl bg-[#171717] px-4 py-2 text-xs font-extrabold text-white dark:bg-white dark:text-gray-950">Manage</a></td>
+                                <td class="py-4 pr-4"><span class="rounded-full bg-[#fff3df] px-3 py-1 text-xs font-extrabold uppercase text-[#9a4f00] dark:bg-amber-950/30 dark:text-amber-200">{{ $studio->trashed() ? 'archived' : ($studio->status ?? 'unknown') }}</span></td>
+                                <td class="py-4 text-right">
+                                    @if($studio->trashed())
+                                        <form method="POST" action="{{ route('superadmin.studios.restore', $studio->id) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button class="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-emerald-700">Restore</button>
+                                        </form>
+                                    @else
+                                        <a href="{{ route('superadmin.studios.edit', $studio) }}" class="rounded-xl bg-[#171717] px-4 py-2 text-xs font-extrabold text-white dark:bg-white dark:text-gray-950">Manage</a>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="7" class="py-8 text-center text-sm font-bold text-[#9a8c7d] dark:text-gray-500">No studios found.</td></tr>
