@@ -9,11 +9,6 @@ use RuntimeException;
 
 class StudioArchiveService
 {
-    public function __construct(
-        private readonly PlatformStripeBillingService $billing,
-    ) {
-    }
-
     public function archive(Studio $studio, string $reason, ?int $archivedBy = null): void
     {
         if ($studio->trashed()) {
@@ -28,7 +23,7 @@ class StudioArchiveService
             // Do this before the local transaction. If Stripe rejects the
             // request, the studio remains accessible and no paid renewal is
             // silently left running behind an archived tenant.
-            $this->billing->cancelAtPeriodEnd($studio);
+            app(PlatformStripeBillingService::class)->cancelAtPeriodEnd($studio);
             $studio->refresh();
         }
 
