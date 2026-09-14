@@ -9,14 +9,14 @@
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            <div class="xl:col-span-7 bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div class="xl:col-span-8 bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="font-bold text-gray-800 dark:text-white">Calendar</h3>
                 </div>
                 <div id="calendar" class="modern-calendar text-sm"></div>
             </div>
 
-            <div class="xl:col-span-5 bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div class="xl:col-span-4 bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="font-bold text-gray-800 dark:text-white">This Month’s Classes</h3>
                 </div>
@@ -82,6 +82,7 @@
             </div>
         </div>
 
+        <x-calendar-event-modal />
     </div>
 
     <style>
@@ -89,7 +90,8 @@
         .fc .fc-toolbar-title { font-size: 1rem !important; font-weight: 700; }
         .fc .fc-daygrid-day-number { font-size: 0.75rem; color: #9ca3af; }
         .fc .fc-button-primary:hover { background-color: #4338ca; }
-        .fc .fc-daygrid-event { border-radius: 10px; padding: 2px 6px; }
+        .fc .fc-daygrid-event { cursor: pointer; border-radius: 10px; padding: 3px 6px; }
+        @media (min-width: 640px) { .fc .fc-daygrid-day-frame { min-height: 88px; } }
     </style>
 
     @push('scripts')
@@ -101,7 +103,8 @@
                     initialView: 'dayGridMonth',
                     headerToolbar: { left: 'prev', center: 'title', right: 'next' },
                     height: 'auto',
-                    events: @json(route('calendar.events'))
+                    events: @json(route('calendar.events')),
+                    eventClick: window.openCalendarEventDetails
                 });
                 calendar.render();
             });
