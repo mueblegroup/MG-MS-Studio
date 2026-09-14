@@ -31,8 +31,8 @@
             @endforeach
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-            <div class="lg:col-span-8 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="grid grid-cols-1 items-start gap-6 mt-6 lg:grid-cols-12">
+            <div class="self-start lg:col-span-8 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
                     <div>
                         <h3 class="font-bold text-gray-800 dark:text-white">Revenue Analytics</h3>
