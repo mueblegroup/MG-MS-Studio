@@ -95,6 +95,7 @@ class CalendarEventController extends Controller
                 'sessions.end_time',
                 'sessions.venue_name',
                 'classes.name',
+                'classes.description',
                 'classes.type',
                 'teachers.name as teacher_name',
             ])
@@ -107,6 +108,8 @@ class CalendarEventController extends Controller
                 'borderColor' => 'transparent',
                 'extendedProps' => [
                     'kind' => $session->type === 'subscription' ? 'subscription' : 'class',
+                    'name' => $session->name,
+                    'description' => $session->description,
                     'teacher' => $session->teacher_name,
                     'venue' => $session->venue_name,
                 ],
@@ -121,6 +124,7 @@ class CalendarEventController extends Controller
                 'sessions.end_time',
                 'sessions.venue_name',
                 'plans.name',
+                'plans.description',
                 'teachers.name as teacher_name',
             ])
             ->map(fn ($session) => [
@@ -132,6 +136,8 @@ class CalendarEventController extends Controller
                 'borderColor' => 'transparent',
                 'extendedProps' => [
                     'kind' => 'plan',
+                    'name' => $session->session_name ?: $session->name,
+                    'description' => $session->description,
                     'teacher' => $session->teacher_name,
                     'venue' => $session->venue_name,
                 ],
