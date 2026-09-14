@@ -17,41 +17,51 @@ class StudentDashboardController extends Controller
         $tomorrow = Carbon::tomorrow();
 
         // -----------------------
-        // Today's class sessions (assigned)
+        // Today/tomorrow class sessions visible to this student. Active
+        // subscriptions expose their complete upcoming schedule even though
+        // individual attendance assignments are fulfilled per billing cycle.
         // -----------------------
-        $todayClass = DB::table('class_session_assignments as a')
-            ->join('class_sessions as s', 'a.class_session_id', '=', 's.id')
-            ->join('classes as c', 's.class_id', '=', 'c.id')
-            ->whereNull('a.deleted_at')
-            ->where('a.user_id', $studentId)
-            ->whereDate('s.start_time', $today)
-            ->orderBy('s.start_time')
-            ->select([
-                's.id as session_id',
-                's.start_time',
-                's.end_time',
-                's.venue_name',
-                'c.name as title',
-                DB::raw("'class' as type"),
-            ])
-            ->get();
+        $classSessionsForDate = function (Carbon $date) use ($studentId) {
+            return DB::table('class_sessions as s')
+                ->join('classes as c', 's.class_id', '=', 'c.id')
+                ->whereDate('s.start_time', $date)
+                ->where(function ($status) {
+                    $status->whereNull('s.status')->orWhere('s.status', '!=', 'cancelled');
+                })
+                ->where(function ($visibility) use ($studentId) {
+                    $visibility->whereExists(function ($assignment) use ($studentId) {
+                        $assignment->selectRaw('1')
+                            ->from('class_session_assignments as a')
+                            ->whereColumn('a.class_session_id', 's.id')
+                            ->where('a.user_id', $studentId)
+                            ->whereNull('a.deleted_at')
+                            ->where(function ($status) {
+                                $status->whereNull('a.status')
+                                    ->orWhereNotIn('a.status', ['cancelled', 'inactive']);
+                            });
+                    })->orWhereExists(function ($subscription) use ($studentId) {
+                        $subscription->selectRaw('1')
+                            ->from('studio_subscriptions as subscriptions')
+                            ->whereColumn('subscriptions.class_id', 'c.id')
+                            ->where('subscriptions.user_id', $studentId)
+                            ->whereIn('subscriptions.status', ['active', 'trialing', 'past_due'])
+                            ->whereNull('subscriptions.cancelled_at');
+                    });
+                })
+                ->orderBy('s.start_time')
+                ->select([
+                    's.id as session_id',
+                    's.start_time',
+                    's.end_time',
+                    's.venue_name',
+                    'c.name as title',
+                    DB::raw("'class' as type"),
+                ])
+                ->get();
+        };
 
-        $tomorrowClass = DB::table('class_session_assignments as a')
-            ->join('class_sessions as s', 'a.class_session_id', '=', 's.id')
-            ->join('classes as c', 's.class_id', '=', 'c.id')
-            ->whereNull('a.deleted_at')
-            ->where('a.user_id', $studentId)
-            ->whereDate('s.start_time', $tomorrow)
-            ->orderBy('s.start_time')
-            ->select([
-                's.id as session_id',
-                's.start_time',
-                's.end_time',
-                's.venue_name',
-                'c.name as title',
-                DB::raw("'class' as type"),
-            ])
-            ->get();
+        $todayClass = $classSessionsForDate($today);
+        $tomorrowClass = $classSessionsForDate($tomorrow);
 
         // -----------------------
         // Today's plan sessions (active plan membership)
