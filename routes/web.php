@@ -24,6 +24,7 @@ use App\Http\Controllers\ClassAttendanceController;
 use App\Http\Controllers\PlanAttendanceController;
 use App\Http\Controllers\ClassCardAttendanceController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CalendarEventController;
 use App\Http\Controllers\PaymentHistoryController;
 use App\Http\Controllers\StudioSettingsController;
 use App\Http\Controllers\Student\StudentDashboardController;
@@ -71,6 +72,8 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/calendar/events', [CalendarEventController::class, 'index'])->name('calendar.events');
+
     Route::delete('/profile', function () {
         abort_unless(auth()->user()->role === 'admin', 403);
         return app(ProfileController::class)->destroy(request());
