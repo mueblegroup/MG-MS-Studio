@@ -7,11 +7,13 @@ use App\Models\PlatformSubscriptionPayment;
 use App\Models\PlatformSubscriptionPlan;
 use App\Models\Studio;
 use App\Models\User;
+use App\Services\StudioArchiveService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class SuperadminController extends Controller
 {
@@ -73,7 +75,7 @@ class SuperadminController extends Controller
     public function studios(): View
     {
         return view('superadmin.studios.index', [
-            'studios' => Studio::query()
+            'studios' => Studio::withTrashed()
                 ->with(['owner:id,name,email', 'platformSubscriptionPlan:id,name,price,currency,billing_interval'])
                 ->withCount('users')
                 ->latest()
@@ -119,6 +121,59 @@ class SuperadminController extends Controller
         return redirect()
             ->route('superadmin.studios.index')
             ->with('success', 'Studio subscription updated successfully.');
+    }
+
+    public function archiveStudio(
+        Request $request,
+        Studio $studio,
+        StudioArchiveService $archives
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'archive_reason' => ['required', 'string', 'min:5', 'max:1000'],
+            'studio_name_confirmation' => ['required', 'string'],
+        ]);
+
+        if (! hash_equals($studio->name, $validated['studio_name_confirmation'])) {
+            return back()
+                ->withInput()
+                ->withErrors(['studio_name_confirmation' => 'Enter the studio name exactly to confirm archival.']);
+        }
+
+        try {
+            $archives->archive($studio, $validated['archive_reason'], $request->user()->id);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with(
+                'error',
+                'The studio was not archived because its billing or access shutdown could not be completed safely: '
+                .$exception->getMessage()
+            );
+        }
+
+        return redirect()
+            ->route('superadmin.studios.index')
+            ->with('success', 'Studio archived. Users and records were preserved, access was revoked, domains were disabled, and active Stripe billing was scheduled to end.');
+    }
+
+    public function restoreStudio(
+        Request $request,
+        int $studioId,
+        StudioArchiveService $archives
+    ): RedirectResponse {
+        $studio = Studio::withTrashed()->findOrFail($studioId);
+
+        try {
+            $archives->restore($studio, $request->user()->id);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'The studio could not be restored: '.$exception->getMessage());
+        }
+
+        return redirect()
+            ->route('superadmin.studios.edit', $studio)
+            ->with('success', 'Studio restored as inactive. Review its billing and then activate it when ready.');
     }
 
     public function users(Request $request): View
