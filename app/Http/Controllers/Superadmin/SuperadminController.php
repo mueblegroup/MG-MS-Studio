@@ -7,9 +7,13 @@ use App\Models\PlatformSubscriptionPayment;
 use App\Models\PlatformSubscriptionPlan;
 use App\Models\Studio;
 use App\Models\User;
+use App\Services\AuditLogService;
 use App\Services\StudioArchiveService;
+use App\Services\StudioProvisioningService;
+use App\Support\StudioLocaleOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -81,6 +85,87 @@ class SuperadminController extends Controller
                 ->latest()
                 ->paginate(20),
         ]);
+    }
+
+    public function createStudio(): View
+    {
+        return view('superadmin.studios.create', [
+            'plans' => PlatformSubscriptionPlan::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('price')
+                ->get(),
+            'timezoneOptions' => StudioLocaleOptions::timezones(),
+            'currencyOptions' => StudioLocaleOptions::currencies(),
+            'rootDomain' => config('saas.root_domain'),
+        ]);
+    }
+
+    public function storeStudio(
+        Request $request,
+        StudioProvisioningService $provisioning,
+        AuditLogService $audit
+    ): RedirectResponse {
+        $reserved = config('saas.reserved_subdomains', []);
+
+        $validated = $request->validate([
+            'owner_name' => ['required', 'string', 'max:255'],
+            'owner_email' => ['required', 'string', 'lowercase', 'email', 'max:255'],
+            'owner_phone' => ['nullable', 'string', 'max:30'],
+            'studio_name' => ['required', 'string', 'max:255'],
+            'subdomain' => [
+                'required', 'string', 'min:3', 'max:40', 'alpha_dash:ascii',
+                Rule::notIn($reserved),
+                Rule::unique('studios', 'subdomain'),
+                Rule::unique('studio_domains', 'domain')->where(
+                    fn ($query) => $query->where('domain', strtolower((string) $request->input('subdomain')).'.'.strtolower((string) config('saas.root_domain'))
+                ),
+            ],
+            'platform_subscription_plan_id' => ['required', 'integer', Rule::exists('platform_subscription_plans', 'id')->where('is_active', true)],
+            'status' => ['required', Rule::in(['active', 'trial', 'inactive'])],
+            'subscription_ends_at' => ['nullable', 'date', 'after:today'],
+            'timezone' => ['required', Rule::in(array_keys(StudioLocaleOptions::timezones()))],
+            'currency' => ['required', Rule::in(array_keys(StudioLocaleOptions::currencies()))],
+            'send_invitation' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            [$studio, $owner, $ownerWasCreated] = $provisioning->provision(
+                $validated,
+                $request->user()->id
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withInput()->withErrors(['owner_email' => $exception->getMessage()]);
+        }
+
+        $invitationSent = false;
+        if ($request->boolean('send_invitation')) {
+            $invitationSent = Password::sendResetLink(['email' => $owner->email]) === Password::RESET_LINK_SENT;
+        }
+
+        $audit->record('superadmin.client_studio.provisioned', $request->user(), [
+            'studio_id' => $studio->id,
+            'studio_name' => $studio->name,
+            'owner_user_id' => $owner->id,
+            'owner_email' => $owner->email,
+            'owner_was_created' => $ownerWasCreated,
+            'platform_subscription_plan_id' => $studio->platform_subscription_plan_id,
+            'status' => $studio->status,
+            'invitation_sent' => $invitationSent,
+        ], $request);
+
+        $message = 'Client studio created successfully.';
+        if ($request->boolean('send_invitation')) {
+            $message .= $invitationSent
+                ? ' A password setup link was sent to the client.'
+                : ' The studio was created, but the invitation email could not be sent; use password reset to resend it.';
+        }
+
+        return redirect()
+            ->route('superadmin.studios.edit', $studio)
+            ->with('success', $message);
     }
 
     public function editStudio(Studio $studio): View
