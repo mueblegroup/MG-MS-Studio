@@ -116,6 +116,8 @@ class CalendarEventController extends Controller
             ]);
 
         $confirmedSubscriptionSessionIds = collect();
+        $subscriptionPayments = collect();
+
         if ($user->role === 'student') {
             $confirmedSubscriptionSessionIds = DB::table('class_session_assignments')
                 ->where('user_id', $user->id)
@@ -127,12 +129,36 @@ class CalendarEventController extends Controller
                 })
                 ->pluck('class_session_id')
                 ->map(fn ($id) => (int) $id);
+
+            $subscriptionPayments = DB::table('payments')
+                ->join('orders', 'orders.id', '=', 'payments.order_id')
+                ->join('order_items', 'order_items.order_id', '=', 'orders.id')
+                ->where('orders.user_id', $user->id)
+                ->whereIn('order_items.purchasable_id', $classRows->pluck('id'))
+                ->where(function ($type) {
+                    $type->where('order_items.purchasable_type', \App\Models\ClassSession::class)
+                        ->orWhere('order_items.purchasable_type', 'like', '%ClassSession');
+                })
+                ->orderByDesc('payments.id')
+                ->get([
+                    'order_items.purchasable_id as class_session_id',
+                    'payments.provider',
+                    'payments.method',
+                    'payments.reference',
+                    'payments.status',
+                ])
+                ->unique('class_session_id')
+                ->keyBy(fn ($payment) => (int) $payment->class_session_id);
         }
 
-        $classEvents = $classRows->map(function ($session) use ($user, $confirmedSubscriptionSessionIds) {
+        $classEvents = $classRows->map(function ($session) use ($user, $confirmedSubscriptionSessionIds, $subscriptionPayments) {
             $isSubscription = $session->type === 'subscription';
+            $payment = $subscriptionPayments->get((int) $session->id);
+            $paymentStatus = strtolower((string) ($payment?->status ?? ''));
+            $paymentIsPaid = in_array($paymentStatus, ['paid', 'success', 'completed', 'complete'], true);
             $isConfirmed = ! $isSubscription
                 || $user->role !== 'student'
+                || $paymentIsPaid
                 || $confirmedSubscriptionSessionIds->contains((int) $session->id);
 
             $billingStatus = null;
@@ -161,6 +187,9 @@ class CalendarEventController extends Controller
                     'venue' => $session->venue_name,
                     'billingStatus' => $billingStatus,
                     'billingMessage' => $billingMessage,
+                    'paymentStatus' => $paymentStatus ?: null,
+                    'paymentProvider' => strtoupper((string) ($payment?->provider ?: $payment?->method ?: '')),
+                    'paymentReference' => $payment?->reference,
                 ],
             ];
         });
