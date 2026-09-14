@@ -67,6 +67,21 @@ class CalendarEventController extends Controller
                         ->where('subscriptions.user_id', $user->id)
                         ->whereIn('subscriptions.status', ['active', 'trialing', 'past_due'])
                         ->whereNull('subscriptions.cancelled_at');
+                })->orWhereExists(function ($purchase) use ($user) {
+                    // A successfully paid session remains visible even if an
+                    // older subscription cancellation left its assignment in
+                    // a cancelled state or the provider later ended the parent
+                    // subscription.
+                    $purchase->selectRaw('1')
+                        ->from('orders')
+                        ->join('order_items', 'order_items.order_id', '=', 'orders.id')
+                        ->whereColumn('order_items.purchasable_id', 'sessions.id')
+                        ->where('orders.user_id', $user->id)
+                        ->where('orders.status', 'paid')
+                        ->where(function ($type) {
+                            $type->where('order_items.purchasable_type', \App\Models\ClassSession::class)
+                                ->orWhere('order_items.purchasable_type', 'like', '%ClassSession');
+                        });
                 });
             });
 
