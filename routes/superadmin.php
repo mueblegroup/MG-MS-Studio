@@ -18,6 +18,10 @@ Route::middleware(['auth', 'central', 'role:superadmin'])
         Route::get('/studios', [SuperadminController::class, 'studios'])->name('studios.index');
         Route::get('/studios/{studio}/edit', [SuperadminController::class, 'editStudio'])->name('studios.edit');
         Route::patch('/studios/{studio}', [SuperadminController::class, 'updateStudio'])->name('studios.update');
+        Route::delete('/studios/{studio}', [SuperadminController::class, 'archiveStudio'])->name('studios.archive');
+        Route::patch('/studios/{studioId}/restore', [SuperadminController::class, 'restoreStudio'])
+            ->whereNumber('studioId')
+            ->name('studios.restore');
 
         Route::get('/users', [SuperadminController::class, 'users'])->name('users.index');
         Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
