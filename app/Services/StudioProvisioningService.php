@@ -42,6 +42,10 @@ class StudioProvisioningService
             ? PlatformSubscriptionPlan::query()->where('is_active', true)->findOrFail($data['platform_subscription_plan_id'])
             : null;
 
+        if ($plan && $plan->max_admins !== null && (int) $plan->max_admins < 1) {
+            throw new RuntimeException('The selected plan does not include an administrator seat.');
+        }
+
         return DB::transaction(function () use ($data, $email, $existingOwner, $plan, $provisionedBy): array {
             $ownerWasCreated = ! $existingOwner;
             $owner = $existingOwner ?: User::query()->create([
