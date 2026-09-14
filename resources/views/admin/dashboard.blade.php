@@ -100,7 +100,6 @@
             const revenueLabels = @json($dashboardMonths);
             const revenueData = @json($dashboardRevenueData);
             const userDistributionData = @json($dashboardUserDistribution);
-            const calendarEvents = @json($dashboardCalendarEvents);
 
             // 1. Line Chart (Revenue)
             const revenueCanvas = document.getElementById('paymentHistoryChart');
@@ -187,7 +186,7 @@
                     initialView: 'dayGridMonth',
                     headerToolbar: { left: 'prev', center: 'title', right: 'next' },
                     height: 'auto',
-                    events: calendarEvents
+                    events: @json(route('calendar.events'))
                 });
                 calendar.render();
             }
