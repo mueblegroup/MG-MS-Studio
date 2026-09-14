@@ -133,6 +133,34 @@ class FinalSessionAwareSubscriptionClassService extends ReliableSubscriptionClas
             return;
         }
 
+        // Provider cancellation is irreversible. Never allow an out-of-order or
+        // duplicated invoice webhook to end billing while this class still has
+        // a future session. Keep Stripe scheduled to stop after the real final
+        // session instead.
+        $finalSession = ClassSession::query()
+            ->where('class_id', $subscription->class_id)
+            ->where('status', '!=', 'cancelled')
+            ->orderByDesc('start_time')
+            ->first();
+
+        $finalSessionEndsAt = $finalSession
+            ? Carbon::parse($finalSession->end_time ?: $finalSession->start_time)
+            : null;
+
+        if ($finalSessionEndsAt?->isFuture()) {
+            Log::warning('Prevented premature Stripe class subscription cancellation.', [
+                'studio_subscription_id' => $subscription->id,
+                'stripe_subscription_id' => $subscription->provider_subscription_id,
+                'reason' => $reason,
+                'final_session_id' => $finalSession->id,
+                'final_session_ends_at' => $finalSessionEndsAt->toIso8601String(),
+            ]);
+
+            $this->scheduleStripeCancellationAfterFinalSession($subscription);
+
+            return;
+        }
+
         try {
             $stripe = new StripeClient((string) config('services.stripe.secret'));
             $stripe->subscriptions->cancel($subscription->provider_subscription_id, [
