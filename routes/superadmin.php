@@ -16,6 +16,8 @@ Route::middleware(['auth', 'central', 'role:superadmin'])
         Route::get('/dashboard', [SuperadminController::class, 'dashboard'])->name('dashboard');
 
         Route::get('/studios', [SuperadminController::class, 'studios'])->name('studios.index');
+        Route::get('/studios/create', [SuperadminController::class, 'createStudio'])->name('studios.create');
+        Route::post('/studios', [SuperadminController::class, 'storeStudio'])->name('studios.store');
         Route::get('/studios/{studio}/edit', [SuperadminController::class, 'editStudio'])->name('studios.edit');
         Route::patch('/studios/{studio}', [SuperadminController::class, 'updateStudio'])->name('studios.update');
         Route::delete('/studios/{studio}', [SuperadminController::class, 'archiveStudio'])->name('studios.archive');
