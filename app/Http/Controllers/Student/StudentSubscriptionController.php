@@ -136,6 +136,23 @@ class StudentSubscriptionController extends Controller
             );
         });
 
+        // Eloquent reuses one eager-loaded ClassModel instance for records
+        // belonging to the same class. Clone it and its sessions per
+        // subscription before attaching display-only payment state, otherwise
+        // one subscription card can show another subscription's payment.
+        $subscriptions->each(function (StudioSubscription $subscription): void {
+            if (! $subscription->classModel) {
+                return;
+            }
+
+            $classModel = clone $subscription->classModel;
+            $classModel->setRelation(
+                'sessions',
+                $subscription->classModel->sessions->map(fn (ClassSession $session) => clone $session)
+            );
+            $subscription->setRelation('classModel', $classModel);
+        });
+
         $subscriptionIds = $subscriptions->pluck('id');
         $sessionIds = $subscriptions
             ->flatMap(fn (StudioSubscription $subscription) => $subscription->classModel?->sessions?->pluck('id') ?? collect())
