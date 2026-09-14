@@ -7,7 +7,10 @@
                     <h1 class="mt-2 text-2xl font-extrabold text-[#171717] dark:text-white">Manage Studios</h1>
                     <p class="mt-1 max-w-3xl text-sm font-medium text-[#6b5f52] dark:text-gray-400">Owner-level view of every studio in the platform. Normal admins only manage their assigned studio.</p>
                 </div>
-                <a href="{{ route('superadmin.dashboard') }}" class="rounded-2xl bg-[#171717] px-4 py-3 text-sm font-extrabold text-white shadow-sm dark:bg-white dark:text-gray-950">Back to Dashboard</a>
+                <div class="flex flex-wrap gap-3">
+                    <a href="{{ route('superadmin.studios.create') }}" class="rounded-2xl bg-[#d97706] px-4 py-3 text-sm font-extrabold text-white shadow-sm hover:bg-[#b96305]">Create Client Studio</a>
+                    <a href="{{ route('superadmin.dashboard') }}" class="rounded-2xl bg-[#171717] px-4 py-3 text-sm font-extrabold text-white shadow-sm dark:bg-white dark:text-gray-950">Back to Dashboard</a>
+                </div>
             </div>
         </div>
 
