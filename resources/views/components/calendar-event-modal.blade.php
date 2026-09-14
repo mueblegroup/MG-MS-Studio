@@ -37,6 +37,11 @@
                 <div>
                     <div id="calendar-event-billing-title" class="text-sm font-extrabold"></div>
                     <p id="calendar-event-billing-message" class="mt-1 text-xs leading-5"></p>
+                    <div id="calendar-event-payment-details" class="mt-3 hidden flex-wrap gap-2 text-[10px] font-extrabold uppercase tracking-wide">
+                        <span id="calendar-event-payment-provider" class="rounded-full border border-current/20 px-2 py-1"></span>
+                        <span id="calendar-event-payment-status" class="rounded-full border border-current/20 px-2 py-1"></span>
+                        <span id="calendar-event-payment-reference" class="break-all rounded-full border border-current/20 px-2 py-1 normal-case tracking-normal"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -100,6 +105,20 @@
                     isConfirmed ? 'Session confirmed' : 'Confirmation pending';
                 document.getElementById('calendar-event-billing-message').textContent =
                     details.billingMessage || '';
+
+                const paymentDetails = document.getElementById('calendar-event-payment-details');
+                const paymentProvider = details.paymentProvider || '';
+                const paymentStatus = details.paymentStatus || '';
+                const paymentReference = details.paymentReference || '';
+                const hasPaymentDetails = paymentProvider || paymentStatus || paymentReference;
+                paymentDetails.classList.toggle('hidden', !hasPaymentDetails);
+                paymentDetails.classList.toggle('flex', Boolean(hasPaymentDetails));
+                document.getElementById('calendar-event-payment-provider').textContent = paymentProvider;
+                document.getElementById('calendar-event-payment-provider').classList.toggle('hidden', !paymentProvider);
+                document.getElementById('calendar-event-payment-status').textContent = paymentStatus;
+                document.getElementById('calendar-event-payment-status').classList.toggle('hidden', !paymentStatus);
+                document.getElementById('calendar-event-payment-reference').textContent = paymentReference;
+                document.getElementById('calendar-event-payment-reference').classList.toggle('hidden', !paymentReference);
 
                 const description = (details.description || '').trim();
                 document.getElementById('calendar-event-description-wrap').classList.toggle('hidden', !description);
