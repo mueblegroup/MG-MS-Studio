@@ -163,7 +163,7 @@
                     initialView: 'dayGridMonth',
                     headerToolbar: { left: 'prev', center: 'title', right: 'next' },
                     height: 'auto',
-                    events: @json($calendarEvents ?? [])
+                    events: @json(route('calendar.events'))
                 });
                 calendar.render();
             });
