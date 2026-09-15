@@ -54,6 +54,10 @@ class ApiAbilities
                 'orders:read' => 'View orders',
                 'shop:read' => 'View shop products',
             ],
+            'Migration' => [
+                'migration:read' => 'View legacy migration mappings and reconciliation data',
+                'migration:write' => 'Import legacy data into the current studio tenant',
+            ],
             'Notifications' => [
                 'notifications:read' => 'View notifications',
                 'notifications:create' => 'Create notifications',

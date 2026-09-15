@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AttendanceApiController;
 use App\Http\Controllers\Api\V1\ClassApiController;
 use App\Http\Controllers\Api\V1\ClassCardApiController;
 use App\Http\Controllers\Api\V1\CommerceApiController;
+use App\Http\Controllers\Api\V1\MigrationApiController;
 use App\Http\Controllers\Api\V1\NotificationApiController;
 use App\Http\Controllers\Api\V1\PlanApiController;
 use App\Http\Controllers\Api\V1\SettingsApiController;
@@ -84,6 +85,17 @@ Route::prefix('v1')
         Route::get('orders', [CommerceApiController::class, 'orders'])->middleware('api.ability:orders:read');
         Route::get('orders/{order}', [CommerceApiController::class, 'order'])->middleware('api.ability:orders:read');
         Route::get('shop', [CommerceApiController::class, 'shop'])->middleware('api.ability:shop:read');
+
+        Route::prefix('migration')->group(function () {
+            Route::get('records', [MigrationApiController::class, 'records'])->middleware('api.ability:migration:read');
+            Route::post('records', [MigrationApiController::class, 'register'])->middleware('api.ability:migration:write');
+            Route::post('users', [MigrationApiController::class, 'user'])->middleware('api.ability:migration:write');
+            Route::post('user-plans', [MigrationApiController::class, 'userPlan'])->middleware('api.ability:migration:write');
+            Route::post('classcard-purchases', [MigrationApiController::class, 'classCardPurchase'])->middleware('api.ability:migration:write');
+            Route::post('attendance', [MigrationApiController::class, 'attendance'])->middleware('api.ability:migration:write');
+            Route::post('orders', [MigrationApiController::class, 'order'])->middleware('api.ability:migration:write');
+            Route::post('payments', [MigrationApiController::class, 'payment'])->middleware('api.ability:migration:write');
+        });
 
         Route::get('notifications', [NotificationApiController::class, 'index'])->middleware('api.ability:notifications:read');
         Route::post('notifications', [NotificationApiController::class, 'store'])->middleware('api.ability:notifications:create');
