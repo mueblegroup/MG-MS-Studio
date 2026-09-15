@@ -68,5 +68,6 @@ class AppServiceProvider extends ServiceProvider
         });
 
         require base_path('routes/seat-limits.php');
+        require base_path('routes/admin-pending-orders.php');
     }
 }
