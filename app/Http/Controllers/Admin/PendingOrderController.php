@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\StudioSubscription;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -37,10 +38,29 @@ class PendingOrderController extends Controller
 
             Payment::query()
                 ->where('order_id', $order->id)
-                ->where('status', 'pending')
+                ->whereIn('status', ['pending', 'past_due'])
                 ->update([
                     'status' => 'cancelled',
                 ]);
+
+            if ($order->billing_reason === 'subscription_initial' && $order->studio_subscription_id) {
+                $subscription = StudioSubscription::query()
+                    ->whereKey($order->studio_subscription_id)
+                    ->whereIn('status', ['pending', 'past_due'])
+                    ->first();
+
+                if ($subscription) {
+                    $subscription->updateQuietly([
+                        'status' => 'cancelled',
+                        'cancelled_at' => now(),
+                        'next_billing_at' => null,
+                        'meta' => array_merge((array) $subscription->meta, [
+                            'admin_cancelled_order_id' => $order->id,
+                            'admin_cancelled_at' => now()->toIso8601String(),
+                        ]),
+                    ]);
+                }
+            }
         });
 
         return back()->with('success', "Order #{$order->id} has been cancelled.");
