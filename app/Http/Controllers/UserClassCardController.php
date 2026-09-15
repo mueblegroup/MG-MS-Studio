@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\ClassCard;
 use App\Models\User;
 use App\Models\UserClassCard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class UserClassCardController extends Controller
 {
@@ -142,6 +144,67 @@ class UserClassCardController extends Controller
         ]);
 
         return redirect()->route('admin.classcards.classcard-purchases')->with('success', 'Class card assignment updated.');
+    }
+
+    public function extendExpiry(Request $request, UserClassCard $userClassCard)
+    {
+        $studioId = (int) current_studio_id();
+        abort_if($studioId <= 0, 403, 'Studio context is required.');
+        abort_unless((int) $userClassCard->studio_id === $studioId, 404);
+
+        $validated = $request->validate([
+            'extension' => 'required|in:1_week,2_weeks,1_month,3_months,custom',
+            'new_expiry_date' => 'nullable|required_if:extension,custom|date',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $oldExpiry = $userClassCard->expires_at?->copy();
+        $base = $oldExpiry && $oldExpiry->isFuture() ? $oldExpiry->copy() : now();
+
+        $newExpiry = match ($validated['extension']) {
+            '1_week' => $base->copy()->addWeek(),
+            '2_weeks' => $base->copy()->addWeeks(2),
+            '1_month' => $base->copy()->addMonth(),
+            '3_months' => $base->copy()->addMonths(3),
+            'custom' => Carbon::parse($validated['new_expiry_date'])->endOfDay(),
+        };
+
+        $minimum = $oldExpiry && $oldExpiry->isFuture() ? $oldExpiry : now();
+        if ($newExpiry->lte($minimum)) {
+            throw ValidationException::withMessages([
+                'new_expiry_date' => 'The new expiry must be later than the current expiry date, or later than today for an expired card.',
+            ]);
+        }
+
+        $newStatus = (int) $userClassCard->classes_remaining <= 0 ? 'completed' : 'active';
+
+        $userClassCard->update([
+            'expires_at' => $newExpiry,
+            'status' => $newStatus,
+        ]);
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'studio_id' => $studioId,
+            'event' => 'class_card_expiry_extended',
+            'route' => $request->route()?->getName(),
+            'method' => $request->method(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'metadata' => [
+                'user_class_card_id' => $userClassCard->id,
+                'class_card_id' => $userClassCard->class_card_id,
+                'student_user_id' => $userClassCard->user_id,
+                'old_expiry' => $oldExpiry?->toIso8601String(),
+                'new_expiry' => $newExpiry->toIso8601String(),
+                'extension' => $validated['extension'],
+                'reason' => $validated['reason'] ?? null,
+                'classes_remaining' => (int) $userClassCard->classes_remaining,
+                'resulting_status' => $newStatus,
+            ],
+        ]);
+
+        return back()->with('success', 'Class card expiry extended to '.$newExpiry->format('Y-m-d').'.');
     }
 
     public function destroy(UserClassCard $userClassCard)
