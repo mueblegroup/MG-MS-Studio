@@ -72,19 +72,39 @@ class MigrationApiController extends BaseApiController
             ],
             'role' => ['required', Rule::in(['admin', 'teacher', 'student'])],
             'phone_number' => ['nullable', 'string', 'max:50'],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['nullable', 'string', 'min:8', 'prohibited_with:legacy_password_hash'],
+            'legacy_password_hash' => [
+                'nullable',
+                'string',
+                'size:60',
+                'prohibited_with:password',
+                'regex:/^\$2y\$(0[4-9]|[12][0-9]|3[01])\$[\.\/A-Za-z0-9]{53}$/',
+            ],
             'metadata' => ['nullable', 'array'],
         ]);
 
-        [$user, $record] = DB::transaction(function () use ($validated, $source) {
+        $preservesLegacyPassword = ! empty($validated['legacy_password_hash']);
+        $hasPassword = ! empty($validated['password']) || $preservesLegacyPassword;
+
+        [$user, $record] = DB::transaction(function () use ($validated, $source, $preservesLegacyPassword) {
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'role' => $validated['role'],
                 'phone_number' => $validated['phone_number'] ?? null,
-                // Legacy password hashes are deliberately never imported.
+                // Use the normal model path for new plaintext passwords. Legacy hashes are
+                // applied directly below so the User model's "hashed" cast cannot hash them again.
                 'password' => $validated['password'] ?? Str::random(48),
             ]);
+
+            if ($preservesLegacyPassword) {
+                DB::table('users')
+                    ->where('id', $user->id)
+                    ->where('studio_id', $this->studioId())
+                    ->update(['password' => $validated['legacy_password_hash']]);
+
+                $user->refresh();
+            }
 
             $record = $this->recordTarget($source, $user, $validated['metadata'] ?? []);
 
@@ -94,7 +114,8 @@ class MigrationApiController extends BaseApiController
         return $this->success([
             'target' => $user,
             'migration_record' => $record,
-            'password_setup_required' => empty($validated['password']),
+            'password_setup_required' => ! $hasPassword,
+            'legacy_password_preserved' => $preservesLegacyPassword,
         ], 'Legacy user imported.', 201);
     }
 
