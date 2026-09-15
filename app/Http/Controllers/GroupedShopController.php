@@ -5,17 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\ClassCard;
 use App\Models\ClassModel;
 use App\Models\Plan;
+use App\Services\StudioSettingsService;
 use App\Support\TenantManager;
 use Illuminate\Http\Request;
 
 class GroupedShopController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, StudioSettingsService $settings)
     {
         $studio = app(TenantManager::class)->current();
         abort_unless($studio, 404, 'Studio shop not found.');
 
         $studioId = (int) $studio->id;
+        $currency = strtoupper($settings->currency('MYR'));
         $tab = $request->query('tab', 'classes');
         $q = trim((string) $request->query('q', ''));
         $now = now();
@@ -80,6 +82,6 @@ class GroupedShopController extends Controller
             ->paginate(12, ['*'], 'cards_page')
             ->withQueryString();
 
-        return view('shop.grouped-index', compact('tab', 'q', 'classes', 'plans', 'classcards'));
+        return view('shop.grouped-index', compact('tab', 'q', 'classes', 'plans', 'classcards', 'currency'));
     }
 }
