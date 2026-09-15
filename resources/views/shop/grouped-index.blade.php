@@ -53,7 +53,7 @@
                                     </div>
                                     <div class="text-right">
                                         <div class="text-xs font-bold uppercase text-[#9a8c7d]">{{ $isSubscription ? 'Recurring charge' : 'Price' }}</div>
-                                        <div class="mt-1 text-lg font-extrabold">RM {{ number_format((float) $class->price, 2) }}</div>
+                                        <div class="mt-1 text-lg font-extrabold">{{ $currency }} {{ number_format((float) $class->price, 2) }}</div>
                                         @if($isSubscription)<span class="mg-badge mt-2">{{ strtoupper($class->billing_interval) }}</span>@endif
                                     </div>
                                 </div>
@@ -109,7 +109,7 @@
                         <section class="mg-card p-5">
                             <h2 class="font-extrabold">{{ $plan->name }}</h2>
                             <p class="mt-1 text-sm text-[#6b5f52]">{{ $plan->sessions->count() }} upcoming sessions</p>
-                            <div class="mt-4 text-lg font-extrabold">{{ $plan->currency ?? 'MYR' }} {{ number_format((float) $plan->price, 2) }}</div>
+                            <div class="mt-4 text-lg font-extrabold">{{ $currency }} {{ number_format((float) $plan->price, 2) }}</div>
                             @if($canPurchase)<form method="POST" action="{{ route('shop.cart.add') }}" class="mt-4">@csrf<input type="hidden" name="type" value="plan"><input type="hidden" name="id" value="{{ $plan->id }}"><button class="mg-btn-primary w-full"><i class="bx bx-cart-add"></i> Add plan</button></form>@endif
                         </section>
                     @empty<div class="mg-card col-span-full p-10 text-center">No plans found.</div>@endforelse
@@ -121,7 +121,7 @@
                         <section class="mg-card p-5">
                             <h2 class="font-extrabold">{{ $card->name }}</h2>
                             <p class="mt-1 text-sm text-[#6b5f52]">{{ $card->total_classes }} classes · {{ $card->validity_weeks }} weeks</p>
-                            <div class="mt-4 text-lg font-extrabold">RM {{ number_format((float) $card->price, 2) }}</div>
+                            <div class="mt-4 text-lg font-extrabold">{{ $currency }} {{ number_format((float) $card->price, 2) }}</div>
                             @if($canPurchase)<form method="POST" action="{{ route('shop.cart.add') }}" class="mt-4">@csrf<input type="hidden" name="type" value="class_card"><input type="hidden" name="id" value="{{ $card->id }}"><button class="mg-btn-primary w-full"><i class="bx bx-cart-add"></i> Add class card</button></form>@endif
                         </section>
                     @empty<div class="mg-card col-span-full p-10 text-center">No class cards found.</div>@endforelse
