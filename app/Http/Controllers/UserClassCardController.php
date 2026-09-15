@@ -106,6 +106,10 @@ class UserClassCardController extends Controller
 
     public function update(Request $request, UserClassCard $userClassCard)
     {
+        if ($request->boolean('extension_only')) {
+            return $this->extendExpiry($request, $userClassCard);
+        }
+
         $studioId = (int) current_studio_id();
         abort_if($studioId <= 0, 403, 'Studio context is required.');
 
