@@ -64,11 +64,16 @@ Example:
   "name": "Student Name",
   "email": "student@example.com",
   "role": "student",
-  "phone_number": "+6590000000"
+  "phone_number": "+6590000000",
+  "legacy_password_hash": "$2y$10$....................................................."
 }
 ```
 
-Legacy password hashes are never accepted. If `password` is omitted, ClassM8 creates a random unusable migration password and returns `password_setup_required: true`.
+For trusted legacy migrations, ClassM8 can preserve an existing PHP bcrypt password hash through `legacy_password_hash`. The value must be a valid 60-character `$2y$` bcrypt hash with a supported cost factor. It is written directly to the password column so Laravel does not hash the bcrypt string a second time. The hash is never returned by this endpoint.
+
+`password` and `legacy_password_hash` are mutually exclusive. If `legacy_password_hash` is accepted, the response returns `legacy_password_preserved: true` and `password_setup_required: false`, allowing the user to keep the same password used in the legacy system. If both password fields are omitted, ClassM8 creates a random migration password and returns `password_setup_required: true`.
+
+Only use this option for bcrypt hashes from a trusted source database. Revoke the migration token after the import.
 
 ### User plan memberships
 
@@ -174,7 +179,7 @@ Imported payments always use `method=legacy` and `provider=legacy`. No payment g
 
 ## Recommended Étude n8n order
 
-1. Teachers and students through `/migration/users`.
+1. Teachers and students through `/migration/users`, preserving compatible `$2y$` bcrypt hashes with `legacy_password_hash`.
 2. Plans through the normal `/api/v1/plans` endpoint, then register each old/new mapping in `/migration/records`.
 3. Exact historical plan sessions through normal plan-session endpoints, then register mappings.
 4. Class card definition through the normal class-card endpoint, then register its mapping.
