@@ -1,11 +1,17 @@
 <x-app-layout>
     <div class="p-6 sm:p-8 bg-gray-50/60 dark:bg-gray-900 min-h-screen">
 
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Payment History</h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Completed transactions and subscriptions due within the next three days.</p>
             </div>
+
+            <a href="{{ route('admin.pending-orders.index') }}"
+               class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-red-700">
+                <i class="bx bx-time-five"></i>
+                Pending Orders
+            </a>
         </div>
 
         @if($upcomingSubscriptions->isNotEmpty())
