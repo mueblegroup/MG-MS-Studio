@@ -44,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\RestrictStaffShopPurchases::class,
             \App\Http\Middleware\ReconcileStripeCheckoutReturn::class,
             \App\Http\Middleware\AuditAuthenticatedActions::class,
+            \App\Http\Middleware\SearchEngineVisibility::class,
         ]);
 
         $middleware->alias([
