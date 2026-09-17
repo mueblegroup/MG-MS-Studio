@@ -112,21 +112,33 @@ const renderMobileLogout = () => {
 };
 
 const syncClassM8Branding = () => {
-    const logoUrl = '/images/mueble-logo.svg';
+    const logoUrl = '/images/branding/classm8-logo.png';
     const icons = Array.from(document.querySelectorAll('link[rel~="icon"]'));
 
     if (!icons.length) {
         const icon = document.createElement('link');
         icon.rel = 'icon';
-        icon.type = 'image/svg+xml';
+        icon.type = 'image/png';
         icon.href = logoUrl;
         document.head.appendChild(icon);
     } else {
         icons.forEach((icon) => {
-            icon.type = 'image/svg+xml';
+            icon.type = 'image/png';
             icon.href = logoUrl;
         });
     }
+
+    document.querySelectorAll('aside').forEach((aside) => {
+        const placeholder = aside.querySelector('.h-10.w-10, .h-11.w-11, .h-12.w-12');
+        if (!placeholder || placeholder.tagName === 'IMG') return;
+
+        const image = document.createElement('img');
+        image.src = logoUrl;
+        image.alt = 'ClassM8';
+        image.className = `${placeholder.className} object-contain bg-white p-1`;
+        image.style.boxShadow = 'none';
+        placeholder.replaceWith(image);
+    });
 
     // Older client portal templates still contain the previous product name.
     document.querySelectorAll('aside p').forEach((element) => {
@@ -141,7 +153,7 @@ const renderMarketingLogo = () => {
 
     document.querySelectorAll('.brand-mark').forEach((mark) => {
         const logo = document.createElement('img');
-        logo.src = '/images/mueble-logo.svg';
+        logo.src = '/images/branding/classm8-logo.png';
         logo.alt = 'ClassM8';
         logo.width = 164;
         logo.height = 192;
@@ -151,6 +163,7 @@ const renderMarketingLogo = () => {
         logo.style.objectFit = 'contain';
         logo.style.borderRadius = '10px';
         logo.style.background = '#ffffff';
+        logo.style.padding = '3px';
         logo.style.boxShadow = '0 6px 18px rgba(15, 23, 42, .12)';
         mark.replaceWith(logo);
     });
