@@ -49,6 +49,17 @@
             overflow: hidden;
         }
 
+        /* Standalone auth pages render a <main> directly under <body> rather than
+           the application shell. They must remain vertically scrollable when the
+           form is taller than the viewport (especially registration on laptops). */
+        html:has(body > main),
+        body:has(> main) {
+            height: auto;
+            min-height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
         body:not(.marketing-page) > div:first-of-type {
             height: 100vh;
             min-height: 0;
