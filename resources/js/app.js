@@ -87,7 +87,7 @@ const renderDocumentationLink = () => {
     const link = document.createElement('a');
     link.id = 'mueble-docs-link';
     link.href = '/docs';
-    link.setAttribute('aria-label', 'Open Mueble LMS documentation');
+    link.setAttribute('aria-label', 'Open ClassM8 documentation');
     link.title = 'Help & Documentation';
     link.className = 'fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-extrabold text-white shadow-2xl transition hover:-translate-y-0.5 hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200';
     link.innerHTML = '<i class="bx bx-book-open text-xl"></i><span class="hidden sm:inline">Docs</span>';
@@ -111,22 +111,47 @@ const renderMobileLogout = () => {
     controls.appendChild(logout);
 };
 
+const syncClassM8Branding = () => {
+    const logoUrl = '/images/mueble-logo.svg';
+    const icons = Array.from(document.querySelectorAll('link[rel~="icon"]'));
+
+    if (!icons.length) {
+        const icon = document.createElement('link');
+        icon.rel = 'icon';
+        icon.type = 'image/svg+xml';
+        icon.href = logoUrl;
+        document.head.appendChild(icon);
+    } else {
+        icons.forEach((icon) => {
+            icon.type = 'image/svg+xml';
+            icon.href = logoUrl;
+        });
+    }
+
+    // Older client portal templates still contain the previous product name.
+    document.querySelectorAll('aside p').forEach((element) => {
+        if (element.textContent.trim() === 'Mueble LMS') {
+            element.textContent = 'ClassM8';
+        }
+    });
+};
+
 const renderMarketingLogo = () => {
     if (!document.body.classList.contains('marketing-page')) return;
 
     document.querySelectorAll('.brand-mark').forEach((mark) => {
         const logo = document.createElement('img');
         logo.src = '/images/mueble-logo.svg';
-        logo.alt = 'Mueble';
-        logo.width = 300;
-        logo.height = 300;
+        logo.alt = 'ClassM8';
+        logo.width = 164;
+        logo.height = 192;
         logo.style.width = '44px';
         logo.style.height = '44px';
         logo.style.display = 'block';
         logo.style.objectFit = 'contain';
-        logo.style.borderRadius = '0';
-        logo.style.background = 'transparent';
-        logo.style.boxShadow = 'none';
+        logo.style.borderRadius = '10px';
+        logo.style.background = '#ffffff';
+        logo.style.boxShadow = '0 6px 18px rgba(15, 23, 42, .12)';
         mark.replaceWith(logo);
     });
 };
@@ -175,5 +200,6 @@ document.addEventListener('DOMContentLoaded', renderSeatPromotion);
 document.addEventListener('DOMContentLoaded', explainSubscriptionEndDate);
 document.addEventListener('DOMContentLoaded', renderDocumentationLink);
 document.addEventListener('DOMContentLoaded', renderMobileLogout);
+document.addEventListener('DOMContentLoaded', syncClassM8Branding);
 document.addEventListener('DOMContentLoaded', renderMarketingLogo);
 document.addEventListener('DOMContentLoaded', renderClientSso);
