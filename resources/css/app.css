@@ -43,15 +43,15 @@
     }
 
     @media (min-width: 768px) {
-        html:not(.marketing-document),
-        body:not(.marketing-page) {
+        html:not(.marketing-document):not(:has(body > main)),
+        body:not(.marketing-page):not(:has(> main)) {
             height: 100%;
             overflow: hidden;
         }
 
-        /* Standalone auth pages render a <main> directly under <body> rather than
-           the application shell. They must remain vertically scrollable when the
-           form is taller than the viewport (especially registration on laptops). */
+        /* Standalone pages such as login and registration render a <main>
+           directly under <body>. Keep the document itself scrollable instead
+           of applying the fixed-height application-shell behaviour. */
         html:has(body > main),
         body:has(> main) {
             height: auto;
