@@ -6,6 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/png" href="{{ asset('images/branding/classm8-logo.png') }}">
     <title>{{ $studio?->name ?? 'ClassM8' }} - Login</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -28,9 +29,11 @@
                     </div>
 
                     <div class="relative">
-                        <div class="mb-8 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-xl font-black shadow-lg ring-1 ring-white/20">
-                            {{ strtoupper(substr($studio?->name ?? 'ClassM8', 0, 1)) }}
-                        </div>
+                        <a href="{{ url('/') }}" class="mb-8 inline-flex rounded-2xl bg-white p-1.5 shadow-lg ring-1 ring-white/30" aria-label="ClassM8 home">
+                            <img src="{{ asset('images/branding/classm8-logo.png') }}"
+                                 alt="ClassM8"
+                                 class="h-14 w-14 object-contain bg-white rounded-xl">
+                        </a>
 
                         <p class="mb-3 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] ring-1 ring-white/20">
                             {{ $studio ? 'Studio Portal' : 'Client Portal' }}
