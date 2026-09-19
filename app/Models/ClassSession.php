@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class ClassSession extends Model
 {
-    use AssignsStudio;
+    use AssignsStudio, \App\Models\Concerns\InvalidatesAttendanceQr;
+
+    protected $hidden = ['attendance_qr_version'];
 
     protected $fillable = [
         'studio_id',

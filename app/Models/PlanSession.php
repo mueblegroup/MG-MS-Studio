@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PlanSession extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, \App\Models\Concerns\InvalidatesAttendanceQr;
+
+    protected $hidden = ['attendance_qr_version'];
 
     protected $fillable = [
         'studio_id',

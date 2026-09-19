@@ -1,4 +1,5 @@
 import './bootstrap';
+import './attendance-qr';
 
 import Alpine from 'alpinejs';
 

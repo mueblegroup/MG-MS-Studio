@@ -42,7 +42,7 @@ class AuthenticatedSessionController extends Controller
             $request->session()->put([
                 'two_factor_user_id' => $user->id,
                 'two_factor_remember' => $request->boolean('remember'),
-                'url.intended' => $destination,
+                'url.intended' => $request->session()->get('url.intended', $destination),
             ]);
             Auth::logout();
 

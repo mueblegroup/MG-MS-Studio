@@ -20,6 +20,8 @@
             </a>
         </div>
 
+        @include('attendance.qr-link', ['kind' => 'class'])
+
         @if(session('success'))
             <div class="mb-4 p-3 rounded-xl bg-green-50 text-green-700 border border-green-200">
                 {{ session('success') }}

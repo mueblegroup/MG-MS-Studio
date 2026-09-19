@@ -203,6 +203,18 @@ Route::post('/webhooks/stripe', [CheckoutController::class, 'stripeWebhook'])->n
 Route::post('/webhooks/hitpay', [CheckoutController::class, 'hitpayWebhook'])->name('webhooks.hitpay');
 
 /* Attendance */
+Route::middleware(['auth', 'throttle:60,1'])->prefix('attendance/qr')->group(function () {
+    Route::get('/{kind}/{id}', [\App\Http\Controllers\QrAttendanceController::class, 'show'])
+        ->whereIn('kind', ['class', 'plan'])->whereNumber('id')->name('attendance.qr.show');
+    Route::post('/{kind}/{id}', [\App\Http\Controllers\QrAttendanceController::class, 'open'])
+        ->whereIn('kind', ['class', 'plan'])->whereNumber('id')->name('attendance.qr.open');
+});
+Route::middleware(['auth', 'role:student', 'throttle:30,1'])->prefix('student/check-in')->group(function () {
+    Route::get('/{kind}/{id}', [\App\Http\Controllers\QrAttendanceController::class, 'checkIn'])
+        ->whereIn('kind', ['class', 'plan'])->whereNumber('id')->name('attendance.check-in');
+    Route::post('/{kind}/{id}', [\App\Http\Controllers\QrAttendanceController::class, 'confirm'])
+        ->whereIn('kind', ['class', 'plan'])->whereNumber('id')->name('attendance.check-in.confirm');
+});
 Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/classes/{classSessionId}/attendance', [ClassAttendanceController::class, 'show'])->name('admin.classes.attendance');
     Route::post('/classes/{classSessionId}/attendance/{assignmentId}', [ClassAttendanceController::class, 'mark'])->name('admin.classes.attendance.mark');
